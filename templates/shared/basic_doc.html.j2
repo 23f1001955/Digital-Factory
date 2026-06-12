@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        {% include 'shared/base.css' %}
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Cover Page -->
+        <div class="cover">
+            <div class="cover-accent"></div>
+            <div class="cover-title">{{ title }}</div>
+            <div class="cover-subtitle">{{ subtitle if subtitle else niche }}</div>
+            <div class="cover-meta">
+                <span>Product: {{ product_type }}</span>
+                <span>Date: {{ date }}</span>
+            </div>
+        </div>
+
+        <!-- Table of Contents -->
+        {% include 'shared/toc.html.j2' %}
+
+        <!-- Content -->
+        <div class="content">
+            {{ content | safe }}
+        </div>
+    </div>
+</body>
+</html>

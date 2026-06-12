@@ -1,0 +1,13 @@
+{% if toc_items %}
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ul class="toc-list">
+  {% for item in toc_items %}
+    <li class="toc-item toc-item-{{ item.level }}">
+      <a href="#{{ item.id }}">{{ item.title }}</a>
+      <span class="toc-page">{{ item.page }}</span>
+    </li>
+  {% endfor %}
+  </ul>
+</div>
+{% endif %}
