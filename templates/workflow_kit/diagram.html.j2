@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} — Workflow Diagram</title>
+    <style>
+        {% include 'shared/base.css' %}
+        .diagram-container {
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            background: var(--color-bg-secondary);
+            padding: 32px;
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+        }
+        pre.mermaid {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="cover">
+            <div class="cover-accent"></div>
+            <div class="cover-title">Workflow Diagram</div>
+            <div class="cover-subtitle">{{ title }}</div>
+            <div class="cover-meta">
+                <span>Product: {{ product_type }}</span>
+                <span>Date: {{ date }}</span>
+            </div>
+        </div>
+
+        <p class="text-lead">A high-level view of the automated processes.</p>
+
+        <div class="diagram-container">
+            <pre class="mermaid">
+{{ mermaid_src | safe }}
+            </pre>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} — Reference Board</title>
+    <style>
+        {% include 'shared/base.css' %}
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-top: 24px;
+        }
+        .card {
+            border: 1px solid var(--color-border);
+            padding: 16px;
+            border-radius: 12px;
+            page-break-inside: avoid;
+            background: var(--color-bg-secondary);
+        }
+        .card img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .card-title {
+            font-family: var(--font-heading);
+            font-weight: var(--font-weight-semibold);
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        .card-desc {
+            font-size: 12px;
+            color: var(--color-text-muted);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="cover">
+            <div class="cover-accent"></div>
+            <div class="cover-title">Reference Board</div>
+            <div class="cover-subtitle">{{ title }}</div>
+            <div class="cover-meta">
+                <span>Product: {{ product_type }}</span>
+                <span>Date: {{ date }}</span>
+            </div>
+        </div>
+        <p class="text-lead">A curated collection of visual references generated for this pack.</p>
+
+        <div class="grid">
+            {% for item in catalog %}
+            <div class="card">
+                <img src="file:///{{ item.image_path }}" alt="{{ item.title }}" />
+                <div class="card-title">{{ item.title }}</div>
+                <div class="card-desc">{{ item.description }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
