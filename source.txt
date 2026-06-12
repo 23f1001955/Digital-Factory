@@ -1,0 +1,13 @@
+    def request(
+        self,
+        path: str,
+        method: str,
+        query: Optional[Dict[Any, Any]] = None,
+        body: Optional[Dict[Any, Any]] = None,
+        form_data: Optional[Dict[Any, Any]] = None,
+        auth: Optional[Union[str, Dict[str, str]]] = None,
+    ) -> Any:
+        """Send an HTTP request."""
+        validate_request_path(path)
+        self.logger.info(f"{method} {self.client.base_url}{path}")
+        return self._execute_with_retry(method, path, query, body, form_data, auth)

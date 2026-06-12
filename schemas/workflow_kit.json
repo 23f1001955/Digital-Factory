@@ -1,0 +1,73 @@
+{
+  "product_type": "workflow_kit",
+  "display_name": "Workflow Kit",
+  "notion_sync": true,
+  "components": [
+    {
+      "id": "setup_guide",
+      "agent": "content_agent",
+      "output": "content/setup_guide.md",
+      "depends_on": []
+    },
+    {
+      "id": "prompts",
+      "agent": "content_agent",
+      "output": "content/prompts.md",
+      "depends_on": []
+    },
+    {
+      "id": "automation_blueprint",
+      "agent": "content_agent",
+      "output": "content/automation_blueprint.md",
+      "depends_on": []
+    },
+    {
+      "id": "workflow_diagram_src",
+      "agent": "diagram_agent",
+      "output": "content/diagram.mmd",
+      "depends_on": []
+    },
+    {
+      "id": "notion_crm",
+      "agent": "content_agent",
+      "output": "content/notion_crm.md",
+      "depends_on": []
+    },
+    {
+      "id": "setup_guide_pdf",
+      "agent": "render_agent",
+      "output": "presentation/setup_guide.pdf",
+      "depends_on": ["setup_guide"],
+      "uses_renderer": true,
+      "template": "shared/basic_doc.html.j2"
+    },
+    {
+      "id": "diagram_pdf",
+      "agent": "render_agent",
+      "output": "presentation/workflow_diagram.pdf",
+      "depends_on": ["workflow_diagram_src"],
+      "uses_renderer": true,
+      "template": "workflow_kit/diagram.html.j2"
+    },
+    {
+      "id": "notion_tree",
+      "agent": "notion_agent",
+      "output": "notion_sync.json",
+      "depends_on": ["setup_guide", "prompts", "automation_blueprint", "notion_crm"]
+    },
+    {
+      "id": "package",
+      "agent": "packaging_agent",
+      "output": "{slug}.zip",
+      "depends_on": ["setup_guide_pdf", "diagram_pdf", "notion_tree"]
+    }
+  ],
+  "notion_structure": {
+    "pages": [
+      {"name": "Setup Guide", "source": "setup_guide", "type": "page"},
+      {"name": "Prompts", "source": "prompts", "type": "page"},
+      {"name": "Automation Blueprint", "source": "automation_blueprint", "type": "page"},
+      {"name": "CRM Base", "source": "notion_crm", "type": "database", "database_title": "CRM Sales Pipeline"}
+    ]
+  }
+}

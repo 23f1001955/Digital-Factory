@@ -12,9 +12,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         output_path_resolved = component.output.replace("{slug}", job_spec.slug)
         output_zip = os.path.join("outputs", job_spec.slug, output_path_resolved)
         
-        # We don't want to include job_spec.json and job_state.json in the user zip usually
-        # based on the implementation plan
-        exclude_files = {"job_spec.json", "job_state.json", component.output}
+        exclude_files = {"job_spec.json", "job_state.json", os.path.basename(output_zip)}
         
         with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
             for root, dirs, files in os.walk(base_dir):

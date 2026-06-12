@@ -1,0 +1,30 @@
+{
+  "slug": "freelance-designer-operating-system",
+  "components": {
+    "guide": {
+      "status": "failed",
+      "output_path": null,
+      "error": "'charmap' codec can't encode character '\\u2192' in position 4697: character maps to <undefined>"
+    },
+    "sops": {
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\content/sops.md",
+      "error": null
+    },
+    "templates": {
+      "status": "failed",
+      "output_path": null,
+      "error": "'charmap' codec can't encode character '\\U0001f4cb' in position 69: character maps to <undefined>"
+    },
+    "prompts": {
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\content/prompts.md",
+      "error": null
+    },
+    "sops_pdf": {
+      "status": "failed",
+      "output_path": null,
+      "error": "'utf-8' codec can't decode byte 0x97 in position 379: invalid start byte"
+    }
+  }
+}

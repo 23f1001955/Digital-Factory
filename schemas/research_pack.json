@@ -1,0 +1,1 @@
+{"product_type": "research_pack", "display_name": "Test Pack", "notion_sync": false, "components": [{"id": "dep1", "agent": "a", "output": "a", "depends_on": []}, {"id": "dep2", "agent": "b", "output": "b", "depends_on": ["dep1"]}]}

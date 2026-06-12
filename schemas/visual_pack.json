@@ -1,0 +1,47 @@
+{
+  "product_type": "visual_pack",
+  "display_name": "Visual Pack",
+  "notion_sync": false,
+  "components": [
+    {
+      "id": "image_prompts",
+      "agent": "content_agent",
+      "output": "content/image_prompts.json",
+      "depends_on": []
+    },
+    {
+      "id": "catalog",
+      "agent": "catalog_agent",
+      "output": "content/catalog.json",
+      "depends_on": ["image_prompts"]
+    },
+    {
+      "id": "images",
+      "agent": "visual_agent",
+      "output": "assets/images",
+      "depends_on": ["image_prompts"]
+    },
+    {
+      "id": "reference_board",
+      "agent": "render_agent",
+      "output": "presentation/reference_board.pdf",
+      "depends_on": ["images", "catalog"],
+      "uses_renderer": true,
+      "template": "visual_pack/reference_board.html.j2"
+    },
+    {
+      "id": "showcase_pdf",
+      "agent": "render_agent",
+      "output": "presentation/showcase.pdf",
+      "depends_on": ["images", "catalog"],
+      "uses_renderer": true,
+      "template": "visual_pack/showcase.html.j2"
+    },
+    {
+      "id": "package",
+      "agent": "packaging_agent",
+      "output": "{slug}.zip",
+      "depends_on": ["reference_board", "showcase_pdf"]
+    }
+  ]
+}
