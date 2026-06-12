@@ -1,0 +1,91 @@
+{
+  "databases": [
+    {
+      "name": "Clients",
+      "description": "Tracks all client information and contact details.",
+      "icon": "👥",
+      "properties": {
+        "Client Name": {"type": "title", "options": []},
+        "Company": {"type": "text", "options": []},
+        "Email": {"type": "email", "options": []},
+        "Phone": {"type": "phone", "options": []},
+        "Status": {"type": "select", "options": ["Lead", "Active", "On Hold", "Archived"]},
+        "Primary Contact": {"type": "text", "options": []},
+        "Address": {"type": "text", "options": []},
+        "Notes": {"type": "text", "options": []},
+        "Related Projects": {"type": "relation", "target": "Projects"},
+        "Created Time": {"type": "created_time", "options": []}
+      }
+    },
+    {
+      "name": "Projects",
+      "description": "Manages all design projects from scope to completion.",
+      "icon": "🎨",
+      "properties": {
+        "Project Name": {"type": "title", "options": []},
+        "Client": {"type": "relation", "target": "Clients"},
+        "Status": {"type": "select", "options": ["Proposal", "Kickoff", "In Progress", "Review", "Completed", "Invoiced"]},
+        "Start Date": {"type": "date", "options": []},
+        "Deadline": {"type": "date", "options": []},
+        "Budget": {"type": "number", "format": "currency"},
+        "Description": {"type": "text", "options": []},
+        "Deliverables": {"type": "text", "options": []},
+        "Tasks": {"type": "relation", "target": "Tasks"},
+        "Invoices": {"type": "relation", "target": "Invoices"},
+        "Total Invoiced": {"type": "rollup", "rollup_property": "Amount Due", "rollup_function": "sum"},
+        "Created Time": {"type": "created_time", "options": []},
+        "Last Edited Time": {"type": "last_edited_time", "options": []}
+      }
+    },
+    {
+      "name": "Tasks",
+      "description": "Tracks individual tasks and to-dos within projects.",
+      "icon": "✅",
+      "properties": {
+        "Task Name": {"type": "title", "options": []},
+        "Project": {"type": "relation", "target": "Projects"},
+        "Status": {"type": "select", "options": ["To Do", "In Progress", "Done", "Blocked"]},
+        "Priority": {"type": "select", "options": ["High", "Medium", "Low"]},
+        "Due Date": {"type": "date", "options": []},
+        "Assignee": {"type": "person", "options": []},
+        "Estimated Time": {"type": "number", "format": "number"},
+        "Actual Hours": {"type": "rollup", "rollup_property": "Hours", "rollup_function": "sum"},
+        "Time Logs": {"type": "relation", "target": "Time Logs"},
+        "Description": {"type": "text", "options": []},
+        "Checkbox": {"type": "checkbox", "options": []},
+        "Created Time": {"type": "created_time", "options": []},
+        "Last Edited Time": {"type": "last_edited_time", "options": []}
+      }
+    },
+    {
+      "name": "Time Logs",
+      "description": "Records time spent on tasks for billing and tracking.",
+      "icon": "⏱️",
+      "properties": {
+        "Log Name": {"type": "title", "options": []},
+        "Task": {"type": "relation", "target": "Tasks"},
+        "Date": {"type": "date", "options": []},
+        "Hours": {"type": "number", "format": "number"},
+        "Billable": {"type": "checkbox", "options": []},
+        "Notes": {"type": "text", "options": []},
+        "Created Time": {"type": "created_time", "options": []}
+      }
+    },
+    {
+      "name": "Invoices",
+      "description": "Manages invoices and payment tracking.",
+      "icon": "💰",
+      "properties": {
+        "Invoice Number": {"type": "title", "options": []},
+        "Project": {"type": "relation", "target": "Projects"},
+        "Client": {"type": "relation", "target": "Clients"},
+        "Amount Due": {"type": "number", "format": "currency"},
+        "Due Date": {"type": "date", "options": []},
+        "Status": {"type": "select", "options": ["Draft", "Sent", "Paid", "Overdue"]},
+        "Paid Date": {"type": "date", "options": []},
+        "Notes": {"type": "text", "options": []},
+        "Created Time": {"type": "created_time", "options": []}
+      }
+    }
+  ]
+}

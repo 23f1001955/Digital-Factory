@@ -1,9 +1,7 @@
 {
-  "root_page_id": "37defcc5-d24e-8124-83cc-f476628e7764",
-  "pages": {
-    "Guide": "37defcc5-d24e-8124-b2ed-d4dc1fa5056f",
-    "SOPs": "3ed94903-9e3d-4c41-9d2d-46d4afc45ec9",
-    "Templates": "83728e79-8d9b-4178-954d-2bb679f001d2",
-    "Prompts": "37defcc5-d24e-81d3-a622-c61757e84be0"
-  }
+  "root_page_id": "37defcc5-d24e-8166-ac58-cfe5037be7d4",
+  "root_page_url": "https://app.notion.com/p/Freelance-Designer-Operating-System-operating_system-37defcc5d24e8166ac58cfe5037be7d4",
+  "databases": {},
+  "template_page_id": "37defcc5-d24e-81e4-ba74-cc901a9fefb9",
+  "template_page_url": "https://app.notion.com/p/Notion-Template-How-to-Use-37defcc5d24e81e4ba74cc901a9fefb9"
 }

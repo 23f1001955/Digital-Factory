@@ -6,13 +6,21 @@
 
 ## Component Status
 
-- ❌ **guide**: failed
-  - *Error: 'charmap' codec can't encode character '\u2192' in position 4697: character maps to <undefined>*
+- ✅ **guide**: done
+  - *Output: `outputs\freelance-designer-operating-system\content/guide.md`*
 - ✅ **sops**: done
   - *Output: `outputs\freelance-designer-operating-system\content/sops.md`*
-- ❌ **templates**: failed
-  - *Error: 'charmap' codec can't encode character '\U0001f4cb' in position 69: character maps to <undefined>*
+- ✅ **templates**: done
+  - *Output: `outputs\freelance-designer-operating-system\content/templates.md`*
 - ✅ **prompts**: done
   - *Output: `outputs\freelance-designer-operating-system\content/prompts.md`*
-- ❌ **sops_pdf**: failed
-  - *Error: 'utf-8' codec can't decode byte 0x97 in position 379: invalid start byte*
+- ✅ **guide_pdf**: done
+  - *Output: `outputs\freelance-designer-operating-system\presentation/guide.pdf`*
+- ✅ **sops_pdf**: done
+  - *Output: `outputs\freelance-designer-operating-system\presentation/sops.pdf`*
+- ✅ **notion_schema**: done
+  - *Output: `outputs\freelance-designer-operating-system\data/notion_schema.json`*
+- ✅ **notion_tree**: done
+  - *Output: `outputs\freelance-designer-operating-system\notion_sync.json`*
+- ✅ **package**: done
+  - *Output: `outputs\freelance-designer-operating-system\freelance-designer-operating-system.zip`*

@@ -117,11 +117,22 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             db_name = db["name"]
             try:
                 properties = _build_property_config(db.get("properties", {}))
-                new_db = notion.databases.create(
-                    parent={"page_id": root_page_id},
-                    title=[{"type": "text", "text": {"content": db_name}}],
-                    properties=properties,
-                    description=db.get("description", ""),
+                
+                # Format parent correctly with type for paged media API version 2022-06-28
+                parent_config = {"type": "page_id", "page_id": root_page_id}
+                db_body = {
+                    "parent": parent_config,
+                    "title": [{"type": "text", "text": {"content": db_name}}],
+                    "properties": properties,
+                }
+                db_desc = db.get("description", "")
+                if db_desc:
+                    db_body["description"] = [{"type": "text", "text": {"content": db_desc}}]
+
+                new_db = notion.request(
+                    path="databases",
+                    method="POST",
+                    body=db_body
                 )
                 db_id_map[db_name] = new_db["id"]
                 logger.info(f"Created database: {db_name} -> {new_db['id']}")
@@ -132,14 +143,16 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         if relation_configs:
             for key, config in relation_configs.items():
                 try:
-                    notion.databases.update(
-                        database_id=config["db_id"],
-                        properties={
-                            config["prop_name"]: {
-                                "type": "relation",
-                                "relation": {"database_id": config["target_id"]},
+                    notion.request(
+                        path=f"databases/{config['db_id']}",
+                        method="PATCH",
+                        body={
+                            "properties": {
+                                config["prop_name"]: {
+                                    "relation": {"database_id": config["target_id"]}
+                                }
                             }
-                        },
+                        }
                     )
                     logger.info(f"Set relation: {key}")
                 except Exception as e:

@@ -1,71 +1,72 @@
-# Freelance Designer Operating System: Standard Operating Procedures
+## SOP 1: Client Intake & Onboarding
 
-## SOP 1: New Project Intake & Client Onboarding
+**Purpose:** To standardize the process from initial client contact to signed agreement, ensuring all project parameters are defined before work begins.
 
-**Purpose:** To standardize the process of qualifying a new lead, defining project scope, and legally initiating a client engagement.
-
-**Scope:** Applies to the Freelance Designer from the moment a potential client expresses interest until a signed contract and initial deposit are secured.
+**Scope:** Applies to the Designer and Salesperson/Owner for all new client projects requiring a formal proposal or contract.
 
 **Procedure Steps:**
-1. **Schedule** — A 30-minute discovery call with the lead within 48 hours of initial contact using the Calendly link in your email signature.
-2. **Assess** — During the call, complete the Client Qualification Checklist, confirming they have a defined need, a budget within your $2k-$50k range, and decision-making authority.
-3. **Send** — A Project Proposal document within 24 hours of the discovery call, outlining the agreed scope, timeline, investment (in 3 milestones), and your Terms & Conditions.
-4. **Clarify** — Initiate one round of revisions to the proposal if requested; deny scope expansions with a written explanation and a link to your Scope Expansion SOP.
-5. **Secure** — A signed digital contract (via PandaDoc or DocuSign) and the first 50% milestone deposit within 5 business days of proposal delivery.
-6. **Archive** — The signed contract and payment confirmation in the `/Client/[ClientName]/01_Contract` folder.
-7. **Welcome** — Send the client a Welcome Kit PDF and a link to your shared portal (Notion or Google Drive) containing the project folder structure within 4 hours of payment clearance.
-8. **Schedule** — The official project Kick-Off Meeting with the client and any key stakeholders for the following week.
-9. **Allocate** — Project hours to your production calendar for the first two weeks based on the project timeline.
-10. **Notify** — Your accountant of the new project and deposit via the designated Slack channel or email template.
+1.  **Log Lead** — Enter the new client's name, company, contact info, and initial inquiry into the CRM within 2 business hours of first contact.
+2.  **Schedule Discovery Call** — Send a Calendly link within 24 hours to schedule a 30-minute discovery call.
+3.  **Conduct Call** — Use the "Discovery Call Checklist" to capture: Project goals, target audience, deliverables, timeline, budget range, and key stakeholders.
+4.  **Define Scope** — Translate call notes into a bulleted Project Scope document, listing all deliverables (e.g., 3 logo concepts, 5 social media templates, 1 style guide) with clear specifications.
+5.  **Create Proposal** — Populate the company proposal template with the Project Scope, timeline, milestones, and pricing within 48 hours of the call.
+6.  **Send Proposal** — Email the proposal PDF with a 7-day validity period and a link to a DocuSign contract.
+7.  **Follow Up** — If no response within 3 business days, send a scheduled follow-up email.
+8.  **Send Final Invoice** — Upon signed contract, issue a 50% deposit invoice via accounting software, referencing the contract number.
+9.  **Trigger Onboarding** — Upon payment confirmation, automatically send the "Welcome & Onboarding" email package via CRM, including:
+    *   Link to the client questionnaire.
+    *   Access to the project folder in Google Drive.
+    *   Link to the project kickoff poll in Calendly.
+10. **Schedule Kickoff** — After questionnaire is returned (within 5 business days), schedule a 60-minute kickoff meeting with the client and any internal team members.
 
-**Expected Outcome:** A legally active project with a clear scope, funded first milestone, and organized digital workspace, ready for creative work to begin.
+**Expected Outcome:** A fully onboarded client with a signed contract, paid deposit, and a scheduled kickoff meeting, all information centralized in the CRM and project management system.
 
-**Related SOPs:** Scope Expansion Process (SOP 4), Client Communication Cadence (SOP 3).
+**Related SOPs:** SOP 2: Project Execution & Delivery, SOP 3: Invoicing & Payment Processing.
 
 ---
 
-## SOP 2: Design Delivery & Iterative Feedback Management
+## SOP 2: Project Execution & Delivery
 
-**Purpose:** To manage the design review process efficiently, ensuring client feedback is collected, integrated, and approved in a structured manner.
+**Purpose:** To manage the design production workflow from kickoff to final file delivery, ensuring quality control and client approval at key stages.
 
-**Scope:** Applies to the Freelance Designer from the presentation of the first design concept to the final approval of all design assets.
+**Scope:** Applies to the Designer and Project Manager for all active client projects post-onboarding.
 
 **Procedure Steps:**
-1. **Prepare** — Compile design files (e.g., Figma links, high-res PDFs) into a presentation deck with clear section titles (e.g., "1. Homepage Hero Concept") and a "Feedback Guide" on the first slide.
-2. **Present** — Send the presentation deck via email with a subject line: "Project [Name] - Design Presentation Round [X] for Review." Set a 48-hour feedback deadline.
-3. **Log** — All client feedback received into the Project Tracker spreadsheet, tagging it as "New," "Under Review," or "Implemented."
-4. **Triangulate** — Schedule a 20-minute call if feedback is contradictory or exceeds 5 major points, to align on a single revision direction before any work is done.
-5. **Implement** — Complete all design revisions in one consolidated block of time, adhering strictly to the feedback logged. Do not address unstated requests.
-6. **Submit** — The revised designs in the same format and location as the original presentation, with a concise changelog email: "All points from feedback on [Date] have been addressed."
-7. **Enforce** — The agreed revision cap (standard is 3 rounds). Any additional rounds must trigger the Scope Expansion SOP.
-8. **Secure** — Final "Written Approval" from the client via email with the specific phrase: "We approve the final designs for [Project Name] for production."
-9. **Export** — All final design assets into the `/Deliverables` subfolder using the naming convention: `[ProjectName]_[Asset]_[Size]_[Version]_[Date]`.
-10. **Archive** — The entire feedback thread (emails, call notes) into the `/Client/[ClientName]/03_Feedback` folder.
+1.  **Host Kickoff** — Present the confirmed project scope and timeline during the meeting; record and upload video notes to the project folder.
+2.  **Break Down Tasks** — Within 24 hours of kickoff, create all project milestones and individual tasks in Asana/Trello with assigned due dates.
+3.  **Conduct Research** — Allocate 1-3 days for gathering client-provided assets, conducting competitor analysis, and creating mood boards.
+4.  **Develop First Concepts** — Present 2-3 distinct initial design concepts in a mockup for internal review before client presentation.
+5.  **Submit for Internal Review** — Schedule a 30-minute internal critique with the Creative Lead at least 1 business day before the client deadline.
+6.  **Present Concepts** — Send a professionally designed PDF presentation to the client, accompanied by a 15-minute video walkthrough explaining design rationales.
+7.  **Manage Revisions** — Log all client feedback in the project management tool. Implement up to 2 rounds of revisions as per contract; charge for additional rounds.
+8.  **Obtain Final Approval** — Send the final design for formal approval via the "Final Approval" form in the client portal. A 2-business-day response window is permitted.
+9.  **Prepare Final Files** — Upon approval, organize deliverables into three folders: `01_Source_Files` (e.g., AI, PSD), `02_Exported` (e.g., PNG, PDF, JPG), and `03_Style_Guide`.
+10. **Deliver & Archive** — Grant client view access to the delivery folder. Archive the complete project folder to cold storage 7 days after delivery.
 
-**Expected Outcome:** A clear, documented chain of design approvals, preventing scope creep and ensuring the final deliverable matches client consensus.
+**Expected Outcome:** A completed project delivered to specification, with documented approvals and all assets neatly archived for future reference.
 
-**Related SOPs:** Scope Expansion Process (SOP 4), Design File Organization (SOP 5).
+**Related SOPs:** SOP 1: Client Intake & Onboarding, SOP 3: Invoicing & Payment Processing.
 
 ---
 
-## SOP 3: Project Completion, Final Settlement & Retrospective
+## SOP 3: Invoicing & Payment Processing
 
-**Purpose:** To formally close a project, ensure final financial settlement, gather testimonial content, and perform an internal review for continuous improvement.
+**Purpose:** To ensure timely and accurate client billing and the systematic application of late-fee policies.
 
-**Scope:** Applies to the Freelance Designer from the client's final design approval to the complete archival of the project.
+**Scope:** Applies to the Owner/Operations Manager for all financial transactions related to client projects.
 
 **Procedure Steps:**
-1. **Submit** — A final invoice for the remaining 50% milestone immediately upon receiving "Written Approval" (from SOP 2).
-2. **Deliver** — The final design asset package via a cloud transfer service (e.g., Dropbox) with a download link valid for 7 days.
-3. **Send** — A "Project Wrap-Up" email 24 hours after delivery, including a link to a 3-question Google Form for the client testimonial.
-4. **Process** — The final payment within your financial system. Flag any invoice unpaid after 14 days for a polite reminder.
-5. **Review** — The internal Project Retrospective document, noting what went well (e.g., "Client feedback was clear in Round 2") and what to improve (e.g., "Needed more buffer time for asset export").
-6. **Archive** — The entire project folder (Contract, Brief, Designs, Feedback, Deliverables, Finance) to cold storage, retaining it for 2 years.
-7. **Update** — Your public portfolio and case studies with 1-2 highlight images from the project, upon client's written permission.
-8. **Nurture** — The client relationship by adding them to your "Alumni Clients" CRM list for a check-in email in 3 months.
-9. **Assess** — The project's financials against your hourly rate and profitability goals, updating your Rate Calculator sheet if necessary.
-10. **Close** — The active project in your Project Tracker by marking its status as "Completed" and noting the final hours spent.
+1.  **Generate Deposit Invoice** — Create and send the 50% deposit invoice immediately after contract execution, net 15 payment terms.
+2.  **Generate Milestone Invoice** — For projects >$500, create a second invoice for 25% at the midpoint of the project timeline.
+3.  **Track Payment** — Monitor payment status in the accounting software (e.g., QuickBooks). Flag unpaid invoices 2 days past due.
+4.  **Send First Reminder** — If payment is 5 days late, send the first automated reminder email with a copy of the original invoice.
+5.  **Apply Late Fee** — If payment is 15 days late, add a 5% late fee to the invoice balance and send a formal late notice.
+6.  **Initiate Collections** — If payment is 30 days late, suspend all work on the project, issue a final demand letter, and place the account on hold.
+7.  **Send Final Invoice** — Upon project delivery and final approval, issue the remaining balance invoice with a 10-day payment term.
+8.  **Send Thank You** — Within 48 hours of receiving final payment, send a personalized thank-you email requesting a testimonial or referral.
+9.  **Conduct Financial Review** — Monthly, review accounts receivable to ensure the average collection period remains ≤30 days.
+10. **Update Project Status** — Upon final payment, mark the project as "Closed" in both the CRM and project management system.
 
-**Expected Outcome:** A financially closed project, a documented testimonial, a cleaned-up active workspace, and actionable insights to improve future project profitability and workflow.
+**Expected Outcome:** 100% of invoices paid within 30 days on average, with clear financial records and a formalized escalation process for overdue accounts.
 
-**Related SOPs:** Client Communication Cadence (SOP 3), Financial Reconciliation (SOP 6).
+**Related SOPs:** SOP 1: Client Intake & Onboarding, SOP 2: Project Execution & Delivery.

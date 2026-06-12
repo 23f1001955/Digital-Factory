@@ -2,9 +2,9 @@
   "slug": "freelance-designer-operating-system",
   "components": {
     "guide": {
-      "status": "failed",
-      "output_path": null,
-      "error": "'charmap' codec can't encode character '\\u2192' in position 4697: character maps to <undefined>"
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\content/guide.md",
+      "error": null
     },
     "sops": {
       "status": "done",
@@ -12,19 +12,39 @@
       "error": null
     },
     "templates": {
-      "status": "failed",
-      "output_path": null,
-      "error": "'charmap' codec can't encode character '\\U0001f4cb' in position 69: character maps to <undefined>"
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\content/templates.md",
+      "error": null
     },
     "prompts": {
       "status": "done",
       "output_path": "outputs\\freelance-designer-operating-system\\content/prompts.md",
       "error": null
     },
+    "guide_pdf": {
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\presentation/guide.pdf",
+      "error": null
+    },
     "sops_pdf": {
-      "status": "failed",
-      "output_path": null,
-      "error": "'utf-8' codec can't decode byte 0x97 in position 379: invalid start byte"
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\presentation/sops.pdf",
+      "error": null
+    },
+    "notion_schema": {
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\data/notion_schema.json",
+      "error": null
+    },
+    "notion_tree": {
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\notion_sync.json",
+      "error": null
+    },
+    "package": {
+      "status": "done",
+      "output_path": "outputs\\freelance-designer-operating-system\\freelance-designer-operating-system.zip",
+      "error": null
     }
   }
 }
