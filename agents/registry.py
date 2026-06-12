@@ -1,0 +1,25 @@
+from . import (
+    research_agent,
+    csv_export_agent,
+    content_agent,
+    render_agent,
+    packaging_agent,
+    notion_agent,
+    catalog_agent,
+    visual_agent,
+    diagram_agent,
+    notion_schema_agent
+)
+
+AGENT_REGISTRY = {
+    "research_agent": research_agent.run,
+    "csv_export_agent": csv_export_agent.run,
+    "content_agent": content_agent.run,
+    "render_agent": render_agent.run,
+    "packaging_agent": packaging_agent.run,
+    "notion_agent": notion_agent.run,
+    "catalog_agent": catalog_agent.run,
+    "visual_agent": visual_agent.run,
+    "diagram_agent": diagram_agent.run,
+    "notion_schema_agent": notion_schema_agent.run,
+}

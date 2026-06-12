@@ -1,0 +1,73 @@
+{
+  "product_type": "operating_system",
+  "display_name": "Operating System",
+  "notion_sync": true,
+  "components": [
+    {
+      "id": "guide",
+      "agent": "content_agent",
+      "output": "content/guide.md",
+      "depends_on": []
+    },
+    {
+      "id": "sops",
+      "agent": "content_agent",
+      "output": "content/sops.md",
+      "depends_on": []
+    },
+    {
+      "id": "templates",
+      "agent": "content_agent",
+      "output": "content/templates.md",
+      "depends_on": []
+    },
+    {
+      "id": "prompts",
+      "agent": "content_agent",
+      "output": "content/prompts.md",
+      "depends_on": []
+    },
+    {
+      "id": "guide_pdf",
+      "agent": "render_agent",
+      "output": "presentation/guide.pdf",
+      "depends_on": ["guide"],
+      "uses_renderer": true,
+      "template": "shared/basic_doc.html.j2"
+    },
+    {
+      "id": "sops_pdf",
+      "agent": "render_agent",
+      "output": "presentation/sops.pdf",
+      "depends_on": ["sops"],
+      "uses_renderer": true,
+      "template": "shared/basic_doc.html.j2"
+    },
+    {
+      "id": "notion_schema",
+      "agent": "notion_schema_agent",
+      "output": "data/notion_schema.json",
+      "depends_on": ["guide", "sops", "templates", "prompts"]
+    },
+    {
+      "id": "notion_tree",
+      "agent": "notion_agent",
+      "output": "notion_sync.json",
+      "depends_on": ["notion_schema"]
+    },
+    {
+      "id": "package",
+      "agent": "packaging_agent",
+      "output": "{slug}.zip",
+      "depends_on": ["guide_pdf", "sops_pdf", "notion_tree"]
+    }
+  ],
+  "notion_structure": {
+    "pages": [
+      {"name": "Guide", "source": "guide"},
+      {"name": "SOPs", "source": "sops"},
+      {"name": "Templates", "source": "templates"},
+      {"name": "Prompts", "source": "prompts"}
+    ]
+  }
+}
