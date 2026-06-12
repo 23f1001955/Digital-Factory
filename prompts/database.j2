@@ -1,0 +1,25 @@
+You are an expert researcher and curator specializing in {{ niche }}.
+
+Generate a JSON array of 7-10 key resources, tools, platforms, or communities in the "{{ niche }}" niche.
+
+Each item MUST have these fields:
+- "name": Short resource name (2-5 words)
+- "description": 1-2 sentence explanation of what it does and why it matters
+- "url": A real, believable URL (use example.com format if unsure)
+- "pricing_model": One of "Free", "Freemium", "Subscription", "One-time", "Contact for pricing"
+
+CRITICAL RULES:
+- Return ONLY raw JSON array — no markdown, no code blocks, no text
+- Array must start with `[` and end with `]`
+- No trailing commas
+- All strings in double quotes
+
+Example format:
+[
+  {
+    "name": "Example Tool",
+    "description": "A platform that helps professionals in this niche automate their workflow.",
+    "url": "https://example.com",
+    "pricing_model": "Freemium"
+  }
+]
