@@ -1,0 +1,44 @@
+:root {
+  /* Typography */
+  --font-heading: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  /* Colors */
+  --color-text-primary: #000000;
+  --color-text-secondary: #555555;
+  --color-text-muted: #999999;
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f8f8;
+  --color-accent: #000000;
+  --color-accent-hover: #333333;
+  --color-border: #eeeeee;
+  --color-border-light: #f4f4f4;
+  --color-code-bg: #f8f8f8;
+  --color-quote-border: #000000;
+
+  --font-weight-bold: 400;
+  --font-weight-semibold: 400;
+  --letter-spacing-tight: 0.05em;
+  --letter-spacing-wide: 0.1em;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 300;
+  letter-spacing: 0.05em;
+}
+
+h1 {
+  font-size: 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cover-accent {
+  background: var(--color-accent);
+  width: 40px;
+  height: 2px;
+}
+
+.cover-title {
+  font-weight: 200;
+  letter-spacing: 0.08em;
+}

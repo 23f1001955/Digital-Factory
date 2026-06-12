@@ -1,0 +1,45 @@
+:root {
+  /* Typography */
+  --font-heading: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-body: 'Times New Roman', Times, Georgia, serif;
+  --font-mono: 'Courier New', Courier, monospace;
+
+  /* Colors */
+  --color-text-primary: #111111;
+  --color-text-secondary: #444444;
+  --color-text-muted: #666666;
+  --color-bg-primary: #fcfcfc;
+  --color-bg-secondary: #f5f3f0;
+  --color-accent: #b22222;
+  --color-accent-hover: #8b1a1a;
+  --color-border: #dddddd;
+  --color-border-light: #e8e8e8;
+  --color-code-bg: #f5f3f0;
+  --color-quote-border: #b22222;
+
+  /* Layout */
+  --section-spacing: 40px;
+}
+
+h1, h2, h3, h4 {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 30px;
+  border-bottom: 3px solid var(--color-accent);
+}
+
+.cover-accent {
+  background: var(--color-accent);
+  height: 3px;
+}
+
+.cover-title {
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 44px;
+}
