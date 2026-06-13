@@ -97,8 +97,10 @@ def test_visual_agent_placeholder(tmp_path, monkeypatch):
     assert result.status == "done"
     assert os.path.exists(result.output_path)
 
-    assert len(os.listdir(result.output_path)) == 2
-    assert "image_1.png" in os.listdir(result.output_path)
+    files = os.listdir(result.output_path)
+    svg_files = [f for f in files if f.endswith(".svg")]
+    assert len(svg_files) >= 2
+    assert "_manifest.json" in files
 
 
 def test_content_agent(monkeypatch):

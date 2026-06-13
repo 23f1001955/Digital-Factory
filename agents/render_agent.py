@@ -9,6 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
 from renderers.base import Renderer
+from agents.image_agent import ImageRequirement
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,8 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             with open(md_file, "r", encoding="utf-8") as f:
                 mermaid_src = f.read()
 
+        toc_items = _parse_toc_items(md_text)
+
         env = Environment(loader=FileSystemLoader("templates"))
         template = env.get_template(component.template)
 
@@ -99,10 +102,10 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             "content": html_content,
             "mermaid_src": mermaid_src,
             "theme": getattr(job_spec, "theme", "default"),
-            "toc_items": _parse_toc_items(md_text),
+            "toc_items": toc_items,
         }
 
-        # Inject cover image if available
+        # Inject cover image from context if available
         if "images" in context:
             try:
                 with open(context["images"], "r", encoding="utf-8") as imf:
@@ -116,8 +119,8 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         if "catalog" in context:
             with open(context["catalog"], "r", encoding="utf-8") as cf:
                 catalog_data = json.load(cf)
-            if "images" in context:
-                images_dir = os.path.abspath(context["images"])
+            if "visual_assets" in context:
+                images_dir = os.path.abspath(context["visual_assets"])
                 for i, item in enumerate(catalog_data):
                     item["image_path"] = os.path.join(images_dir, f"image_{i+1}.png").replace('\\', '/')
             template_vars["catalog"] = catalog_data
