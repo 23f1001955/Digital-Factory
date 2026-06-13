@@ -10,6 +10,12 @@
       "depends_on": []
     },
     {
+      "id": "images",
+      "agent": "image_agent",
+      "output": "data/images_generated.json",
+      "depends_on": ["market_research"]
+    },
+    {
       "id": "setup_guide",
       "agent": "content_agent",
       "output": "content/setup_guide.md",
