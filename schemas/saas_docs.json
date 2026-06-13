@@ -40,7 +40,8 @@
       "depends_on": [
         "api_reference",
         "user_guide",
-        "changelog"
+        "changelog",
+        "images"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"

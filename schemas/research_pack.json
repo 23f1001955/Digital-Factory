@@ -49,7 +49,8 @@
       "agent": "render_agent",
       "output": "presentation/report.pdf",
       "depends_on": [
-        "report"
+        "report",
+        "images"
       ],
       "uses_renderer": true,
       "template": "research_pack/report.html.j2"

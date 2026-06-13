@@ -43,7 +43,8 @@
       "output": "presentation/reference_board.pdf",
       "depends_on": [
         "visual_assets",
-        "catalog"
+        "catalog",
+        "images"
       ],
       "uses_renderer": true,
       "template": "visual_pack/reference_board.html.j2"
@@ -54,7 +55,8 @@
       "output": "presentation/showcase.pdf",
       "depends_on": [
         "visual_assets",
-        "catalog"
+        "catalog",
+        "images"
       ],
       "uses_renderer": true,
       "template": "visual_pack/showcase.html.j2"

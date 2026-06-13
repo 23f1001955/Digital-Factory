@@ -5,6 +5,17 @@
     <title>{{ title }}</title>
     <style>
         {% include 'shared/base.css' %}
+        .cover-image-wrapper {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .cover-image {
+            max-width: 80%;
+            max-height: 250px;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -12,6 +23,11 @@
         <!-- Cover Page -->
         <div class="cover">
             <div class="cover-accent"></div>
+            {% if cover_image %}
+            <div class="cover-image-wrapper">
+                <img src="{{ cover_image }}" alt="Cover" class="cover-image">
+            </div>
+            {% endif %}
             <div class="cover-title">{{ title }}</div>
             <div class="cover-subtitle">{{ subtitle if subtitle else niche }}</div>
             <div class="cover-meta">
@@ -28,5 +44,6 @@
             {{ content | safe }}
         </div>
     </div>
+
 </body>
 </html>

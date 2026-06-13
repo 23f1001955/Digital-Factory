@@ -44,7 +44,8 @@
       "agent": "render_agent",
       "output": "presentation/guide.pdf",
       "depends_on": [
-        "guide"
+        "guide",
+        "images"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"
@@ -54,7 +55,8 @@
       "agent": "render_agent",
       "output": "presentation/sops.pdf",
       "depends_on": [
-        "sops"
+        "sops",
+        "images"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"

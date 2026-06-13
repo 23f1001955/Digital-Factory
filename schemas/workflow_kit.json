@@ -50,7 +50,8 @@
       "agent": "render_agent",
       "output": "presentation/setup_guide.pdf",
       "depends_on": [
-        "setup_guide"
+        "setup_guide",
+        "images"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"
@@ -60,7 +61,8 @@
       "agent": "render_agent",
       "output": "presentation/workflow_diagram.pdf",
       "depends_on": [
-        "workflow_diagram_src"
+        "workflow_diagram_src",
+        "images"
       ],
       "uses_renderer": true,
       "template": "workflow_kit/diagram.html.j2"

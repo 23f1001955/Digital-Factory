@@ -1,5 +1,7 @@
 import os
 import json
+import re
+import unicodedata
 import logging
 import markdown
 from datetime import datetime
@@ -9,6 +11,39 @@ from orchestrator.models import ComponentSpec, JobSpec, AgentResult
 from renderers.base import Renderer
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_toc_items(md_text: str) -> list[dict]:
+    items: list[dict] = []
+    in_code_block = False
+
+    for line in md_text.splitlines():
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            if in_code_block:
+                continue
+
+        if in_code_block:
+            continue
+
+        m = re.match(r'^(#{2,3})\s+(.+)$', stripped)
+        if not m:
+            continue
+
+        level = len(m.group(1))
+        title = m.group(2).strip()
+        folded = unicodedata.normalize('NFKD', title).encode('ascii', 'ignore').decode('ascii')
+        anchor_id = re.sub(r'[^a-zA-Z0-9]+', '-', folded.lower()).strip('-')
+        items.append({
+            "level": level,
+            "id": anchor_id,
+            "title": title,
+            "page": "",
+        })
+
+    return items
 
 
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
@@ -22,6 +57,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
 
         html_content = ""
         mermaid_src = ""
+        md_text = ""
 
         md_file = context.get(component.depends_on[0]) if component.depends_on else context.get("report")
         if md_file and md_file.endswith(".md") and os.path.exists(md_file):
@@ -39,6 +75,14 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
 
             html_content = markdown.markdown(md_text, extensions=['extra', 'toc'])
 
+            # Convert fenced mermaid code blocks to mermaid-renderable elements
+            html_content = re.sub(
+                r'<pre><code class="language-mermaid">(.*?)</code></pre>',
+                r'<pre class="mermaid">\1</pre>',
+                html_content,
+                flags=re.DOTALL,
+            )
+
         if md_file and md_file.endswith(".mmd") and os.path.exists(md_file):
             with open(md_file, "r", encoding="utf-8") as f:
                 mermaid_src = f.read()
@@ -55,8 +99,19 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             "content": html_content,
             "mermaid_src": mermaid_src,
             "theme": getattr(job_spec, "theme", "default"),
-            "toc_items": [],
+            "toc_items": _parse_toc_items(md_text),
         }
+
+        # Inject cover image if available
+        if "images" in context:
+            try:
+                with open(context["images"], "r", encoding="utf-8") as imf:
+                    images_data = json.load(imf)
+                cover_path = images_data.get("images", {}).get("cover", "")
+                if cover_path and os.path.exists(cover_path):
+                    template_vars["cover_image"] = os.path.abspath(cover_path).replace("\\", "/")
+            except Exception as e:
+                logger.warning(f"Failed to load cover image for template: {e}")
 
         if "catalog" in context:
             with open(context["catalog"], "r", encoding="utf-8") as cf:
@@ -68,6 +123,21 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             template_vars["catalog"] = catalog_data
 
         final_html = template.render(**template_vars)
+
+        if 'class="mermaid"' in final_html:
+            local_mermaid = os.path.join("templates", "shared", "mermaid.min.js")
+            mermaid_src = (
+                f'file:///{os.path.abspath(local_mermaid).replace(chr(92), "/")}'
+                if os.path.exists(local_mermaid) else
+                "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"
+            )
+            mermaid_script = (
+                f'<script src="{mermaid_src}"></script>\n'
+                '<script>mermaid.initialize({startOnLoad:true,theme:"default"});</script>\n'
+            )
+            idx = final_html.rfind("</body>")
+            if idx != -1:
+                final_html = final_html[:idx] + mermaid_script + final_html[idx:]
 
         output_path = os.path.join("outputs", job_spec.slug, component.output)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)

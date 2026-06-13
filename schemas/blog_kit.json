@@ -50,7 +50,8 @@
       "agent": "render_agent",
       "output": "presentation/compilation.pdf",
       "depends_on": [
-        "post_draft"
+        "post_draft",
+        "images"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"

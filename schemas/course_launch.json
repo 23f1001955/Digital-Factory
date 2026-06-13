@@ -49,7 +49,8 @@
       "agent": "render_agent",
       "output": "presentation/outline.pdf",
       "depends_on": [
-        "course_outline"
+        "course_outline",
+        "images"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"
@@ -59,7 +60,8 @@
       "agent": "render_agent",
       "output": "presentation/launch_plan.pdf",
       "depends_on": [
-        "timeline"
+        "timeline",
+        "images"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"
