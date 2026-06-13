@@ -1,52 +1,52 @@
 {
-  "product_type": "research_pack",
-  "display_name": "Research Pack",
+  "product_type": "saas_docs",
+  "display_name": "SaaS Documentation",
+  "notion_sync": false,
   "components": [
     {
-      "id": "database",
-      "agent": "research_agent",
-      "output": "data/database.json",
-      "depends_on": []
-    },
-    {
-      "id": "sources",
-      "agent": "research_agent",
-      "output": "content/sources.md",
-      "depends_on": []
-    },
-    {
-      "id": "csv",
-      "agent": "csv_export_agent",
-      "output": "data/export.csv",
-      "depends_on": [
-        "database"
-      ]
-    },
-    {
-      "id": "report",
+      "id": "api_reference",
       "agent": "content_agent",
-      "output": "content/report.md",
-      "depends_on": [
-        "database",
-        "sources"
-      ]
+      "output": "content/api_reference.md",
+      "depends_on": []
     },
     {
-      "id": "report_pdf",
+      "id": "user_guide",
+      "agent": "content_agent",
+      "output": "content/user_guide.md",
+      "depends_on": []
+    },
+    {
+      "id": "changelog",
+      "agent": "content_agent",
+      "output": "content/changelog.md",
+      "depends_on": []
+    },
+    {
+      "id": "docs_pdf",
       "agent": "render_agent",
-      "output": "presentation/report.pdf",
+      "output": "presentation/docs.pdf",
       "depends_on": [
-        "report"
+        "api_reference",
+        "user_guide",
+        "changelog"
       ],
       "uses_renderer": true,
-      "template": "research_pack/report.html.j2"
+      "template": "shared/basic_doc.html.j2"
+    },
+    {
+      "id": "package",
+      "agent": "packaging_agent",
+      "output": "{slug}.zip",
+      "depends_on": [
+        "docs_pdf"
+      ]
     },
     {
       "id": "gumroad_research",
       "agent": "gumroad_agent",
       "output": "gumroad/research.json",
       "depends_on": [
-        "report_pdf"
+        "docs_pdf"
       ]
     },
     {
@@ -69,6 +69,5 @@
       "output": "landing/social_results.json",
       "depends_on": ["landing_page"]
     }
-  ],
-  "notion_sync": false
+  ]
 }

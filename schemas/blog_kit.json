@@ -1,6 +1,7 @@
 {
-  "product_type": "research_pack",
-  "display_name": "Research Pack",
+  "product_type": "blog_kit",
+  "display_name": "Blog Kit",
+  "notion_sync": false,
   "components": [
     {
       "id": "database",
@@ -15,38 +16,46 @@
       "depends_on": []
     },
     {
-      "id": "csv",
-      "agent": "csv_export_agent",
-      "output": "data/export.csv",
-      "depends_on": [
-        "database"
-      ]
-    },
-    {
-      "id": "report",
+      "id": "post_draft",
       "agent": "content_agent",
-      "output": "content/report.md",
+      "output": "content/post_draft.md",
       "depends_on": [
         "database",
         "sources"
       ]
     },
     {
-      "id": "report_pdf",
-      "agent": "render_agent",
-      "output": "presentation/report.pdf",
+      "id": "seo_metadata",
+      "agent": "content_agent",
+      "output": "content/seo_metadata.md",
       "depends_on": [
-        "report"
+        "post_draft"
+      ]
+    },
+    {
+      "id": "compilation_pdf",
+      "agent": "render_agent",
+      "output": "presentation/compilation.pdf",
+      "depends_on": [
+        "post_draft"
       ],
       "uses_renderer": true,
-      "template": "research_pack/report.html.j2"
+      "template": "shared/basic_doc.html.j2"
+    },
+    {
+      "id": "package",
+      "agent": "packaging_agent",
+      "output": "{slug}.zip",
+      "depends_on": [
+        "compilation_pdf"
+      ]
     },
     {
       "id": "gumroad_research",
       "agent": "gumroad_agent",
       "output": "gumroad/research.json",
       "depends_on": [
-        "report_pdf"
+        "compilation_pdf"
       ]
     },
     {
@@ -69,6 +78,5 @@
       "output": "landing/social_results.json",
       "depends_on": ["landing_page"]
     }
-  ],
-  "notion_sync": false
+  ]
 }

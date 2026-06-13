@@ -31,7 +31,9 @@
       "id": "guide_pdf",
       "agent": "render_agent",
       "output": "presentation/guide.pdf",
-      "depends_on": ["guide"],
+      "depends_on": [
+        "guide"
+      ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"
     },
@@ -39,7 +41,9 @@
       "id": "sops_pdf",
       "agent": "render_agent",
       "output": "presentation/sops.pdf",
-      "depends_on": ["sops"],
+      "depends_on": [
+        "sops"
+      ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"
     },
@@ -47,27 +51,79 @@
       "id": "notion_schema",
       "agent": "notion_schema_agent",
       "output": "data/notion_schema.json",
-      "depends_on": ["guide", "sops", "templates", "prompts"]
+      "depends_on": [
+        "guide",
+        "sops",
+        "templates",
+        "prompts"
+      ]
     },
     {
       "id": "notion_tree",
       "agent": "notion_agent",
       "output": "notion_sync.json",
-      "depends_on": ["notion_schema"]
+      "depends_on": [
+        "notion_schema"
+      ]
     },
     {
       "id": "package",
       "agent": "packaging_agent",
       "output": "{slug}.zip",
-      "depends_on": ["guide_pdf", "sops_pdf", "notion_tree"]
+      "depends_on": [
+        "guide_pdf",
+        "sops_pdf",
+        "notion_tree"
+      ]
+    },
+    {
+      "id": "gumroad_research",
+      "agent": "gumroad_agent",
+      "output": "gumroad/research.json",
+      "depends_on": [
+        "guide_pdf",
+        "sops_pdf"
+      ]
+    },
+    {
+      "id": "gumroad_publish",
+      "agent": "gumroad_agent",
+      "output": "gumroad/published.json",
+      "depends_on": [
+        "gumroad_research"
+      ]
+    },
+    {
+      "id": "landing_page",
+      "agent": "landing_agent",
+      "output": "landing/deployed.json",
+      "depends_on": ["gumroad_publish"]
+    },
+    {
+      "id": "social_promotion",
+      "agent": "social_agent",
+      "output": "landing/social_results.json",
+      "depends_on": ["landing_page"]
     }
   ],
   "notion_structure": {
     "pages": [
-      {"name": "Guide", "source": "guide"},
-      {"name": "SOPs", "source": "sops"},
-      {"name": "Templates", "source": "templates"},
-      {"name": "Prompts", "source": "prompts"}
+      {
+        "name": "Guide",
+        "source": "guide"
+      },
+      {
+        "name": "SOPs",
+        "source": "sops"
+      },
+      {
+        "name": "Templates",
+        "source": "templates"
+      },
+      {
+        "name": "Prompts",
+        "source": "prompts"
+      }
     ]
   }
 }

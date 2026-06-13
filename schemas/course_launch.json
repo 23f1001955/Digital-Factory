@@ -1,67 +1,66 @@
 {
-  "product_type": "workflow_kit",
-  "display_name": "Workflow Kit",
+  "product_type": "course_launch",
+  "display_name": "Course Launch Kit",
   "notion_sync": true,
   "components": [
     {
-      "id": "setup_guide",
+      "id": "course_outline",
       "agent": "content_agent",
-      "output": "content/setup_guide.md",
+      "output": "content/course_outline.md",
       "depends_on": []
     },
     {
-      "id": "prompts",
+      "id": "lessons",
       "agent": "content_agent",
-      "output": "content/prompts.md",
-      "depends_on": []
-    },
-    {
-      "id": "automation_blueprint",
-      "agent": "content_agent",
-      "output": "content/automation_blueprint.md",
-      "depends_on": []
-    },
-    {
-      "id": "workflow_diagram_src",
-      "agent": "diagram_agent",
-      "output": "content/diagram.mmd",
-      "depends_on": []
-    },
-    {
-      "id": "notion_crm",
-      "agent": "content_agent",
-      "output": "content/notion_crm.md",
-      "depends_on": []
-    },
-    {
-      "id": "setup_guide_pdf",
-      "agent": "render_agent",
-      "output": "presentation/setup_guide.pdf",
+      "output": "content/lessons.md",
       "depends_on": [
-        "setup_guide"
+        "course_outline"
+      ]
+    },
+    {
+      "id": "marketing_copy",
+      "agent": "content_agent",
+      "output": "content/marketing_copy.md",
+      "depends_on": []
+    },
+    {
+      "id": "timeline",
+      "agent": "content_agent",
+      "output": "content/timeline.md",
+      "depends_on": [
+        "course_outline",
+        "marketing_copy"
+      ]
+    },
+    {
+      "id": "outline_pdf",
+      "agent": "render_agent",
+      "output": "presentation/outline.pdf",
+      "depends_on": [
+        "course_outline"
       ],
       "uses_renderer": true,
       "template": "shared/basic_doc.html.j2"
     },
     {
-      "id": "diagram_pdf",
+      "id": "launch_pdf",
       "agent": "render_agent",
-      "output": "presentation/workflow_diagram.pdf",
+      "output": "presentation/launch_plan.pdf",
       "depends_on": [
-        "workflow_diagram_src"
+        "timeline"
       ],
       "uses_renderer": true,
-      "template": "workflow_kit/diagram.html.j2"
+      "template": "shared/basic_doc.html.j2"
     },
     {
       "id": "notion_tree",
       "agent": "notion_agent",
       "output": "notion_sync.json",
       "depends_on": [
-        "setup_guide",
-        "prompts",
-        "automation_blueprint",
-        "notion_crm"
+        "course_outline",
+        "lessons",
+        "marketing_copy",
+        "timeline"
       ]
     },
     {
@@ -69,8 +68,8 @@
       "agent": "packaging_agent",
       "output": "{slug}.zip",
       "depends_on": [
-        "setup_guide_pdf",
-        "diagram_pdf",
+        "outline_pdf",
+        "launch_pdf",
         "notion_tree"
       ]
     },
@@ -79,8 +78,8 @@
       "agent": "gumroad_agent",
       "output": "gumroad/research.json",
       "depends_on": [
-        "setup_guide_pdf",
-        "diagram_pdf"
+        "outline_pdf",
+        "launch_pdf"
       ]
     },
     {
@@ -107,25 +106,20 @@
   "notion_structure": {
     "pages": [
       {
-        "name": "Setup Guide",
-        "source": "setup_guide",
-        "type": "page"
+        "name": "Course Outline",
+        "source": "course_outline"
       },
       {
-        "name": "Prompts",
-        "source": "prompts",
-        "type": "page"
+        "name": "Lessons",
+        "source": "lessons"
       },
       {
-        "name": "Automation Blueprint",
-        "source": "automation_blueprint",
-        "type": "page"
+        "name": "Marketing Copy",
+        "source": "marketing_copy"
       },
       {
-        "name": "CRM Base",
-        "source": "notion_crm",
-        "type": "database",
-        "database_title": "CRM Sales Pipeline"
+        "name": "Launch Timeline",
+        "source": "timeline"
       }
     ]
   }

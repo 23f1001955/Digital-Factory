@@ -13,19 +13,26 @@
       "id": "catalog",
       "agent": "catalog_agent",
       "output": "content/catalog.json",
-      "depends_on": ["image_prompts"]
+      "depends_on": [
+        "image_prompts"
+      ]
     },
     {
       "id": "images",
       "agent": "visual_agent",
       "output": "assets/images",
-      "depends_on": ["image_prompts"]
+      "depends_on": [
+        "image_prompts"
+      ]
     },
     {
       "id": "reference_board",
       "agent": "render_agent",
       "output": "presentation/reference_board.pdf",
-      "depends_on": ["images", "catalog"],
+      "depends_on": [
+        "images",
+        "catalog"
+      ],
       "uses_renderer": true,
       "template": "visual_pack/reference_board.html.j2"
     },
@@ -33,7 +40,10 @@
       "id": "showcase_pdf",
       "agent": "render_agent",
       "output": "presentation/showcase.pdf",
-      "depends_on": ["images", "catalog"],
+      "depends_on": [
+        "images",
+        "catalog"
+      ],
       "uses_renderer": true,
       "template": "visual_pack/showcase.html.j2"
     },
@@ -41,7 +51,39 @@
       "id": "package",
       "agent": "packaging_agent",
       "output": "{slug}.zip",
-      "depends_on": ["reference_board", "showcase_pdf"]
+      "depends_on": [
+        "reference_board",
+        "showcase_pdf"
+      ]
+    },
+    {
+      "id": "gumroad_research",
+      "agent": "gumroad_agent",
+      "output": "gumroad/research.json",
+      "depends_on": [
+        "reference_board",
+        "showcase_pdf"
+      ]
+    },
+    {
+      "id": "gumroad_publish",
+      "agent": "gumroad_agent",
+      "output": "gumroad/published.json",
+      "depends_on": [
+        "gumroad_research"
+      ]
+    },
+    {
+      "id": "landing_page",
+      "agent": "landing_agent",
+      "output": "landing/deployed.json",
+      "depends_on": ["gumroad_publish"]
+    },
+    {
+      "id": "social_promotion",
+      "agent": "social_agent",
+      "output": "landing/social_results.json",
+      "depends_on": ["landing_page"]
     }
   ]
 }
