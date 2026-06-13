@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = "gemini-2.0-flash-exp"
 
+IMAGEN_API_URL_DEFAULT = "https://imagen.kundan8824099478.workers.dev"
+
 
 class ImageRequirement(TypedDict):
     id: str
@@ -99,7 +101,7 @@ def generate_from_prompt(prompt_text: str, output_path: str, aspect_ratio: str =
     output_dir = os.path.dirname(output_path)
     os.makedirs(output_dir, exist_ok=True)
 
-    imagen_url = os.getenv("IMAGEN_API_URL")
+    imagen_url = os.getenv("IMAGEN_API_URL", IMAGEN_API_URL_DEFAULT)
     imagen_key = os.getenv("IMAGEN_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
 
@@ -109,7 +111,7 @@ def generate_from_prompt(prompt_text: str, output_path: str, aspect_ratio: str =
     }
     width, height = aspect_sizes.get(aspect_ratio, (800, 800))
 
-    if imagen_url and imagen_key:
+    if imagen_key and imagen_url:
         img_bytes = _call_imagen(prompt_text, imagen_url, imagen_key, aspect_ratio)
         if img_bytes:
             path = output_path.rsplit(".", 1)[0] + ".jpg"
@@ -177,7 +179,7 @@ def generate_images(
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    imagen_url = os.getenv("IMAGEN_API_URL")
+    imagen_url = os.getenv("IMAGEN_API_URL", IMAGEN_API_URL_DEFAULT)
     imagen_key = os.getenv("IMAGEN_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
 
