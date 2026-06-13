@@ -8,7 +8,10 @@ from . import (
     catalog_agent,
     visual_agent,
     diagram_agent,
-    notion_schema_agent
+    notion_schema_agent,
+    gumroad_agent,
+    landing_agent,
+    social_agent,
 )
 
 AGENT_REGISTRY = {
@@ -22,4 +25,7 @@ AGENT_REGISTRY = {
     "visual_agent": visual_agent.run,
     "diagram_agent": diagram_agent.run,
     "notion_schema_agent": notion_schema_agent.run,
+    "gumroad_agent": gumroad_agent.run,
+    "landing_agent": landing_agent.run,
+    "social_agent": social_agent.run,
 }
