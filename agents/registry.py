@@ -12,6 +12,7 @@ from . import (
     gumroad_agent,
     landing_agent,
     social_agent,
+    market_agent,
 )
 
 AGENT_REGISTRY = {
@@ -28,4 +29,5 @@ AGENT_REGISTRY = {
     "gumroad_agent": gumroad_agent.run,
     "landing_agent": landing_agent.run,
     "social_agent": social_agent.run,
+    "market_agent": market_agent.run,
 }
