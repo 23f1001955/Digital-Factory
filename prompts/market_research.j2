@@ -1,0 +1,20 @@
+You are a digital product market analyst. Analyze the niche "{{ niche }}" for a {{ product_type }} product.
+
+{% if seller_products %}
+Your current Gumroad catalog in this space:
+{% for p in seller_products %}
+- {{ p.name }} (${{ p.price }}, {{ p.sales }} sales)
+{% endfor %}
+{% endif %}
+
+Generate a comprehensive market analysis in JSON format with these keys:
+- "competitor_landscape": object with "direct_competitors" (array of {name, price, strengths:[], weaknesses:[]}), "pricing_tiers" ({budget, mid, premium} as strings), "recommended_price" (integer), "quality_gaps" (array of 3-5 strings), "trending_keywords" (array of 5-10 strings)
+- "content_recommendations": object with "tone" (string), "key_themes" (array of strings), "seo_keywords" (array of strings)
+
+Base your analysis on:
+1. What sells well on Gumroad for this niche
+2. Common quality gaps in competitor products
+3. Pricing psychology for digital products ($5-15 budget, $15-35 mid, $35+ premium)
+4. SEO and discoverability keywords
+
+Return ONLY valid JSON. No markdown, no code blocks, no text outside the JSON.
