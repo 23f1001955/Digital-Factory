@@ -30,7 +30,7 @@
       ]
     },
     {
-      "id": "images",
+      "id": "visual_assets",
       "agent": "visual_agent",
       "output": "assets/images",
       "depends_on": [
@@ -42,7 +42,7 @@
       "agent": "render_agent",
       "output": "presentation/reference_board.pdf",
       "depends_on": [
-        "images",
+        "visual_assets",
         "catalog"
       ],
       "uses_renderer": true,
@@ -53,7 +53,7 @@
       "agent": "render_agent",
       "output": "presentation/showcase.pdf",
       "depends_on": [
-        "images",
+        "visual_assets",
         "catalog"
       ],
       "uses_renderer": true,
