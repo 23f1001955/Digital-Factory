@@ -28,6 +28,7 @@ class JobSpec(BaseModel):
     notion_parent_page_id: Optional[str] = None
     landing_page_enabled: bool = False
     social_promotion_enabled: bool = False
+    gumroad_enabled: bool = False
     landing_page_url: Optional[str] = None
     call_to_action: str = "Buy Now on Gumroad"
     created_at: datetime = Field(default_factory=datetime.utcnow)

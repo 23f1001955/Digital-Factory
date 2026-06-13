@@ -85,8 +85,8 @@ class Orchestrator:
                 context[dep] = dep_state.output_path
                 
             if not deps_ok:
-                # Mark as skipped or failed because of dep
-                # We won't try to run it.
+                self.state.components[component.id] = AgentResult(status="skipped", error=f"dependency not met")
+                save_job_state(self.state, self.state_path)
                 continue
                 
             # Inject renderer if needed
@@ -113,8 +113,22 @@ class Orchestrator:
                 sys.stderr.flush()
                 continue
 
+            # Skip gumroad if not enabled
+            if component.id in ("gumroad_research", "gumroad_publish") and not self.job_spec.gumroad_enabled:
+                self.state.components[component.id] = AgentResult(status="skipped", error="gumroad not enabled")
+                save_job_state(self.state, self.state_path)
+                done_count += 1
+                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (disabled)\n")
+                sys.stderr.flush()
+                continue
+
             if not agent_func:
                 logger.error(f"Agent {component.agent} not found in registry")
+                self.state.components[component.id] = AgentResult(status="failed", error=f"Agent {component.agent} not in registry")
+                save_job_state(self.state, self.state_path)
+                done_count += 1
+                sys.stderr.write(f"\r  ❌ [{done_count}/{total}] {component.id} — agent not found\n")
+                sys.stderr.flush()
                 continue
                 
             self.state.components[component.id] = AgentResult(status="running")
@@ -123,7 +137,11 @@ class Orchestrator:
             done_count += 1
             sys.stderr.write(f"\r  ▶️  [{done_count}/{total}] {component.id}...")
             sys.stderr.flush()
-            result = agent_func(component, self.job_spec, context)
+            try:
+                result = agent_func(component, self.job_spec, context)
+            except Exception as e:
+                logger.error(f"Agent {component.agent} ({component.id}) raised unhandled exception: {e}")
+                result = AgentResult(status="failed", error=f"Unhandled exception: {e}")
             
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
