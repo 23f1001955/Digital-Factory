@@ -96,32 +96,21 @@ def _post_to_pinterest(pinterest_token: str, board_id: str, title: str, descript
 
 
 def _generate_social_copy(job_spec: JobSpec, gumroad_url: str) -> dict:
-    """Generate platform-specific copy using LLM. Falls back to template-based copy if LLM unavailable."""
+    """Generate platform-specific copy using social_copy.j2 template. Falls back to template-based copy if LLM unavailable."""
     from agents.llm_client import generate_text as llm_call
-
-    prompt_lines = [
-        f"You are a social media marketing expert. Generate promotional posts for a digital product.",
-        f"",
-        f"Product: {job_spec.display_name or job_spec.niche}",
-        f"Type: {job_spec.product_type.replace('_', ' ').title()}",
-        f"Niche: {job_spec.niche}",
-        f"Product URL: {gumroad_url}",
-        f"CTA: {getattr(job_spec, 'call_to_action', 'Buy Now on Gumroad')}",
-        f"",
-        f"Generate 4 posts as a JSON object with keys 'instagram', 'threads', 'facebook', 'pinterest'.",
-        f"Each value is an object with: 'caption' (string), 'hashtags' (array of strings).",
-        f"Pinterest additionally needs a 'title' field.",
-        f"",
-        f"Instagram: 2-3 sentence caption, 8-12 hashtags, emoji-friendly",
-        f"Threads: 1-2 sentence thought-starter, 3-5 hashtags",
-        f"Facebook: Paragraph-length post, 5-8 hashtags, link-friendly",
-        f"Pinterest: SEO title (max 100 chars), 200-300 char description, 3-5 hashtags",
-        f"",
-        f"Return ONLY valid JSON, no markdown, no code blocks.",
-    ]
+    from jinja2 import Environment, FileSystemLoader
 
     try:
-        result = llm_call("\n".join(prompt_lines))
+        env = Environment(loader=FileSystemLoader("prompts"))
+        template = env.get_template("social_copy.j2")
+        prompt = template.render(
+            display_name=job_spec.display_name or job_spec.niche,
+            niche=job_spec.niche,
+            product_type=job_spec.product_type.replace("_", " ").title(),
+            gumroad_url=gumroad_url,
+            cta_text=getattr(job_spec, "call_to_action", "Buy Now on Gumroad"),
+        )
+        result = llm_call(prompt)
         import re
         match = re.search(r'\{.*\}', result, re.DOTALL)
         if match:
