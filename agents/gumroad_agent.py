@@ -156,21 +156,8 @@ def _run_publish(component: ComponentSpec, job_spec: JobSpec, context: dict) -> 
         f.write(f"\n---\n")
         f.write(f"\nPublish to Gumroad? (y/N): ")
 
-    print("\n" + "=" * 55, file=sys.stderr)
-    print(f"  Gumroad Product Review", file=sys.stderr)
-    print(f"  Price: ${suggested_price}", file=sys.stderr)
-    print(f"  Files: {len(files_to_upload)} ready", file=sys.stderr)
-    print("=" * 55, file=sys.stderr)
-
-    import time
-    answer = input("  Publish to Gumroad? (y/N): ").strip().lower()
-    if answer != "y":
-        logger.info("Gumroad publish skipped by user")
-        output_path = os.path.join(output_dir, component.output)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump({"status": "skipped", "reason": "user declined"}, f)
-        return AgentResult(status="skipped", output_path=output_path, error="User declined publish")
+    logger.info(f"Gumroad publish: {len(files_to_upload)} files, suggested price ${suggested_price}")
+    logger.info(f"Review written to {review_path}")
 
     product_name = f"{job_spec.display_name or job_spec.niche} - {job_spec.product_type.replace('_', ' ').title()}"
     product_data = {

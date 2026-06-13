@@ -50,6 +50,10 @@ def run_wizard() -> str | None:
         product_type = "research_pack"
     
     niche = typer.prompt("What is the niche/topic?")
+
+    default_display = niche.title()
+    display_name = typer.prompt("Display name for the product", default=default_display)
+
     default_slug = slugify(niche)
     slug = typer.prompt("Output slug", default=default_slug)
     
@@ -161,6 +165,7 @@ def run_wizard() -> str | None:
         "slug": slug,
         "product_type": product_type,
         "niche": niche,
+        "display_name": display_name,
         "theme": theme,
         "notion_sync": notion_sync,
         "notion_parent_page_id": notion_parent_page_id,
