@@ -29,9 +29,18 @@ def run_wizard() -> str | None:
     print("2. Operating System (operating_system)")
     print("3. Visual Pack (visual_pack)")
     print("4. Workflow Kit (workflow_kit)")
+    print("5. Blog Kit (blog_kit)")
+    print("6. Course Launch Kit (course_launch)")
+    print("7. SaaS Documentation (saas_docs)")
     
-    choice = typer.prompt("Select a product type (1, 2, 3, or 4)", default="1")
-    if choice.strip() == "4":
+    choice = typer.prompt("Select a product type (1-7)", default="1")
+    if choice.strip() == "7":
+        product_type = "saas_docs"
+    elif choice.strip() == "6":
+        product_type = "course_launch"
+    elif choice.strip() == "5":
+        product_type = "blog_kit"
+    elif choice.strip() == "4":
         product_type = "workflow_kit"
     elif choice.strip() == "3":
         product_type = "visual_pack"
@@ -83,6 +92,23 @@ def run_wizard() -> str | None:
                     notion_parent_page_id = typer.prompt("Notion Parent Page ID missing. Please enter it")
                     set_key(env_path, "NOTION_PARENT_PAGE_ID", notion_parent_page_id)
                     
+    gumroad_enabled = False
+    
+    gumroad_token = os.getenv("GUMROAD_ACCESS_TOKEN")
+    if not gumroad_token:
+        configure_gumroad = typer.prompt("Would you like to configure Gumroad publishing for this product? (y/n)", default="n")
+        if configure_gumroad.lower() == 'y':
+            gumroad_token = typer.prompt("Enter your Gumroad access token")
+            set_key(env_path, "GUMROAD_ACCESS_TOKEN", gumroad_token)
+            gumroad_enabled = True
+    else:
+        gumroad_enabled = True
+    
+    if gumroad_enabled:
+        validate_market = typer.prompt("Would you like to validate your product type against Gumroad market data? (y/n)", default="n")
+        if validate_market.lower() == 'y':
+            print("Market validation will run during pipeline execution as part of the gumroad_research component.")
+    
     if product_type == "visual_pack":
         openai_key = os.getenv("OPENAI_API_KEY")
         if not openai_key or openai_key == "your_openai_api_key_here":
@@ -92,6 +118,45 @@ def run_wizard() -> str | None:
                 openai_key = typer.prompt("Please enter your OpenAI API Key")
                 set_key(env_path, "OPENAI_API_KEY", openai_key)
     
+    landing_page_enabled = False
+    social_promotion_enabled = False
+    cta_text = ""
+    
+    landing_prompt = typer.prompt("\nLanding page bhi banayein? (y/n)", default="n")
+    if landing_prompt.lower() == 'y':
+        landing_page_enabled = True
+        
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            gemini_key = typer.prompt("Gemini API Key (for image generation)")
+            set_key(env_path, "GEMINI_API_KEY", gemini_key)
+        
+        stitch_key = os.getenv("STITCH_API_KEY")
+        if not stitch_key:
+            stitch_key = typer.prompt("Google Stitch API Key")
+            set_key(env_path, "STITCH_API_KEY", stitch_key)
+        
+        vercel_token = os.getenv("VERCEL_TOKEN")
+        if not vercel_token:
+            vercel_token = typer.prompt("Vercel Token (for deployment)")
+            set_key(env_path, "VERCEL_TOKEN", vercel_token)
+        
+        cta_text = typer.prompt("Call-to-action text for landing page", default="Buy Now on Gumroad")
+        
+        social_prompt = typer.prompt("\nSocial media pe bhi share karein? (y/n)", default="n")
+        if social_prompt.lower() == 'y':
+            social_promotion_enabled = True
+            
+            fb_token = os.getenv("FACEBOOK_PAGE_TOKEN")
+            if not fb_token:
+                fb_token = typer.prompt("Facebook Page Access Token")
+                set_key(env_path, "FACEBOOK_PAGE_TOKEN", fb_token)
+            
+            pin_token = os.getenv("PINTEREST_TOKEN")
+            if not pin_token:
+                pin_token = typer.prompt("Pinterest Access Token")
+                set_key(env_path, "PINTEREST_TOKEN", pin_token)
+    
     job_spec = {
         "slug": slug,
         "product_type": product_type,
@@ -99,6 +164,10 @@ def run_wizard() -> str | None:
         "theme": theme,
         "notion_sync": notion_sync,
         "notion_parent_page_id": notion_parent_page_id,
+        "gumroad_enabled": gumroad_enabled,
+        "landing_page_enabled": landing_page_enabled,
+        "social_promotion_enabled": social_promotion_enabled,
+        "call_to_action": cta_text,
         "created_at": datetime.utcnow().isoformat() + "Z"
     }
     
