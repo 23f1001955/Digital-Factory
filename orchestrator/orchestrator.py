@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 from typing import Dict, List
@@ -58,10 +59,18 @@ class Orchestrator:
         if needs_renderer and not self.renderer:
             self.renderer = get_renderer()
             
+        total = len(ordered_components)
+        done_count = 0
+        
+        sys.stderr.write(f"\n── Pipeline: {total} components ──────────────────────\n")
+        sys.stderr.flush()
+
         for component in ordered_components:
             state_result = self.state.components.get(component.id)
             if state_result and state_result.status == "done":
-                logger.info(f"Skipping component {component.id} (already done)")
+                done_count += 1
+                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (already done)\n")
+                sys.stderr.flush()
                 continue
                 
             # Check dependencies
@@ -85,24 +94,49 @@ class Orchestrator:
                 context["renderer"] = self.renderer
                 
             agent_func = AGENT_REGISTRY.get(component.agent)
+
+            # Skip landing_page if not enabled
+            if component.id == "landing_page" and not self.job_spec.landing_page_enabled:
+                self.state.components[component.id] = AgentResult(status="skipped", error="landing page not enabled")
+                save_job_state(self.state, self.state_path)
+                done_count += 1
+                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (disabled)\n")
+                sys.stderr.flush()
+                continue
+
+            # Skip social_promotion if not enabled
+            if component.id == "social_promotion" and not self.job_spec.social_promotion_enabled:
+                self.state.components[component.id] = AgentResult(status="skipped", error="social promotion not enabled")
+                save_job_state(self.state, self.state_path)
+                done_count += 1
+                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (disabled)\n")
+                sys.stderr.flush()
+                continue
+
             if not agent_func:
                 logger.error(f"Agent {component.agent} not found in registry")
                 continue
                 
             self.state.components[component.id] = AgentResult(status="running")
             save_job_state(self.state, self.state_path)
-            
-            logger.info(f"Running agent for {component.id}...")
+
+            done_count += 1
+            sys.stderr.write(f"\r  ▶️  [{done_count}/{total}] {component.id}...")
+            sys.stderr.flush()
             result = agent_func(component, self.job_spec, context)
             
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
             
+            icon = "✅" if result.status == "done" else "❌" if result.status == "failed" else "⚠️"
+            sys.stderr.write(f"\r  {icon} [{done_count}/{total}] {component.id}")
             if result.status == "failed":
-                logger.error(f"Component {component.id} failed: {result.error}")
-            else:
-                logger.info(f"Component {component.id} completed successfully")
+                sys.stderr.write(f" — {result.error}")
+            sys.stderr.write("\n")
+            sys.stderr.flush()
                 
+        sys.stderr.write(f"──────────────────────────────────────────────\n\n")
+        sys.stderr.flush()
         logger.info("Orchestrator run complete. Generating summary report...")
         self._generate_run_summary()
 
