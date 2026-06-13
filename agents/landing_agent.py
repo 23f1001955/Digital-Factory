@@ -65,32 +65,19 @@ def _generate_images(niche: str, output_dir: str, gemini_key: str) -> dict:
 
 
 def _build_stitch_prompt(job_spec: JobSpec, images: dict, gumroad_url: str) -> str:
-    """Build a Stitch design prompt from product info and image URLs."""
-    cover_url = images.get("cover", "")
-    parts = [
-        f"Design a premium landing page for a digital product called '{job_spec.display_name or job_spec.niche}'.",
-        f"Product type: {job_spec.product_type.replace('_', ' ').title()}",
-        f"Niche: {job_spec.niche}",
-        f"Theme: {getattr(job_spec, 'theme', 'default')}",
-        "",
-        "Sections:",
-        "1. Hero section with the cover image, product title, and a call-to-action button",
-        "2. Features section highlighting key benefits",
-        "3. Pricing section showing the product value",
-        "4. Footer with minimal branding",
-        "",
-        f"Cover image URL: {cover_url}",
-        f"CTA text: {getattr(job_spec, 'call_to_action', 'Buy Now on Gumroad')}",
-        f"Gumroad product URL: {gumroad_url}",
-        "",
-        "Design requirements:",
-        "- Clean, modern, professional aesthetic",
-        "- Mobile-responsive layout",
-        "- Fast loading (minimal external dependencies)",
-        "- Use a cohesive color palette appropriate for the niche",
-        "- The CTA button should be prominently visible in the hero section",
-    ]
-    return "\n".join(parts)
+    """Build a Stitch design prompt from product info and image URLs using the landing_stitch.j2 template."""
+    from jinja2 import Environment, FileSystemLoader
+    env = Environment(loader=FileSystemLoader("prompts"))
+    template = env.get_template("landing_stitch.j2")
+    return template.render(
+        display_name=job_spec.display_name or job_spec.niche,
+        niche=job_spec.niche,
+        product_type=job_spec.product_type.replace("_", " ").title(),
+        theme=getattr(job_spec, "theme", "default"),
+        cover_url=images.get("cover", ""),
+        cta_text=getattr(job_spec, "call_to_action", "Buy Now on Gumroad"),
+        gumroad_url=gumroad_url,
+    )
 
 
 def _call_stitch(prompt: str, stitch_key: str) -> Optional[dict]:
@@ -112,7 +99,24 @@ def _call_stitch(prompt: str, stitch_key: str) -> Optional[dict]:
 
 
 def _refine_html(raw_html: str, gumroad_url: str, cta_text: str) -> str:
-    """Basic HTML refinement: inject Gumroad CTA button if not present."""
+    """Refine landing page HTML using landing_refine.j2 template and LLM. Falls back to basic CTA injection if LLM fails."""
+    from agents.llm_client import generate_text as llm_call
+    from jinja2 import Environment, FileSystemLoader
+    try:
+        env = Environment(loader=FileSystemLoader("prompts"))
+        template = env.get_template("landing_refine.j2")
+        prompt = template.render(
+            cta_text=cta_text,
+            gumroad_url=gumroad_url,
+            raw_html=raw_html,
+        )
+        result = llm_call(prompt)
+        if result and ("<html" in result.lower() or "<!doctype" in result.lower()):
+            return result
+    except Exception as e:
+        logger.warning(f"LLM HTML refinement failed, using fallback: {e}")
+
+    # Fallback: basic CTA button injection
     if 'href="' not in raw_html and gumroad_url:
         cta_button = (
             f'<a href="{gumroad_url}" '
