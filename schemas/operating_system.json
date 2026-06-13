@@ -4,28 +4,34 @@
   "notion_sync": true,
   "components": [
     {
+      "id": "market_research",
+      "agent": "market_agent",
+      "output": "data/market_research.json",
+      "depends_on": []
+    },
+    {
       "id": "guide",
       "agent": "content_agent",
       "output": "content/guide.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "sops",
       "agent": "content_agent",
       "output": "content/sops.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "templates",
       "agent": "content_agent",
       "output": "content/templates.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "prompts",
       "agent": "content_agent",
       "output": "content/prompts.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "guide_pdf",

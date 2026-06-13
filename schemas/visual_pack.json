@@ -4,10 +4,16 @@
   "notion_sync": false,
   "components": [
     {
+      "id": "market_research",
+      "agent": "market_agent",
+      "output": "data/market_research.json",
+      "depends_on": []
+    },
+    {
       "id": "image_prompts",
       "agent": "content_agent",
       "output": "content/image_prompts.json",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "catalog",

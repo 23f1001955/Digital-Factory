@@ -4,22 +4,28 @@
   "notion_sync": false,
   "components": [
     {
+      "id": "market_research",
+      "agent": "market_agent",
+      "output": "data/market_research.json",
+      "depends_on": []
+    },
+    {
       "id": "api_reference",
       "agent": "content_agent",
       "output": "content/api_reference.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "user_guide",
       "agent": "content_agent",
       "output": "content/user_guide.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "changelog",
       "agent": "content_agent",
       "output": "content/changelog.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "docs_pdf",

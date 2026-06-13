@@ -4,10 +4,16 @@
   "notion_sync": true,
   "components": [
     {
+      "id": "market_research",
+      "agent": "market_agent",
+      "output": "data/market_research.json",
+      "depends_on": []
+    },
+    {
       "id": "course_outline",
       "agent": "content_agent",
       "output": "content/course_outline.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "lessons",
@@ -21,7 +27,7 @@
       "id": "marketing_copy",
       "agent": "content_agent",
       "output": "content/marketing_copy.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "timeline",

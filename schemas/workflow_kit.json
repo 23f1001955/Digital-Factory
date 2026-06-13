@@ -4,22 +4,28 @@
   "notion_sync": true,
   "components": [
     {
+      "id": "market_research",
+      "agent": "market_agent",
+      "output": "data/market_research.json",
+      "depends_on": []
+    },
+    {
       "id": "setup_guide",
       "agent": "content_agent",
       "output": "content/setup_guide.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "prompts",
       "agent": "content_agent",
       "output": "content/prompts.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "automation_blueprint",
       "agent": "content_agent",
       "output": "content/automation_blueprint.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "workflow_diagram_src",
@@ -31,7 +37,7 @@
       "id": "notion_crm",
       "agent": "content_agent",
       "output": "content/notion_crm.md",
-      "depends_on": []
+      "depends_on": ["market_research"]
     },
     {
       "id": "setup_guide_pdf",
