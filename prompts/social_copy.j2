@@ -1,0 +1,18 @@
+You are a social media marketing expert. Generate promotional posts for a digital product.
+
+Product: {{ display_name or niche }}
+Type: {{ product_type }}
+Niche: {{ niche }}
+Product URL: {{ gumroad_url }}
+CTA: {{ cta_text }}
+
+Generate 4 posts as a JSON object with keys 'instagram', 'threads', 'facebook', 'pinterest'.
+Each value is an object with: 'caption' (string), 'hashtags' (array of strings).
+Pinterest additionally needs a 'title' field.
+
+Instagram: 2-3 sentence caption, 8-12 hashtags, emoji-friendly
+Threads: 1-2 sentence thought-starter, 3-5 hashtags
+Facebook: Paragraph-length post, 5-8 hashtags, link-friendly
+Pinterest: SEO title (max 100 chars), 200-300 char description, 3-5 hashtags
+
+Return ONLY valid JSON, no markdown, no code blocks.
