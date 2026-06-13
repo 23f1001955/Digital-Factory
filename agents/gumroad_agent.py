@@ -98,6 +98,23 @@ def _run_research(component: ComponentSpec, job_spec: JobSpec, context: dict) ->
         "competitor_count": len(niche_products),
     }
 
+    try:
+        from agents.llm_client import generate_text as llm_call
+        from jinja2 import Environment, FileSystemLoader
+        env = Environment(loader=FileSystemLoader("prompts"))
+        template = env.get_template("gumroad_research.j2")
+        llm_prompt = template.render(
+            gumroad_data_json=json.dumps(products_data, indent=2)[:8000] if products_data else "No products found",
+            niche=niche,
+            product_type=job_spec.product_type.replace("_", " ").title(),
+        )
+        llm_analysis = llm_call(llm_prompt)
+        research["llm_analysis"] = llm_analysis
+        logger.info("LLM-powered Gumroad research analysis completed")
+    except Exception as e:
+        logger.warning(f"LLM research analysis failed (non-blocking): {e}")
+        research["llm_analysis"] = None
+
     output_path = os.path.join("outputs", job_spec.slug, component.output)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
@@ -161,6 +178,31 @@ def _run_publish(component: ComponentSpec, job_spec: JobSpec, context: dict) -> 
         "price": suggested_price * 100,
         "description": f"A premium {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}.",
     }
+    try:
+        from agents.llm_client import generate_text as llm_call
+        from jinja2 import Environment, FileSystemLoader
+        env = Environment(loader=FileSystemLoader("prompts"))
+        template = env.get_template("gumroad_listing.j2")
+        research_output_path = context.get("gumroad_research", "")
+        listing_prompt = template.render(
+            niche=job_spec.niche,
+            product_type=job_spec.product_type.replace("_", " ").title(),
+            call_to_action=getattr(job_spec, "call_to_action", "Buy Now on Gumroad"),
+            research_output_path=research_output_path,
+        )
+        listing_result = llm_call(listing_prompt)
+        import json as _json
+        import re as _re
+        match = _re.search(r'\{.*\}', listing_result, _re.DOTALL)
+        if match:
+            listing_data = _json.loads(match.group())
+            if "product_name" in listing_data and listing_data["product_name"]:
+                product_name = listing_data["product_name"]
+            if "description" in listing_data and listing_data["description"]:
+                product_data["description"] = listing_data["description"]
+            logger.info(f"LLM-generated listing: {product_name}")
+    except Exception as e:
+        logger.warning(f"LLM listing generation failed (non-blocking): {e}")
     result = _gumroad_api("POST", "products", data=product_data)
 
     if not result or "product" not in result:
