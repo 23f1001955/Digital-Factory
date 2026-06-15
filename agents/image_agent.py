@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = "gemini-2.0-flash-exp"
 
-IMAGEN_API_URL_DEFAULT = "https://imagen.kundan8824099478.workers.dev"
+IMAGEN_API_URL_DEFAULT = ""
 
 
 class ImageRequirement(TypedDict):
