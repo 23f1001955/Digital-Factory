@@ -2,45 +2,14 @@ import os
 import json
 import logging
 
-import httpx
-
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
+from agents.research_tools import brave_search, duckduckgo_search, reddit_search, gdelt_news, newsapi_headlines, pytrends_data, firecrawl_scrape
 
 logger = logging.getLogger(__name__)
 
-GUMROAD_API_BASE = "https://api.gumroad.com/v2"
 
-
-def _fetch_seller_products() -> list:
-    """Fetch the authenticated seller's products from Gumroad API."""
-    token = os.getenv("GUMROAD_ACCESS_TOKEN")
-    if not token:
-        logger.warning("GUMROAD_ACCESS_TOKEN not set -- skipping API fetch")
-        return []
-    try:
-        url = f"{GUMROAD_API_BASE}/products"
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = httpx.get(url, headers=headers, timeout=15.0)
-        resp.raise_for_status()
-        data = resp.json()
-        products = data.get("products", [])
-        logger.info(f"Fetched {len(products)} seller products from Gumroad")
-        return [
-            {
-                "name": p.get("name", ""),
-                "price": p.get("price", 0),
-                "sales": p.get("sales_count", 0),
-                "url": p.get("short_url", ""),
-            }
-            for p in products
-        ]
-    except Exception as e:
-        logger.warning(f"Gumroad API fetch failed: {e}")
-        return []
-
-
-def _generate_research(niche: str, product_type: str, seller_products: list) -> dict:
-    """Generate market research using LLM."""
+def _generate_research(niche: str, product_type: str, real_data: dict) -> dict:
+    """Generate market research using LLM + real data from all sources."""
     from agents.llm_client import generate_text as llm_call
     from jinja2 import Environment, FileSystemLoader
 
@@ -49,7 +18,9 @@ def _generate_research(niche: str, product_type: str, seller_products: list) -> 
     prompt = template.render(
         niche=niche,
         product_type=product_type,
-        seller_products=seller_products,
+        seller_products=[],
+        notion_sync=job_spec.notion_sync,
+        real_data=real_data,
     )
 
     try:
@@ -58,7 +29,8 @@ def _generate_research(niche: str, product_type: str, seller_products: list) -> 
         match = re.search(r'\{.*\}', result, re.DOTALL)
         if match:
             research = json.loads(match.group())
-            logger.info(f"Market research generated: {len(research.get('competitor_landscape', {}).get('direct_competitors', []))} competitors found")
+            competitors = research.get("competitor_landscape", {}).get("direct_competitors", [])
+            logger.info(f"Market research generated: {len(competitors)} competitors from real data")
             return research
     except Exception as e:
         logger.warning(f"LLM market research failed: {e}")
@@ -91,19 +63,62 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         niche = job_spec.niche
         product_type = job_spec.product_type
 
-        seller_products = _fetch_seller_products()
-        research = _generate_research(niche, product_type, seller_products)
+        real_data = {}
+        sources_used = []
+
+        search_results = brave_search(f"{niche} {product_type.replace('_', ' ')} tools market", 10)
+        search_source = "Brave Search"
+        if not search_results:
+            search_results = duckduckgo_search(f"{niche} {product_type.replace('_', ' ')} tools market", 10)
+            search_source = "DuckDuckGo"
+        if search_results:
+            real_data["web_search"] = search_results
+            sources_used.append(search_source)
+            competitor_urls = [r["url"] for r in search_results[:5] if r.get("url")]
+            firecrawl_max = int(os.getenv("FIRECRAWL_MAX_PER_RUN", "3"))
+            firecrawl_data = {}
+            for url in competitor_urls[:firecrawl_max]:
+                content = firecrawl_scrape(url)
+                if content:
+                    firecrawl_data[url] = content
+            if firecrawl_data:
+                real_data["firecrawl_pages"] = firecrawl_data
+                sources_used.append("Firecrawl")
+
+        reddit_results = reddit_search(f"{niche}", 10)
+        if reddit_results:
+            real_data["reddit_discussions"] = reddit_results
+            sources_used.append("Reddit")
+
+        gdelt_results = gdelt_news(niche, 10)
+        if gdelt_results:
+            real_data["gdelt_news"] = gdelt_results
+            sources_used.append("GDelt")
+
+        news_results = newsapi_headlines(niche, 10)
+        if news_results:
+            real_data["newsapi_articles"] = news_results
+            sources_used.append("NewsAPI")
+
+        product_keywords = niche.lower().split()[:3]
+        trends_data = pytrends_data(product_keywords)
+        if trends_data:
+            real_data["google_trends"] = trends_data
+            sources_used.append("Google Trends")
+
+        research = _generate_research(niche, product_type, real_data)
 
         research["niche"] = niche
         research["product_type"] = product_type
-        research["seller_products"] = seller_products
+        research["sources_used"] = sources_used
+        research["data_sources"] = real_data
 
         output_path = os.path.join("outputs", job_spec.slug, component.output)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(research, f, indent=2)
 
-        logger.info(f"Market research written to {output_path}")
+        logger.info(f"Market research written to {output_path} (sources: {', '.join(sources_used) or 'none'})")
         return AgentResult(status="done", output_path=output_path, error=None)
 
     except Exception as e:
