@@ -1,20 +1,101 @@
 You are a digital product market analyst. Analyze the niche "{{ niche }}" for a {{ product_type }} product.
 
-{% if seller_products %}
-Your current Gumroad catalog in this space:
-{% for p in seller_products %}
-- {{ p.name }} (${{ p.price }}, {{ p.sales }} sales)
+{% if real_data.web_search %}
+## REAL COMPETITOR DATA
+The following competitors/products were found online for this niche:
+{% for item in real_data.web_search %}
+- [{{ item.title }}]({{ item.url }})
+  - Description: {{ item.description }}
 {% endfor %}
 {% endif %}
 
-Generate a comprehensive market analysis in JSON format with these keys:
-- "competitor_landscape": object with "direct_competitors" (array of {name, price, strengths:[], weaknesses:[]}), "pricing_tiers" ({budget, mid, premium} as strings), "recommended_price" (integer), "quality_gaps" (array of 3-5 strings), "trending_keywords" (array of 5-10 strings)
-- "content_recommendations": object with "tone" (string), "key_themes" (array of strings), "seo_keywords" (array of strings)
+{% if real_data.firecrawl_pages %}
+## FULL COMPETITOR PAGE CONTENT (Firecrawl — scraped from live websites)
+{% for url, content in real_data.firecrawl_pages.items() %}
+### Content from: {{ url }}
+{{ content[:3000] }}
+---
+{% endfor %}
+{% endif %}
 
-Base your analysis on:
-1. What sells well on Gumroad for this niche
-2. Common quality gaps in competitor products
-3. Pricing psychology for digital products ($5-15 budget, $15-35 mid, $35+ premium)
-4. SEO and discoverability keywords
+{% if real_data.reddit_discussions %}
+## REAL USER DISCUSSIONS (Reddit — pain points, needs, sentiment)
+{% for post in real_data.reddit_discussions %}
+- r/{{ post.subreddit }} | 👍 {{ post.score }} | 💬 {{ post.num_comments }}
+  - Title: {{ post.title }}
+  - Content: {{ post.selftext[:300] }}
+{% endfor %}
+{% endif %}
 
-Return ONLY valid JSON. No markdown, no code blocks, no text outside the JSON.
+{% if real_data.gdelt_news %}
+## NEWS COVERAGE (GDelt Project — global news events)
+{% for article in real_data.gdelt_news %}
+- [{{ article.title }}]({{ article.url }}) — {{ article.date }}
+{% endfor %}
+{% endif %}
+
+{% if real_data.newsapi_articles %}
+## LATEST NEWS (NewsAPI)
+{% for article in real_data.newsapi_articles %}
+- [{{ article.title }}]({{ article.url }}) — {{ article.source_name }} ({{ article.published_at }})
+  - {{ article.description[:200] }}
+{% endfor %}
+{% endif %}
+
+{% if notion_sync %}Note: This product includes a Notion workspace (CRM, dashboards, trackers).{% endif %}
+
+{% if real_data.google_trends %}
+## GOOGLE TRENDS DATA
+Trend direction: {{ real_data.google_trends.get('trend_direction', 'stable') }}
+{% for key, value in real_data.google_trends.items() %}
+{% if 'related' in key %}
+{{ key }}: {{ value }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+Based on this REAL DATA, generate a comprehensive market analysis in JSON format with these keys:
+- "competitor_landscape": object with:
+  - "direct_competitors": array of {name, price (number or null), strengths:[], weaknesses:[], url}
+  - "pricing_tiers": {budget, mid, premium} as strings with actual price ranges
+  - "recommended_price": integer (based on actual competitor pricing)
+  - "quality_gaps": array of 3-5 specific gaps identified from user complaints and competitor weaknesses
+  - "trending_keywords": array of 5-10 keywords from search data
+- "content_recommendations": object with:
+  - "tone" (string)
+  - "key_themes" (array of strings)
+  - "seo_keywords" (array of strings)
+- "market_insights": object with:
+  - "total_competitors_found" (integer)
+  - "avg_competitor_price" (number or null)
+  - "sentiment_summary" (string — from Reddit/user discussions)
+  - "news_headline" (most relevant news story summary)
+  - "trend_insight" (what's gaining/losing traction)
+- "pipeline_plan": object with a "components" array. Design a custom pipeline for THIS specific niche. Each component:
+  - "id" (string, unique, descriptive — e.g., lead_tracker, email_templates, churn_analysis)
+  - "agent" (string, from catalog below)
+  - "output" (string, use convention: "data/<id>.csv" for csv_export, "content/<id>.md" for content, "content/<id>.mmd" for diagram)
+  - "depends_on" (array, ["market_research"] or ["<other_component_id>"])
+
+AVAILABLE AGENTS CATALOG — use only these:
+- research_agent: Database + source compilation. Output .json or .md.
+- content_agent: Markdown content. Prompt loaded by component.id + ".j2". Output .md
+- render_agent: HTML → PDF. Requires "template": "shared/basic_doc.html.j2". Output .pdf
+- csv_export_agent: JSON → CSV. Output .csv
+- diagram_agent: Mermaid diagrams. Output .mmd
+- catalog_agent: Product catalog. Output .json
+- stitch_agent: Stitch AI design screens. Output varies
+
+RULES for pipeline_plan:
+1. Generate DIFFERENT components per niche — real estate needs CRM + lead_tracker, SaaS needs churn_analysis + onboarding, coaching needs student_tracker + session_scheduler.
+2. Do NOT use reserved IDs: images, package, notion_schema, notion_tree, gumroad_research, gumroad_publish, landing_page, social_promotion.
+3. Every component must depend on "market_research" or another component in this same plan.
+4. Generate 2-6 components based on niche complexity. Simple niche = fewer.
+5. Output paths must not overlap — each must be unique.
+
+Rules:
+1. Use the REAL DATA above. Do NOT hallucinate competitors or pricing.
+2. If no real data is available (empty sections), acknowledge gaps rather than making things up.
+3. Pricing should match what you see in actual search results.
+4. Quality gaps should come from actual Reddit complaints or competitor page weaknesses.
+5. Return ONLY valid JSON. No markdown, no code blocks, no text outside the JSON.
