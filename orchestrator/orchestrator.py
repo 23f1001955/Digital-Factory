@@ -1,5 +1,4 @@
 import os
-import sys
 import json
 import logging
 from typing import Dict, List
@@ -51,7 +50,7 @@ class Orchestrator:
         return ordered
 
     def run(self):
-        logger.info(f"Starting pipeline for slug: {self.job_spec.slug}")
+        logger.info("Starting pipeline for slug: %s", self.job_spec.slug)
         ordered_components = self._get_execution_order()
         
         # Check if we need a renderer
@@ -62,15 +61,13 @@ class Orchestrator:
         total = len(ordered_components)
         done_count = 0
         
-        sys.stderr.write(f"\n── Pipeline: {total} components ──────────────────────\n")
-        sys.stderr.flush()
+        logger.info("Pipeline: %s components", total)
 
         for component in ordered_components:
             state_result = self.state.components.get(component.id)
             if state_result and state_result.status == "done":
                 done_count += 1
-                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (already done)\n")
-                sys.stderr.flush()
+                logger.info("%s/%s %s (already done)", done_count, total, component.id)
                 continue
                 
             # Check dependencies
@@ -80,7 +77,7 @@ class Orchestrator:
                 dep_state = self.state.components.get(dep)
                 if not dep_state or dep_state.status != "done":
                     deps_ok = False
-                    logger.warning(f"Component {component.id} blocked by dependency {dep}")
+                    logger.warning("Component %s blocked by dependency %s", component.id, dep)
                     break
                 context[dep] = dep_state.output_path
                 
@@ -100,8 +97,7 @@ class Orchestrator:
                 self.state.components[component.id] = AgentResult(status="skipped", error="landing page not enabled")
                 save_job_state(self.state, self.state_path)
                 done_count += 1
-                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (disabled)\n")
-                sys.stderr.flush()
+                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
             # Skip social_promotion if not enabled
@@ -109,8 +105,7 @@ class Orchestrator:
                 self.state.components[component.id] = AgentResult(status="skipped", error="social promotion not enabled")
                 save_job_state(self.state, self.state_path)
                 done_count += 1
-                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (disabled)\n")
-                sys.stderr.flush()
+                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
             # Skip gumroad if not enabled
@@ -118,43 +113,39 @@ class Orchestrator:
                 self.state.components[component.id] = AgentResult(status="skipped", error="gumroad not enabled")
                 save_job_state(self.state, self.state_path)
                 done_count += 1
-                sys.stderr.write(f"\r  ⏭️  [{done_count}/{total}] {component.id} (disabled)\n")
-                sys.stderr.flush()
+                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
             if not agent_func:
-                logger.error(f"Agent {component.agent} not found in registry")
+                logger.error("Agent %s not found in registry", component.agent)
                 self.state.components[component.id] = AgentResult(status="failed", error=f"Agent {component.agent} not in registry")
                 save_job_state(self.state, self.state_path)
                 done_count += 1
-                sys.stderr.write(f"\r  ❌ [{done_count}/{total}] {component.id} — agent not found\n")
-                sys.stderr.flush()
+                logger.error("%s/%s %s - agent not found", done_count, total, component.id)
                 continue
                 
             self.state.components[component.id] = AgentResult(status="running")
             save_job_state(self.state, self.state_path)
 
             done_count += 1
-            sys.stderr.write(f"\r  ▶️  [{done_count}/{total}] {component.id}...")
-            sys.stderr.flush()
+            logger.info("%s/%s %s...", done_count, total, component.id)
             try:
                 result = agent_func(component, self.job_spec, context)
             except Exception as e:
-                logger.error(f"Agent {component.agent} ({component.id}) raised unhandled exception: {e}")
+                logger.error("Agent %s (%s) raised unhandled exception: %s", component.agent, component.id, e)
                 result = AgentResult(status="failed", error=f"Unhandled exception: {e}")
             
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
             
-            icon = "✅" if result.status == "done" else "❌" if result.status == "failed" else "⚠️"
-            sys.stderr.write(f"\r  {icon} [{done_count}/{total}] {component.id}")
-            if result.status == "failed":
-                sys.stderr.write(f" — {result.error}")
-            sys.stderr.write("\n")
-            sys.stderr.flush()
+            if result.status == "done":
+                logger.info("%s/%s %s", done_count, total, component.id)
+            elif result.status == "failed":
+                logger.error("%s/%s %s - %s", done_count, total, component.id, result.error)
+            else:
+                logger.warning("%s/%s %s", done_count, total, component.id)
                 
-        sys.stderr.write(f"──────────────────────────────────────────────\n\n")
-        sys.stderr.flush()
+        logger.info("Pipeline complete")
         logger.info("Orchestrator run complete. Generating summary report...")
         self._generate_run_summary()
 
@@ -175,4 +166,4 @@ class Orchestrator:
                 if result.output_path:
                     f.write(f"  - *Output: `{result.output_path}`*\n")
                     
-        logger.info(f"Run summary generated at {summary_path}")
+        logger.info("Run summary generated at %s", summary_path)
