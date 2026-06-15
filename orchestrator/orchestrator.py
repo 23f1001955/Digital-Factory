@@ -3,7 +3,7 @@ import json
 import logging
 from typing import List
 
-from .models import JobSpec, ProductSchema, ComponentSpec, AgentResult
+from .models import JobSpec, ProductSchema, ComponentSpec, AgentResult, PipelinePlan
 from .state import load_job_state, save_job_state
 from agents.registry import AGENT_REGISTRY
 from renderers.base import get_renderer
@@ -48,6 +48,74 @@ class Orchestrator:
             visit(c.id)
             
         return ordered
+
+    def _merge_pipeline_plan(self, research_path: str) -> None:
+        """Load market_research.json, extract pipeline_plan, merge into schema."""
+        if not os.path.exists(research_path):
+            logger.warning("No market_research.json found — core components only")
+            return
+
+        with open(research_path, "r") as f:
+            research = json.load(f)
+
+        raw_plan = research.get("pipeline_plan")
+        if not raw_plan or "components" not in raw_plan:
+            logger.info("No pipeline_plan in research — core components only")
+            return
+
+        plan = PipelinePlan(**raw_plan)
+
+        RESERVED_IDS = {
+            "market_research", "images", "package",
+            "notion_schema", "notion_tree",
+            "gumroad_research", "gumroad_publish",
+            "landing_page", "social_promotion",
+        }
+
+        existing_ids = {c.id for c in self.schema.components}
+        allowed_agents = set(AGENT_REGISTRY.keys())
+
+        added = 0
+        for comp in plan.components:
+            if comp.id in RESERVED_IDS:
+                logger.warning(f"Skipping reserved ID '{comp.id}'")
+                continue
+            if comp.id in existing_ids:
+                logger.warning(f"Skipping duplicate '{comp.id}'")
+                continue
+            if comp.agent not in allowed_agents:
+                logger.warning(f"Skipping unknown agent '{comp.agent}' for '{comp.id}'")
+                continue
+
+            all_valid_ids = existing_ids | {c.id for c in plan.components}
+            if not all(dep in all_valid_ids for dep in comp.depends_on):
+                logger.warning(f"Skipping '{comp.id}' — invalid dependencies")
+                continue
+
+            spec = ComponentSpec(
+                id=comp.id,
+                agent=comp.agent,
+                output=comp.output,
+                depends_on=comp.depends_on,
+                template=comp.template,
+                format=comp.format,
+            )
+            self.schema.components.append(spec)
+            existing_ids.add(comp.id)
+            added += 1
+            logger.info(f"Added dynamic component: {comp.id} ({comp.agent})")
+
+        # Ensure package runs last — depends on all non-wizard-gated components
+        for c in self.schema.components:
+            if c.id == "package":
+                c.depends_on = [
+                    comp.id for comp in self.schema.components
+                    if comp.id != "package"
+                    and comp.id not in ("gumroad_research", "gumroad_publish", "landing_page", "social_promotion")
+                ]
+                break
+
+        logger.info(f"Pipeline plan merged: {added} dynamic components")
 
     def run(self):
         logger.info("Starting pipeline for slug: %s", self.job_spec.slug)
@@ -137,7 +205,14 @@ class Orchestrator:
             
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
-            
+
+            # After market_agent completes, merge pipeline_plan
+            if component.id == "market_research" and result.status == "done":
+                self._merge_pipeline_plan(result.output_path)
+                ordered_components = self._get_execution_order()
+                total = len(ordered_components)
+                logger.info("Pipeline re-planned: %s total components", total)
+
             if result.status == "done":
                 logger.info("%s/%s %s", done_count, total, component.id)
             elif result.status == "failed":
