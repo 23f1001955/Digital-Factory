@@ -45,6 +45,16 @@
       ]
     },
     {
+      "id": "stitch_download",
+      "agent": "stitch_agent",
+      "output": "stitch/screens",
+      "depends_on": [
+        "course_outline",
+        "lessons",
+        "marketing_copy"
+      ]
+    },
+    {
       "id": "outline_pdf",
       "agent": "render_agent",
       "output": "presentation/outline.pdf",
@@ -88,6 +98,12 @@
       ]
     },
     {
+      "id": "stitch_assets",
+      "agent": "stitch_agent",
+      "output": "stitch",
+      "depends_on": ["market_research"]
+    },
+    {
       "id": "gumroad_research",
       "agent": "gumroad_agent",
       "output": "gumroad/research.json",
@@ -101,14 +117,16 @@
       "agent": "gumroad_agent",
       "output": "gumroad/published.json",
       "depends_on": [
-        "gumroad_research"
+        "gumroad_research",
+        "outline_pdf",
+        "launch_pdf"
       ]
     },
     {
       "id": "landing_page",
       "agent": "landing_agent",
       "output": "landing/deployed.json",
-      "depends_on": ["gumroad_publish"]
+      "depends_on": ["gumroad_publish", "stitch_assets"]
     },
     {
       "id": "social_promotion",
