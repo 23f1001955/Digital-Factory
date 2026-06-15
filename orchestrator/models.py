@@ -38,6 +38,17 @@ class AgentResult(BaseModel):
     output_path: Optional[str] = None
     error: Optional[str] = None
 
+class PipelineComponent(BaseModel):
+    id: str
+    agent: str
+    output: str
+    depends_on: List[str] = Field(default_factory=list)
+    template: Optional[str] = None
+    format: Literal["full", "guide", "notion"] = "full"
+
+class PipelinePlan(BaseModel):
+    components: List[PipelineComponent]
+
 class JobState(BaseModel):
     slug: str
     components: Dict[str, AgentResult] = Field(default_factory=dict)
