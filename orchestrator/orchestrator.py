@@ -131,7 +131,10 @@ class Orchestrator:
         
         logger.info("Pipeline: %s components", total)
 
-        for component in ordered_components:
+        idx = 0
+        while idx < len(ordered_components):
+            component = ordered_components[idx]
+            idx += 1
             state_result = self.state.components.get(component.id)
             if state_result and state_result.status == "done":
                 done_count += 1
