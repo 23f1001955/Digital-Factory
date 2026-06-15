@@ -3,118 +3,12 @@
   "display_name": "Visual Pack",
   "notion_sync": false,
   "components": [
-    {
-      "id": "market_research",
-      "agent": "market_agent",
-      "output": "data/market_research.json",
-      "depends_on": []
-    },
-    {
-      "id": "images",
-      "agent": "image_agent",
-      "output": "data/images_generated.json",
-      "depends_on": ["market_research"]
-    },
-    {
-      "id": "image_prompts",
-      "agent": "content_agent",
-      "output": "content/image_prompts.json",
-      "depends_on": ["market_research"]
-    },
-    {
-      "id": "catalog",
-      "agent": "catalog_agent",
-      "output": "content/catalog.json",
-      "depends_on": [
-        "image_prompts"
-      ]
-    },
-    {
-      "id": "visual_assets",
-      "agent": "visual_agent",
-      "output": "assets/images",
-      "depends_on": [
-        "image_prompts"
-      ]
-    },
-    {
-      "id": "stitch_download",
-      "agent": "stitch_agent",
-      "output": "stitch/screens",
-      "depends_on": [
-        "image_prompts",
-        "catalog"
-      ]
-    },
-    {
-      "id": "reference_board",
-      "agent": "render_agent",
-      "output": "presentation/reference_board.pdf",
-      "depends_on": [
-        "visual_assets",
-        "catalog",
-        "images"
-      ],
-      "uses_renderer": true,
-      "template": "visual_pack/reference_board.html.j2"
-    },
-    {
-      "id": "showcase_pdf",
-      "agent": "render_agent",
-      "output": "presentation/showcase.pdf",
-      "depends_on": [
-        "visual_assets",
-        "catalog",
-        "images"
-      ],
-      "uses_renderer": true,
-      "template": "visual_pack/showcase.html.j2"
-    },
-    {
-      "id": "package",
-      "agent": "packaging_agent",
-      "output": "{slug}.zip",
-      "depends_on": [
-        "reference_board",
-        "showcase_pdf"
-      ]
-    },
-    {
-      "id": "stitch_assets",
-      "agent": "stitch_agent",
-      "output": "stitch",
-      "depends_on": ["market_research"]
-    },
-    {
-      "id": "gumroad_research",
-      "agent": "gumroad_agent",
-      "output": "gumroad/research.json",
-      "depends_on": [
-        "reference_board",
-        "showcase_pdf"
-      ]
-    },
-    {
-      "id": "gumroad_publish",
-      "agent": "gumroad_agent",
-      "output": "gumroad/published.json",
-      "depends_on": [
-        "gumroad_research",
-        "reference_board",
-        "showcase_pdf"
-      ]
-    },
-    {
-      "id": "landing_page",
-      "agent": "landing_agent",
-      "output": "landing/deployed.json",
-      "depends_on": ["gumroad_publish", "stitch_assets"]
-    },
-    {
-      "id": "social_promotion",
-      "agent": "social_agent",
-      "output": "landing/social_results.json",
-      "depends_on": ["landing_page"]
-    }
+    {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+    {"id": "images", "agent": "image_agent", "output": "data/images_generated.json", "depends_on": ["market_research"]},
+    {"id": "gumroad_research", "agent": "gumroad_agent", "output": "gumroad/research.json", "depends_on": ["market_research"]},
+    {"id": "gumroad_publish", "agent": "gumroad_agent", "output": "gumroad/published.json", "depends_on": ["gumroad_research", "market_research"]},
+    {"id": "landing_page", "agent": "landing_agent", "output": "landing/deployed.json", "depends_on": ["gumroad_publish"]},
+    {"id": "social_promotion", "agent": "social_agent", "output": "landing/social_results.json", "depends_on": ["landing_page"]},
+    {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"]}
   ]
 }
