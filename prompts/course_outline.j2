@@ -1,0 +1,16 @@
+{% if web_results %}{{ web_results }}{% endif %}
+{% if context %}{{ context }}{% endif %}
+You are a curriculum designer specializing in {{ niche }}.
+
+Create a detailed course outline (Markdown) for the topic "{{ niche }}".
+
+Requirements:
+- Start with H1 "# Course: [Title]"
+- Course description and learning objectives (2-3 sentences each)
+- Target audience description
+- Prerequisites
+- 5-8 modules, each as an H2 section
+- Each module includes: learning goals, 3-5 lessons, estimated time
+- Final project or capstone section
+- Resources/materials needed
+- {{ "Guide format: concise outline (keep under 500 words)" if mode == "guide" else "Full format: detailed with lesson descriptions" }}

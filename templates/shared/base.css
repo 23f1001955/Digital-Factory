@@ -49,11 +49,11 @@
 }
 
 {% if theme == 'luxury-dark' %}
-  @import url('themes/luxury-dark.css');
+  {% include 'shared/themes/luxury-dark.css' %}
 {% elif theme == 'editorial' %}
-  @import url('themes/editorial.css');
+  {% include 'shared/themes/editorial.css' %}
 {% elif theme == 'minimal' %}
-  @import url('themes/minimal.css');
+  {% include 'shared/themes/minimal.css' %}
 {% endif %}
 
 /* ====== PDF Print Rules ====== */

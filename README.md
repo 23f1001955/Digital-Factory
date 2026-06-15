@@ -31,6 +31,7 @@ python main.py --resume outputs/foo/job_spec.json  # Resume
   - [7. SaaS Documentation](#7-saas-documentation)
 - [How It Works — End to End](#how-it-works--end-to-end)
 - [Agents Reference](#agents-reference)
+- [Image Agent](#image-agent)
 - [Output Structure](#output-structure)
 - [Notion Integration](#notion-integration)
 - [Gumroad Publishing](#gumroad-publishing)
@@ -107,6 +108,7 @@ The system follows a three-layer **DOE Architecture** (Directive → Orchestrati
 │  visual_agent       → image generation via DALL-E / placeholders │
 │  catalog_agent      → image catalog JSON                     │
 │  diagram_agent      → Mermaid diagrams → SVGs → PDFs         │
+│  image_agent        → 3-variant product images via Gemini/placeholder  │
 │  packaging_agent    → zip archive of all deliverables        │
 │  notion_agent       → creates page tree under shared parent  │
 │  gumroad_agent      → market research + product publishing   │
@@ -176,7 +178,7 @@ NOTION_PARENT_PAGE_ID=your_page_id_here
 # Optional: Gumroad publishing
 GUMROAD_ACCESS_TOKEN=your_token_here
 
-# Optional: Landing page (Google Stitch + Vercel)
+# Optional: Landing page & product image generation (Google Stitch + Gemini 3.1 Flash)
 GEMINI_API_KEY=
 STITCH_API_KEY=
 VERCEL_TOKEN=
@@ -472,6 +474,7 @@ If a component fails:
 | `catalog_agent` | `agents/catalog_agent.py` | Generates image catalog metadata | `catalog.json` |
 | `diagram_agent` | `agents/diagram_agent.py` | Generates Mermaid diagrams | `diagram.mmd` |
 | `visual_agent` | `agents/visual_agent.py` | Generates images via DALL-E (or placeholders) | `assets/images/*` |
+| `image_agent` | `agents/image_agent.py` | Gemini-powered 3-variant image generation (cover, thumbnail, social) | `data/images_generated.json`, `assets/{cover,thumbnail,social}.*` |
 | `render_agent` | `agents/render_agent.js` | HTML → PDF via Playwright | `*.pdf` |
 | `packaging_agent` | `agents/packaging_agent.py` | Zip archive of all outputs | `{slug}.zip` |
 | `notion_schema_agent` | `agents/notion_schema_agent.py` | LLM-generated Notion database blueprint | `data/notion_schema.json` |
@@ -493,6 +496,30 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
 - `job_spec` — The overall job (slug, niche, product type, theme)
 - `context` — Outputs of already-completed dependencies (file paths)
 - Returns `AgentResult` with `status`, `output_path`, and optional `error`
+
+---
+
+## Image Agent
+
+The `image_agent` runs after `market_research` and generates **3 image variants per product** using Gemini 3.1 Flash:
+
+| Variant | Aspect Ratio | File | Used By |
+|---|---|---|---|
+| Cover | 16:9 | `assets/cover.png` | Landing page hero, Gumroad cover, PDF covers |
+| Thumbnail | 1:1 | `assets/thumbnail.png` | Gumroad thumbnail, social media |
+| Social | 2:3 | `assets/social.png` | Instagram posts, Pinterest pins |
+
+The agent:
+
+1. **Generates prompts** — Uses the LLM + `prompts/image_gen.j2` to create 3 image prompts (one per variant)
+2. **Generates images** — Sends each prompt to Gemini 3.1 Flash (`gemini-2.0-flash-exp`) with `responseModalities: ["image"]` to produce PNG images
+3. **Falls back gracefully** — If Gemini is unavailable or `GEMINI_API_KEY` is not set, generates SVG placeholders with descriptive text
+4. **Rate-limits** — Applies a 60-second delay between generations to respect API limits
+5. **Records metadata** — Saves image paths, status, and prompts used to `data/images_generated.json`
+
+Output: `outputs/{slug}/assets/{cover,thumbnail,social}.png` (or `.svg` for fallback)
+
+The generated images flow into **Gumroad** (cover + thumbnail upload), **landing page** (hero image), **social media posts**, and **PDF cover pages**.
 
 ---
 

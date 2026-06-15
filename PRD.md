@@ -168,7 +168,7 @@ Product types select a **fixed** component list (Level 2 consistency from the ea
 
 On `python main.py` with no `job_spec.json` argument:
 
-1. Detect `.env` — if `ANTHROPIC_API_KEY` (or chosen LLM key) missing, prompt for it and write to `.env` (never commit `.env`).
+1. Detect `.env` — if `OPENAI_API_KEY` (fallback: `ANTHROPIC_API_KEY`) missing, prompt for it and write to `.env` (never commit `.env`).
 2. Ask product type (numbered list from `/schemas/*.json`).
 3. Ask niche/topic (free text).
 4. Ask output slug (default: slugified niche).
@@ -227,10 +227,9 @@ def get_renderer() -> Renderer:
 ## 9. Tech Stack
 
 - **Language:** Python 3.11+ (single language across orchestrator + agents — avoids polyglot overhead for a local tool).
-- **LLM access:** Anthropic API (`anthropic` SDK), model configurable via `.env`.
+- **LLM access:** OpenAI-compatible endpoint (`openai` SDK) at `https://opencode.ai/zen/v1`, model `mimo-v2.5-free`, configurable via `.env`.
 - **Templating:** Jinja2 (HTML templates) → Playwright (Chromium headless) → PDF.
 - **Schema validation:** Pydantic models for `job_spec.json`, `job_state.json`, and each schema file — fail fast on malformed config.
-- **Notion:** `notion-client` (official SDK) for Phase 2.
 - **CLI:** `typer` or `argparse` (no framework needed beyond stdlib + typer for the wizard).
 - **Packaging:** stdlib `zipfile`.
 - **Config:** `.env` + `python-dotenv`.

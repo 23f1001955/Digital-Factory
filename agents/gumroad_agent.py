@@ -1,8 +1,8 @@
 import os
-import sys
 import json
+import re
+import urllib.parse
 import logging
-from datetime import datetime, timedelta
 
 import httpx
 
@@ -13,43 +13,173 @@ logger = logging.getLogger(__name__)
 GUMROAD_API_BASE = "https://api.gumroad.com/v2"
 
 
-def _gumroad_api(method: str, path: str, data: dict | None = None) -> dict | None:
+def _gumroad_form_api(method: str, path: str, data: dict | None = None) -> dict | None:
+    """Call Gumroad API with form-encoded data and access_token."""
     token = os.getenv("GUMROAD_ACCESS_TOKEN")
     if not token:
         logger.warning("GUMROAD_ACCESS_TOKEN not set")
         return None
     url = f"{GUMROAD_API_BASE}/{path.lstrip('/')}"
-    headers = {"Authorization": f"Bearer {token}"}
+    form_data = {"access_token": token}
+    if data:
+        form_data.update(data)
     try:
-        resp = httpx.request(method, url, headers=headers, json=data, timeout=15.0)
-        resp.raise_for_status()
-        return resp.json()
+        if method == "GET":
+            resp = httpx.request(method, url, params=form_data, timeout=60.0)
+        else:
+            resp = httpx.request(method, url, data=form_data, timeout=60.0)
+        if resp.status_code == 200:
+            return resp.json()
+        logger.warning(
+            f"Gumroad API {method} {path} -> {resp.status_code}: {resp.text[:300]}"
+        )
+        return None
     except Exception as e:
         logger.warning(f"Gumroad API call failed ({method} {path}): {e}")
         return None
 
 
-def _gumroad_upload_asset(product_id: str, file_path: str) -> dict | None:
+def _to_rails_params(obj, prefix=""):
+    """Convert nested dict/list to Rails-style form params list of (key, value) tuples."""
+    items = []
+    if isinstance(obj, dict):
+        for key, val in obj.items():
+            new_prefix = f"{prefix}[{key}]" if prefix else key
+            items.extend(_to_rails_params(val, new_prefix))
+    elif isinstance(obj, list):
+        for val in obj:
+            items.extend(_to_rails_params(val, f"{prefix}[]"))
+    elif obj is None:
+        pass
+    elif isinstance(obj, bool):
+        items.append((prefix, "true" if obj else "false"))
+    else:
+        items.append((prefix, str(obj)))
+    return items
+
+
+def _gumroad_put_with_rails_params(product_id: str, body_dict: dict) -> dict | None:
+    """Send a PUT to /products/:id with Rails-style nested form encoding."""
     token = os.getenv("GUMROAD_ACCESS_TOKEN")
     if not token:
-        logger.warning("GUMROAD_ACCESS_TOKEN not set for asset upload")
         return None
-    url = f"{GUMROAD_API_BASE}/products/{product_id}/asset"
-    headers = {"Authorization": f"Bearer {token}"}
+    params = [("access_token", token)]
+    for key, val in body_dict.items():
+        if isinstance(val, (dict, list)):
+            params.extend(_to_rails_params(val, key))
+        else:
+            params.append((key, str(val)))
+    body = urllib.parse.urlencode(params)
     try:
-        with open(file_path, "rb") as f:
-            resp = httpx.post(url, headers=headers, files={"file": f}, timeout=30.0)
-        resp.raise_for_status()
-        return resp.json()
+        resp = httpx.put(
+            f"{GUMROAD_API_BASE}/products/{product_id}",
+            content=body,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=120.0,
+        )
+        return resp.json() if resp.status_code == 200 else None
     except Exception as e:
-        logger.warning(f"Failed to upload asset {file_path} to Gumroad product {product_id}: {e}")
+        logger.warning(f"Rails-encoded PUT failed: {e}")
         return None
 
 
-def _run_research(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
+def _generate_tags(niche: str, product_type: str) -> list[str]:
+    """Generate product tags from niche and product type."""
+    tags = set()
+    for kw in niche.lower().split():
+        cleaned = kw.strip(",.!?")
+        if cleaned:
+            tags.add(cleaned)
+    ptype_readable = product_type.replace("_", " ").title()
+    tags.add(ptype_readable)
+    tags.add("Digital Product")
+    tags.add("Download")
+    return sorted(tags)[:8]
+
+
+def _gumroad_upload_file(file_path: str) -> str | None:
+    """Upload a file to Gumroad using presign→upload→complete→attach flow. Returns file_url or None."""
+    token = os.getenv("GUMROAD_ACCESS_TOKEN")
+    if not token:
+        logger.warning("GUMROAD_ACCESS_TOKEN not set for file upload")
+        return None
+    file_name = os.path.basename(file_path)
+    file_size = os.path.getsize(file_path)
+
+    try:
+        # 1. Presign — only filename + file_size per API docs
+        presign_resp = httpx.post(
+            f"{GUMROAD_API_BASE}/files/presign",
+            data={
+                "access_token": token,
+                "filename": file_name,
+                "file_size": str(file_size),
+            },
+            timeout=60.0,
+        )
+        if presign_resp.status_code != 200:
+            logger.warning(
+                f"/files/presign failed ({presign_resp.status_code}): {presign_resp.text[:300]}"
+            )
+            return None
+        presign_body = presign_resp.json()
+        upload_id = presign_body["upload_id"]
+        key = presign_body["key"]
+        parts = presign_body.get("parts", [])
+        file_url = presign_body.get("file_url", "")
+        logger.info(f"Presigned: {file_name} ({file_size}b, {len(parts)} part(s))")
+
+        # 2. Upload each part's byte range to S3, capture ETags
+        etags = []
+        for i, part in enumerate(parts):
+            start = i * 100 * 1024 * 1024
+            end = min(start + 100 * 1024 * 1024, file_size)
+            with open(file_path, "rb") as fh:
+                fh.seek(start)
+                chunk = fh.read(end - start)
+            part_resp = httpx.put(part["presigned_url"], content=chunk, timeout=600.0)
+            part_resp.raise_for_status()
+            etag = part_resp.headers.get("etag", "")
+            etags.append({"part_number": part["part_number"], "etag": etag})
+            logger.info(
+                f"Uploaded part {part['part_number']} ({len(chunk)}b ETag: {etag[:30]}...)"
+            )
+
+        # 3. Complete — submit ETags to finalize
+        complete_items = [
+            ("access_token", token),
+            ("upload_id", upload_id),
+            ("key", key),
+        ]
+        for et in etags:
+            complete_items.append(("parts[][part_number]", str(et["part_number"])))
+            complete_items.append(("parts[][etag]", et["etag"]))
+        complete_resp = httpx.post(
+            f"{GUMROAD_API_BASE}/files/complete",
+            content=urllib.parse.urlencode(complete_items),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=60.0,
+        )
+        if complete_resp.status_code == 200:
+            complete_body = complete_resp.json()
+            file_url = complete_body.get("file_url", file_url)
+        else:
+            logger.warning(
+                f"/files/complete failed ({complete_resp.status_code}): {complete_resp.text[:300]}"
+            )
+        logger.info(f"Upload complete: {file_name} -> {file_url}")
+        return file_url or None
+    except Exception as e:
+        logger.warning(f"File upload failed for {file_name}: {e}")
+        return None
+
+
+def _run_research(
+    component: ComponentSpec, job_spec: JobSpec, context: dict
+) -> AgentResult:
     niche = job_spec.niche
 
-    products_data = _gumroad_api("GET", "products")
+    products_data = _gumroad_form_api("GET", "products")
     niche_products = []
     if products_data and "products" in products_data:
         for p in products_data["products"]:
@@ -64,7 +194,13 @@ def _run_research(component: ComponentSpec, job_spec: JobSpec, context: dict) ->
         "visual_pack": ["visual", "design", "template pack", "assets", "graphics"],
         "workflow_kit": ["workflow", "automation", "pipeline", "sop"],
         "blog_kit": ["blog", "content pack", "article", "seo"],
-        "course_launch": ["course", "training", "workshop", "masterclass", "curriculum"],
+        "course_launch": [
+            "course",
+            "training",
+            "workshop",
+            "masterclass",
+            "curriculum",
+        ],
         "saas_docs": ["documentation", "api docs", "developer", "technical"],
     }
     type_distribution = {}
@@ -77,9 +213,15 @@ def _run_research(component: ComponentSpec, job_spec: JobSpec, context: dict) ->
                 matched = True
                 break
         if not matched:
-            type_distribution["research_pack"] = type_distribution.get("research_pack", 0) + 1
+            type_distribution["research_pack"] = (
+                type_distribution.get("research_pack", 0) + 1
+            )
 
-    recommended_type = max(type_distribution, key=type_distribution.get) if type_distribution else "research_pack"
+    recommended_type = (
+        max(type_distribution, key=type_distribution.get)
+        if type_distribution
+        else "research_pack"
+    )
 
     research = {
         "niche": niche,
@@ -101,10 +243,15 @@ def _run_research(component: ComponentSpec, job_spec: JobSpec, context: dict) ->
     try:
         from agents.llm_client import generate_text as llm_call
         from jinja2 import Environment, FileSystemLoader
+
         env = Environment(loader=FileSystemLoader("prompts"))
         template = env.get_template("gumroad_research.j2")
         llm_prompt = template.render(
-            gumroad_data_json=json.dumps(products_data, indent=2)[:8000] if products_data else "No products found",
+            gumroad_data_json=(
+                json.dumps(products_data, indent=2)[:8000]
+                if products_data
+                else "No products found"
+            ),
             niche=niche,
             product_type=job_spec.product_type.replace("_", " ").title(),
         )
@@ -120,43 +267,96 @@ def _run_research(component: ComponentSpec, job_spec: JobSpec, context: dict) ->
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(research, f, indent=2)
 
-    logger.info(f"Gumroad research: {len(niche_products)} products found, recommended type: {recommended_type}")
+    logger.info(
+        f"Gumroad research: {len(niche_products)} products found, recommended type: {recommended_type}"
+    )
     return AgentResult(status="done", output_path=output_path, error=None)
 
 
-def _run_publish(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
+def _get_previous_product_id(output_dir: str, niche: str = "") -> str | None:
+    """Find existing product_id — first from cached publish state, then by matching Gumroad products."""
+    publish_path = os.path.join(output_dir, "gumroad", "published.json")
+    try:
+        if os.path.isfile(publish_path):
+            with open(publish_path, "r") as f:
+                data = json.load(f)
+            pid = data.get("product_id")
+            if pid:
+                logger.info(f"Found cached product ID: {pid}")
+                return pid
+    except Exception as e:
+        logger.warning(f"Could not read previous publish state: {e}")
+
+    # Fallback: find an existing Gumroad product matching this niche
+    if niche:
+        products_data = _gumroad_form_api("GET", "products")
+        if products_data and "products" in products_data:
+            niche_kw = niche.lower().split()
+            for p in products_data["products"]:
+                name = (p.get("name") or "").lower()
+                if any(kw in name for kw in niche_kw):
+                    pid = p.get("id")
+                    logger.info(
+                        f"Found matching existing product: {p['name']} (ID: {pid})"
+                    )
+                    return pid
+    return None
+
+
+def _run_publish(
+    component: ComponentSpec, job_spec: JobSpec, context: dict
+) -> AgentResult:
     output_dir = os.path.join("outputs", job_spec.slug)
 
-    files_to_upload = []
+    # Load research data from context
     research_data = None
     for key, path in context.items():
-        if path and os.path.exists(path):
-            if path.endswith(".pdf") or path.endswith(".zip"):
-                files_to_upload.append({"key": key, "path": path, "name": os.path.basename(path)})
-            elif path.endswith(".json") and "gumroad_research" in path:
-                with open(path, "r", encoding="utf-8") as f:
-                    research_data = json.load(f)
+        if (
+            path
+            and os.path.exists(path)
+            and path.endswith(".json")
+            and "gumroad_research" in path
+        ):
+            with open(path, "r", encoding="utf-8") as f:
+                research_data = json.load(f)
+
+    # Scan output directory for files: presentation/*.pdf, root *.zip
+    files_to_upload = []
+    pres_dir = os.path.join(output_dir, "presentation")
+    if os.path.isdir(pres_dir):
+        for fn in os.listdir(pres_dir):
+            if fn.lower().endswith(".pdf"):
+                files_to_upload.append({"path": os.path.join(pres_dir, fn), "name": fn})
+    zip_path = os.path.join(output_dir, f"{job_spec.slug}.zip")
+    if os.path.isfile(zip_path):
+        files_to_upload.append({"path": zip_path, "name": os.path.basename(zip_path)})
 
     suggested_price = 29
     if research_data:
-        prices = [p.get("price", 0) for p in research_data.get("top_products", []) if p.get("price", 0) > 0]
+        prices = [
+            p.get("price", 0)
+            for p in research_data.get("top_products", [])
+            if p.get("price", 0) > 0
+        ]
         if prices:
             suggested_price = round(sum(prices) / len(prices))
 
     review_path = os.path.join(output_dir, "gumroad_review.md")
     with open(review_path, "w", encoding="utf-8") as f:
-        f.write(f"# Gumroad Product Review\n\n")
+        f.write("# Gumroad Product Review\n\n")
         f.write(f"**Niche:** {job_spec.niche}\n")
         f.write(f"**Product Type:** {job_spec.product_type}\n")
         f.write(f"**Suggested Price:** ${suggested_price}\n\n")
-        f.write(f"## Files to Upload\n\n")
+        f.write("## Files to Upload\n\n")
         for fobj in files_to_upload:
             fobj_size = os.path.getsize(fobj["path"])
             f.write(f"- `{fobj['name']}` ({fobj_size / 1024:.1f} KB)\n")
-        f.write(f"\n---\n")
-        f.write(f"\nPublish to Gumroad? (y/N): ")
+        f.write("\n---\n")
+        f.write("\nPublish to Gumroad? (y/N): ")
 
-    logger.info(f"Gumroad publish: {len(files_to_upload)} files, suggested price ${suggested_price}")
+    logger.info(
+        f"Gumroad publish: {len(files_to_upload)} files, suggested price ${suggested_price}"
+    )
     logger.info(f"Review written to {review_path}")
 
     product_name = f"{job_spec.display_name or job_spec.niche} - {job_spec.product_type.replace('_', ' ').title()}"
@@ -168,6 +368,7 @@ def _run_publish(component: ComponentSpec, job_spec: JobSpec, context: dict) -> 
     try:
         from agents.llm_client import generate_text as llm_call
         from jinja2 import Environment, FileSystemLoader
+
         env = Environment(loader=FileSystemLoader("prompts"))
         template = env.get_template("gumroad_listing.j2")
         research_output_path = context.get("gumroad_research", "")
@@ -178,46 +379,260 @@ def _run_publish(component: ComponentSpec, job_spec: JobSpec, context: dict) -> 
             research_output_path=research_output_path,
         )
         listing_result = llm_call(listing_prompt)
-        import json as _json
-        import re as _re
-        match = _re.search(r'\{.*\}', listing_result, _re.DOTALL)
+        match = re.search(r"\{.*\}", listing_result, re.DOTALL)
         if match:
-            listing_data = _json.loads(match.group())
+            listing_data = json.loads(match.group())
             if "product_name" in listing_data and listing_data["product_name"]:
                 product_name = listing_data["product_name"]
             if "description" in listing_data and listing_data["description"]:
                 product_data["description"] = listing_data["description"]
+            if "tagline" in listing_data and listing_data["tagline"]:
+                custom_summary = listing_data["tagline"][:120]
             logger.info(f"LLM-generated listing: {product_name}")
     except Exception as e:
         logger.warning(f"LLM listing generation failed (non-blocking): {e}")
-    result = _gumroad_api("POST", "products", data=product_data)
 
-    if not result or "product" not in result:
-        logger.error("Failed to create Gumroad product")
-        return AgentResult(status="failed", error="Gumroad API product creation failed")
+    token = os.getenv("GUMROAD_ACCESS_TOKEN")
 
-    product_id = result["product"]["id"]
-    product_url = result["product"].get("short_url", result["product"].get("url", ""))
+    # Only update existing products (rate limit: 10 creations/day)
+    product_id = _get_previous_product_id(output_dir, niche=job_spec.niche)
+    if not product_id:
+        logger.error(
+            "No existing product found — run publish once with a created product first"
+        )
+        return AgentResult(status="failed", error="No existing product ID to update")
 
-    logger.info(f"Gumroad product created: {product_url} (ID: {product_id})")
+    logger.info(f"Using existing product ID: {product_id}")
 
-    # Upload cover + thumbnail images to Gumroad product
-    images_path = context.get("images")
-    if images_path and os.path.exists(images_path):
+    # Upload all files via presign→upload→complete→attach flow
+    file_urls = []
+    for fobj in files_to_upload:
+        file_url = _gumroad_upload_file(fobj["path"])
+        if file_url:
+            file_urls.append({"url": file_url, "name": fobj["name"]})
+            logger.info(f"Uploaded file {fobj['name']} -> {file_url}")
+        else:
+            logger.warning(f"Failed to upload file {fobj['name']}")
+
+    # Also upload cover + thumbnail images
+    assets_dir = os.path.join(output_dir, "assets")
+    if os.path.isdir(assets_dir):
+        for img_file in os.listdir(assets_dir):
+            img_lower = img_file.lower()
+            if img_lower.startswith("cover") or img_lower.startswith("thumbnail"):
+                img_path = os.path.join(assets_dir, img_file)
+                if os.path.isfile(img_path):
+                    img_url = _gumroad_upload_file(img_path)
+                    if img_url:
+                        file_urls.append({"url": img_url, "name": img_file})
+                        logger.info(f"Uploaded image {img_file} -> {img_url}")
+
+    # Fetch existing product to get current file IDs (to preserve them)
+    existing_file_ids = []
+    product_files_gumroad = []
+    product_url = None
+    if token:
+        get_resp = httpx.request(
+            "GET",
+            f"{GUMROAD_API_BASE}/products/{product_id}",
+            params={"access_token": token},
+            timeout=60.0,
+        )
+        if get_resp.status_code == 200:
+            prod = get_resp.json().get("product", {})
+            for ef in prod.get("files", []):
+                if ef.get("id"):
+                    existing_file_ids.append(ef["id"])
+                if ef.get("url"):
+                    product_files_gumroad.append(ef["url"])
+            product_url = prod.get("short_url", "")
+            if existing_file_ids:
+                logger.info(f"Preserving {len(existing_file_ids)} existing file(s)")
+
+    # Build custom_receipt text
+    cta = getattr(job_spec, "call_to_action", "Buy Now on Gumroad")
+    custom_receipt = (
+        f"Thank you for purchasing {product_name}! "
+        f"Your download links are below. {cta}"
+    )
+
+    # Generate tags from niche + product_type
+    tags = _generate_tags(job_spec.niche, job_spec.product_type)
+
+    # Generate custom_summary from LLM tagline or fallback
+    custom_summary = f"{product_name} — a premium {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}."
+
+    # First PUT: attach files, set all product fields
+    attach_body = {
+        "name": product_name,
+        "price": str(product_data["price"]),
+        "description": product_data["description"],
+        "custom_receipt": custom_receipt,
+        "custom_permalink": job_spec.slug,
+        "custom_summary": custom_summary,
+        "tags": tags,
+        "display_product_reviews": "true",
+        "should_show_sales_count": "true",
+    }
+    files_spec = []
+    for fid in existing_file_ids:
+        files_spec.append({"id": fid})
+    for f in file_urls:
+        files_spec.append({"url": f["url"], "name": f["name"]})
+    if files_spec:
+        attach_body["files"] = files_spec
+
+    attach_result = _gumroad_put_with_rails_params(product_id, attach_body)
+    if attach_result and attach_result.get("success"):
+        updated_product = attach_result.get("product", {})
+        product_url = updated_product.get("short_url", "") or product_url
+        logger.info(
+            f"Updated product with {len(file_urls)} new file(s) + {len(existing_file_ids)} preserved"
+        )
+
+        # Get file IDs from response for rich_content
+        updated_files = updated_product.get("files", [])
+        for f in file_urls:
+            for uf in updated_files:
+                if uf.get("url") and uf["url"] == f["url"]:
+                    f["id"] = uf["id"]
+                    break
+
+        # Upload cover image via POST /products/:id/covers
+        cover_url = None
+        thumbnail_url = None
+        for f in file_urls:
+            name_lower = f.get("name", "").lower()
+            target_url = None
+            for uf in updated_files:
+                if uf.get("id") == f.get("id") and uf.get("url"):
+                    target_url = uf["url"]
+                    break
+            if name_lower.startswith("cover"):
+                cover_url = target_url
+            elif name_lower.startswith("thumbnail"):
+                thumbnail_url = target_url
+
+        if cover_url and token:
+            try:
+                cover_resp = httpx.post(
+                    f"{GUMROAD_API_BASE}/products/{product_id}/covers",
+                    data={"access_token": token, "url": cover_url},
+                    timeout=60.0,
+                )
+                if cover_resp.status_code == 200:
+                    logger.info("Cover image set")
+                else:
+                    logger.warning(f"Cover upload failed: {cover_resp.text[:200]}")
+            except Exception as e:
+                logger.warning(f"Cover upload error: {e}")
+
+        # Upload thumbnail via POST /products/:id/thumbnail
+        if thumbnail_url and token:
+            try:
+                thumb_resp = httpx.post(
+                    f"{GUMROAD_API_BASE}/products/{product_id}/thumbnail",
+                    data={"access_token": token, "url": thumbnail_url},
+                    timeout=60.0,
+                )
+                if thumb_resp.status_code == 200:
+                    logger.info("Thumbnail set")
+                else:
+                    logger.warning(f"Thumbnail upload failed: {thumb_resp.text[:200]}")
+            except Exception as e:
+                logger.warning(f"Thumbnail upload error: {e}")
+
+        # Build and set rich_content (thank-you page with file download embeds)
+        file_embeds = []
+        for uf in updated_files:
+            if uf.get("id"):
+                file_embeds.append(
+                    {
+                        "type": "fileEmbed",
+                        "attrs": {
+                            "id": uf["id"],
+                            "uid": uf["id"][:32],
+                            "collapsed": False,
+                        },
+                    }
+                )
+        if file_embeds:
+            rc_content = [
+                {
+                    "type": "heading",
+                    "attrs": {"level": 1},
+                    "content": [
+                        {
+                            "text": "Thank you for your purchase!",
+                            "type": "text",
+                            "marks": [{"type": "bold"}],
+                        }
+                    ],
+                },
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"text": "Your downloads are ready below.", "type": "text"}
+                    ],
+                },
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "text": "Your Files:",
+                            "type": "text",
+                            "marks": [{"type": "bold"}],
+                        }
+                    ],
+                },
+                *file_embeds,
+            ]
+            rc_result = _gumroad_put_with_rails_params(
+                product_id,
+                {
+                    "rich_content": [
+                        {"description": {"type": "doc", "content": rc_content}}
+                    ]
+                },
+            )
+            if rc_result and rc_result.get("success"):
+                logger.info("Rich content (thank-you page) set")
+            else:
+                logger.warning("Rich content setting failed")
+    else:
+        logger.warning(
+            f"Product update failed: {attach_result.get('message', 'unknown') if attach_result else 'no response'}"
+        )
+
+    # Publish via the enable endpoint
+    if token:
         try:
-            with open(images_path, "r", encoding="utf-8") as f:
-                images_data = json.load(f)
-            product_images = images_data.get("images", {})
-            for img_type in ("cover", "thumbnail"):
-                img_path = product_images.get(img_type)
-                if img_path and os.path.exists(img_path):
-                    asset_result = _gumroad_upload_asset(product_id, img_path)
-                    if asset_result:
-                        logger.info(f"Uploaded {img_type} image to Gumroad product {product_id}")
-                    else:
-                        logger.warning(f"Failed to upload {img_type} image to Gumroad product {product_id}")
+            enable_resp = httpx.put(
+                f"{GUMROAD_API_BASE}/products/{product_id}/enable",
+                data={"access_token": token},
+                timeout=60.0,
+            )
+            if enable_resp.status_code == 200:
+                enable_result = enable_resp.json()
+                if enable_result.get("success"):
+                    product_url = (
+                        enable_result.get("product", {}).get("short_url", "")
+                        or product_url
+                    )
+                    logger.info(f"Product published: {product_url}")
+                else:
+                    logger.warning(
+                        f"Publish failed: {enable_result.get('errors', 'unknown error')}"
+                    )
+            else:
+                logger.warning(
+                    f"Publish HTTP {enable_resp.status_code}: {enable_resp.text[:200]}"
+                )
         except Exception as e:
-            logger.warning(f"Image upload to Gumroad failed (non-blocking): {e}")
+            logger.warning(f"Publish call failed: {e}")
+
+    if not product_url:
+        product_url = f"https://kundanalpk.gumroad.com/l/{job_spec.slug}"
 
     publish_result = {
         "status": "published",
@@ -231,11 +646,17 @@ def _run_publish(component: ComponentSpec, job_spec: JobSpec, context: dict) -> 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(publish_result, f, indent=2)
 
+    # Also save product_id to gumroad/published.json for next-run caching
+    cached_publish_path = os.path.join(output_dir, "gumroad", "published.json")
+    os.makedirs(os.path.dirname(cached_publish_path), exist_ok=True)
+    with open(cached_publish_path, "w", encoding="utf-8") as f:
+        json.dump(publish_result, f, indent=2)
+
     link_dir = os.path.join(output_dir, "presentation")
     os.makedirs(link_dir, exist_ok=True)
     link_path = os.path.join(link_dir, "Gumroad_Product_Link.md")
     with open(link_path, "w", encoding="utf-8") as f:
-        f.write(f"# Gumroad Product Published\n\n")
+        f.write("# Gumroad Product Published\n\n")
         f.write(f"## [View on Gumroad]({product_url})\n\n")
         f.write(f"- **Product ID:** {product_id}\n")
         f.write(f"- **Price:** ${suggested_price}\n")

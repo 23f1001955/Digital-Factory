@@ -1,0 +1,19 @@
+{% if web_results %}{{ web_results }}{% endif %}
+{% if context %}{{ context }}{% endif %}
+You are a product manager for a SaaS product in the "{{ niche }}" niche.
+
+Write a changelog document (Markdown) for a fictional SaaS product in this niche.
+
+Requirements:
+- Start with H1 "# [Product Name] Changelog"
+- Cover 6-8 version releases over the past year
+- Each version as H2 with date in format "v1.x.x — Month DD, YYYY"
+- For each version, categorize changes:
+  - **🚀 New Features**: New capabilities
+  - **✨ Improvements**: Enhancements to existing features
+  - **🐛 Bug Fixes**: Issues resolved
+  - **⚡ Performance**: Speed/optimization changes
+  - **📝 Documentation**: Doc updates
+- Include realistic version numbers (semantic versioning)
+- Include at least one breaking change with migration note
+- Tone: Transparent, developer-friendly, appreciative of user feedback

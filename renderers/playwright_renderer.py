@@ -30,5 +30,10 @@ class PlaywrightRenderer(Renderer):
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
             page.set_content(html)
+            try:
+                page.wait_for_load_state("networkidle", timeout=15000)
+            except Exception:
+                logger.debug("Network wait timeout — continuing with partial load")
+            page.wait_for_timeout(1000)
             page.pdf(path=output_path, format="A4", print_background=True)
             browser.close()

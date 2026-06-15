@@ -1,0 +1,21 @@
+{% if web_results %}{{ web_results }}{% endif %}
+{% if context %}{{ context }}{% endif %}
+{% if course_outline %}Course outline reference:
+{{ course_outline }}
+{% endif %}
+{% if marketing_copy %}Marketing copy reference:
+{{ marketing_copy }}
+{% endif %}
+You are a launch project manager for the niche "{{ niche }}".
+
+Create a detailed launch timeline (Markdown) for a product launch in "{{ niche }}".
+
+Requirements:
+- Start with H1 "# Launch Timeline: [Product Name]"
+- **Pre-Launch Phase** (4-6 weeks before): Tasks, owners, deadlines
+- **Build Phase** (2-4 weeks before): Content creation, design, testing
+- **Launch Week**: Day-by-day breakdown
+- **Post-Launch** (1-4 weeks after): Follow-up, iteration
+- Each task should have: description, estimated effort, dependencies
+- Include buffer time for unexpected delays
+- Mark quick wins vs long-term tasks

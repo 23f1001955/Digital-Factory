@@ -1,0 +1,35 @@
+{% if research_output_path %}Research data available at: {{ research_output_path }}{% endif %}
+You are a direct-response copywriter specializing in Gumroad product listings for the "{{ niche }}" niche.
+
+Using the market research available at {{ research_output_path }}, generate a complete Gumroad product listing.
+
+The call-to-action for this product is: "{{ call_to_action }}"
+
+Generate the following as a **JSON object** with these exact keys:
+
+```json
+{
+  "product_name": "SEO-optimized product name (under 60 chars, includes primary keyword)",
+  "tagline": "Compelling tagline under 10 words",
+  "description": "3-4 benefit-focused paragraphs. First paragraph hooks with the pain point. Second paragraph presents the solution. Third paragraph establishes credibility. Fourth paragraph delivers the call to action.",
+  "features": [
+    "Feature 1 — benefit-driven bullet",
+    "Feature 2 — benefit-driven bullet",
+    "Feature 3 — benefit-driven bullet"
+  ],
+  "pricing_recommendation": {
+    "model": "one-time or subscription or tiered",
+    "price": "USD amount",
+    "rationale": "Brief justification referencing competitor data"
+  }
+}
+```
+
+Requirements:
+- Product name must include a primary keyword for "{{ product_type }}" in "{{ niche }}"
+- Description must be benefit-focused (features tell, benefits sell)
+- Features must be 5-8 bullet points, each with a clear benefit
+- Pricing must be justified against the research data
+- Use the call-to-action "{{ call_to_action }}" naturally in the description
+
+Output ONLY the JSON object — no preamble, no markdown wrapper.

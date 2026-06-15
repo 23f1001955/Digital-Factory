@@ -1,0 +1,21 @@
+{% if web_results %}{{ web_results }}{% endif %}
+{% if context %}{{ context }}{% endif %}
+You are a technical writer for a SaaS product in the "{{ niche }}" niche.
+
+Write a comprehensive API reference document (Markdown) for a fictional SaaS product in this niche.
+
+Requirements:
+- Start with H1 "# [Product Name] API Reference"
+- **Overview**: API base URL, authentication method, content type
+- **Authentication**: How to get and use API keys
+- **Endpoints** (5-8 endpoints), each as H2:
+  - HTTP method and path
+  - Description
+  - Request parameters (table)
+  - Example request (curl)
+  - Example response (JSON)
+  - Error codes
+- **Rate Limiting**: Limits and headers
+- **Webhooks**: Event types and payload format
+- **Error Handling**: Common errors and status codes
+- Use realistic endpoint names and data structures for the niche

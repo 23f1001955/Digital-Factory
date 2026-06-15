@@ -4,15 +4,20 @@ Product: {{ display_name or niche }}
 Product Type: {{ product_type }}
 Niche: {{ niche }}
 Theme: {{ theme }}
-Cover Image URL: {{ cover_url }}
+Available Images:
+{% for img_id, img_url in images.items() %}
+- {{ img_id }}: {{ img_url }}
+{% endfor %}
 Call to Action: "{{ cta_text }}"
 Gumroad URL: {{ gumroad_url }}
 
 Generate a detailed Stitch prompt that:
-1. Specifies a hero section with the cover image, product title, and CTA button linked to {{ gumroad_url }}
-2. Lists 3-5 key features or benefits of this product
-3. Includes a pricing section showing the product value
-4. Has a clean footer
+1. Specifies a hero section using one of the available images, product title, and CTA button linked to {{ gumroad_url }}
+2. Uses remaining images across feature sections, benefit highlights, or background visuals
+3. Lists 3-5 key features or benefits of this product
+4. Includes a pricing section showing the product value
+5. Has a clean footer
 
 Design style should match the "{{ theme }}" theme.
+Choose images that best fit each section's purpose.
 Output should be a plain text prompt suitable for Stitch's generate_screen_from_text tool.

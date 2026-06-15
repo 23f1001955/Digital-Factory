@@ -1,3 +1,4 @@
+{% if web_results %}{{ web_results }}{% endif %}
 You are an expert researcher and curator specializing in {{ niche }}.
 
 Generate a JSON array of 7-10 key resources, tools, platforms, or communities in the "{{ niche }}" niche.
@@ -5,7 +6,7 @@ Generate a JSON array of 7-10 key resources, tools, platforms, or communities in
 Each item MUST have these fields:
 - "name": Short resource name (2-5 words)
 - "description": 1-2 sentence explanation of what it does and why it matters
-- "url": A real, believable URL (use example.com format if unsure)
+- "url": A real URL you know from your training data (e.g., "https://gumroad.com", "https://notion.so", "https://github.com"). NEVER use example.com — use an actual known domain even if approximate.
 - "pricing_model": One of "Free", "Freemium", "Subscription", "One-time", "Contact for pricing"
 
 CRITICAL RULES:
@@ -17,9 +18,9 @@ CRITICAL RULES:
 Example format:
 [
   {
-    "name": "Example Tool",
-    "description": "A platform that helps professionals in this niche automate their workflow.",
-    "url": "https://example.com",
+    "name": "Notion",
+    "description": "An all-in-one workspace platform for notes, wikis, and project management.",
+    "url": "https://notion.so",
     "pricing_model": "Freemium"
   }
 ]

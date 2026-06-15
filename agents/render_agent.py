@@ -60,7 +60,15 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         mermaid_src = ""
         md_text = ""
 
-        md_file = context.get(component.depends_on[0]) if component.depends_on else context.get("report")
+        md_file = None
+        if component.depends_on:
+            for dep in component.depends_on:
+                dep_path = context.get(dep)
+                if dep_path and dep_path.endswith(".md") and os.path.exists(dep_path):
+                    md_file = dep_path
+                    break
+        if not md_file:
+            md_file = context.get("report")
         if md_file and md_file.endswith(".md") and os.path.exists(md_file):
             with open(md_file, "r", encoding="utf-8") as f:
                 md_text = f.read()

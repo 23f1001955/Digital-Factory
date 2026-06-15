@@ -1,0 +1,21 @@
+{% if web_results %}{{ web_results }}{% endif %}
+{% if context %}{{ context }}{% endif %}
+{% if database %}Use this resource database for reference:
+{{ database }}
+{% endif %}
+{% if sources %}Source trends and context:
+{{ sources }}
+{% endif %}
+You are an expert blog writer specializing in {{ niche }}.
+
+Write a comprehensive, engaging blog post (Markdown) for the topic "{{ niche }}".
+
+Requirements:
+- Start with an H1 title (#) — compelling, clickable headline
+- Opening hook paragraph that grabs attention
+- 3-5 H2 sections with detailed, actionable content
+- Include bullet lists, bold key points, and short paragraphs for readability
+- Strong conclusion with call to action
+- 800-1500 words
+- Professional but conversational tone
+- {{ "Guide format: concise and actionable (keep under 1000 words)" if mode == "guide" else "Full format: comprehensive and detailed" }}

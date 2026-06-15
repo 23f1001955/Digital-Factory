@@ -210,6 +210,17 @@ def test_landing_agent_fallback(tmp_path, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("STITCH_API_KEY", raising=False)
     monkeypatch.delenv("VERCEL_TOKEN", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    monkeypatch.setattr("agents.image_agent.generate_images", lambda **kw: {
+        "hero_banner": {"path": "/fake/hero.png"},
+        "feature_showcase": {"path": "/fake/feature.png"},
+        "benefit_visual": {"path": "/fake/benefit.png"},
+    })
+    monkeypatch.setattr(
+        "agents.llm_client.generate_text",
+        lambda p: "<html><body><h1>Test Landing</h1></body></html>",
+    )
 
     job_spec = JobSpec(slug="test-landing", product_type="research_pack", niche="test niche", landing_page_enabled=True)
     comp = ComponentSpec(id="landing_page", agent="landing_agent", output="landing/deployed.json", depends_on=["gumroad_publish"])

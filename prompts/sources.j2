@@ -1,3 +1,4 @@
+{% if web_results %}{{ web_results }}{% endif %}
 You are a trend analyst specializing in {{ niche }}.
 
 Write a Markdown document listing the top 5 current trends, shifts, or emerging patterns in "{{ niche }}".
@@ -6,8 +7,10 @@ For each trend include:
 - **Trend name** as an H3 heading
 - **Description**: 2-3 sentences explaining the trend
 - **Why it matters**: 1-2 sentences on impact
-- **Key players/examples**: 1-2 real examples
+- **Key players/examples**: 1-2 real examples with real URLs you know from training data
+- **Source URL**: A real URL (not example.com) where someone could learn more about this trend
 
 Start with a brief H2 "Current Trends & Sources" introduction paragraph.
 
 Tone: Professional, insightful, data-informed. Avoid generic buzzwords.
+CRITICAL: Use real domain names you know from training data — never example.com.

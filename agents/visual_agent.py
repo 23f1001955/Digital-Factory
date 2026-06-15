@@ -1,62 +1,50 @@
 import os
 import json
 import logging
-from openai import OpenAI
-import requests
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
+from agents.image_agent import generate_from_prompt
 
 logger = logging.getLogger(__name__)
+
 
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
     try:
         if "image_prompts" not in context:
             raise ValueError("image_prompts dependency not met")
-            
+
         with open(context["image_prompts"], "r") as f:
             prompts = json.load(f)
-            
+
+        if isinstance(prompts, list) and all(isinstance(p, str) for p in prompts):
+            prompt_list = prompts
+        elif isinstance(prompts, list) and all(isinstance(p, dict) for p in prompts):
+            prompt_list = [p.get("prompt", str(p)) for p in prompts]
+        else:
+            prompt_list = list(prompts) if isinstance(prompts, list) else [str(prompts)]
+
         output_dir = os.path.join("outputs", job_spec.slug, component.output)
         os.makedirs(output_dir, exist_ok=True)
-        
-        api_key = os.getenv("OPENAI_API_KEY")
-        
-        # If no key, generate placeholders
-        if not api_key or api_key == "your_openai_api_key_here":
-            logger.warning("OPENAI_API_KEY missing or placeholder. Generating local placeholder images.")
-            
-            for i, p in enumerate(prompts):
-                path = os.path.join(output_dir, f"image_{i+1}.png")
-                # Create a simple colored square placeholder
-                # We'll just write an empty file that Playwright can at least reference,
-                # though it won't render an image. Better yet, create a basic SVG or download a dummy image.
-                # Here we'll download a dummy placeholder image from placehold.co
-                res = requests.get(f"https://placehold.co/800x800/png?text=Image+{i+1}")
-                with open(path, "wb") as img_f:
-                    img_f.write(res.content)
-            
-            return AgentResult(status="done", output_path=output_dir, error=None)
-            
-        client = OpenAI(api_key=api_key)
-        
-        for i, prompt_text in enumerate(prompts):
-            path = os.path.join(output_dir, f"image_{i+1}.png")
-            
-            response = client.images.generate(
-                model="dall-e-3",
-                prompt=prompt_text,
-                size="1024x1024",
-                quality="standard",
-                n=1,
-            )
-            image_url = response.data[0].url
-            
-            img_data = requests.get(image_url).content
-            with open(path, "wb") as img_f:
-                img_f.write(img_data)
-                
+
+        aspect_ratios = ["16:9", "1:1", "2:3", "4:5"]
+        results = {}
+
+        for i, prompt_text in enumerate(prompt_list):
+            img_id = f"image_{i+1}"
+            ar = aspect_ratios[i % len(aspect_ratios)]
+            output_path = os.path.join(output_dir, f"{img_id}.png")
+
+            file_path = generate_from_prompt(prompt_text, output_path, ar)
+            results[img_id] = file_path
+            logger.info(f"Generated {img_id} -> {file_path}")
+
+        output_path = os.path.join("outputs", job_spec.slug, component.output.rstrip("/"), "_manifest.json")
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump({"images": results, "count": len(results)}, f, indent=2)
+
         return AgentResult(status="done", output_path=output_dir, error=None)
-        
+
     except Exception as e:
         logger.error(f"Visual agent failed: {e}")
         return AgentResult(status="failed", error=str(e))

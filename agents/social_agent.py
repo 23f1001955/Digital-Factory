@@ -6,6 +6,7 @@ from typing import Optional
 import httpx
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
+from agents.image_agent import generate_images, ImageRequirement
 
 logger = logging.getLogger(__name__)
 
@@ -59,17 +60,37 @@ def _post_to_instagram(ig_user_id: str, page_token: str, caption: str, image_url
         return None
 
 
-def _post_to_threads(threads_user_id: str, page_token: str, text: str) -> Optional[dict]:
-    """Post to Threads via Graph API."""
+def _post_to_threads(threads_user_id: str, page_token: str, text: str, image_url: str = "") -> Optional[dict]:
+    """Post to Threads via Graph API. Supports text + optional image."""
     try:
-        url = f"{FACEBOOK_API_BASE}/{threads_user_id}/threads"
-        data = {
-            "access_token": page_token,
-            "text": text,
-        }
-        resp = httpx.post(url, data=data, timeout=30.0)
-        resp.raise_for_status()
-        return resp.json()
+        if image_url:
+            create_url = f"{FACEBOOK_API_BASE}/{threads_user_id}/threads"
+            create_data = {
+                "access_token": page_token,
+                "media_type": "IMAGE",
+                "image_url": image_url,
+                "text": text,
+            }
+            resp = httpx.post(create_url, data=create_data, timeout=30.0)
+            resp.raise_for_status()
+            container_id = resp.json().get("id")
+            if not container_id:
+                return None
+
+            publish_url = f"{FACEBOOK_API_BASE}/{threads_user_id}/threads_publish"
+            publish_data = {"access_token": page_token, "creation_id": container_id}
+            resp = httpx.post(publish_url, data=publish_data, timeout=30.0)
+            resp.raise_for_status()
+            return resp.json()
+        else:
+            url = f"{FACEBOOK_API_BASE}/{threads_user_id}/threads"
+            data = {
+                "access_token": page_token,
+                "text": text,
+            }
+            resp = httpx.post(url, data=data, timeout=30.0)
+            resp.raise_for_status()
+            return resp.json()
     except Exception as e:
         logger.warning(f"Threads post failed: {e}")
         return None
@@ -170,36 +191,65 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         pinterest_token = os.getenv("PINTEREST_TOKEN")
         pinterest_board_id = os.getenv("PINTEREST_BOARD_ID", "")
 
+        # Determine runtime image requirements per platform
+        social_reqs: list[ImageRequirement] = []
+        if facebook_token:
+            social_reqs.append({"id": "fb_post", "purpose": "Facebook post image", "aspect_ratio": "16:9"})
+        if facebook_token and ig_user_id:
+            for i in range(4):
+                social_reqs.append({"id": f"ig_carousel_{i+1}", "purpose": f"Instagram carousel slide {i+1}", "aspect_ratio": "1:1"})
+        if facebook_token and threads_user_id:
+            social_reqs.append({"id": "threads_post", "purpose": "Threads post image", "aspect_ratio": "1:1"})
+        if pinterest_token and pinterest_board_id:
+            social_reqs.append({"id": "pinterest_pin", "purpose": "Pinterest pin image", "aspect_ratio": "2:3"})
+
+        img_output_dir = os.path.join("outputs", slug, "social_images")
+        social_images = {}
+        if social_reqs:
+            social_images = generate_images(
+                requirements=social_reqs,
+                niche=job_spec.niche,
+                product_type=job_spec.product_type,
+                theme=getattr(job_spec, "theme", "default"),
+                output_dir=img_output_dir,
+            )
+
         results = {}
 
         if facebook_token and copies.get("facebook"):
+            fb_img = social_images.get("fb_post", landing_page_url or "")
             fb_result = _post_to_facebook(
                 page_id, facebook_token,
                 copies["facebook"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["facebook"]["hashtags"]),
+                fb_img,
             )
             results["facebook"] = "posted" if fb_result else "failed"
 
         if facebook_token and ig_user_id and copies.get("instagram"):
+            ig_img = social_images.get("ig_carousel_1", landing_page_url or "")
             ig_result = _post_to_instagram(
                 ig_user_id, facebook_token,
                 copies["instagram"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["instagram"]["hashtags"]),
-                landing_page_url or "",
+                ig_img,
             )
             results["instagram"] = "posted" if ig_result else "failed"
 
         if facebook_token and threads_user_id and copies.get("threads"):
+            threads_img = social_images.get("threads_post", landing_page_url or "")
             threads_result = _post_to_threads(
                 threads_user_id, facebook_token,
                 copies["threads"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["threads"]["hashtags"]),
+                threads_img,
             )
             results["threads"] = "posted" if threads_result else "failed"
 
         if pinterest_token and pinterest_board_id and copies.get("pinterest"):
+            pin_img = social_images.get("pinterest_pin", landing_page_url or "")
             pin_result = _post_to_pinterest(
                 pinterest_token, pinterest_board_id,
                 copies["pinterest"]["title"],
                 copies["pinterest"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["pinterest"]["hashtags"]),
-                landing_page_url or "",
+                pin_img,
                 gumroad_url,
             )
             results["pinterest"] = "posted" if pin_result else "failed"

@@ -46,6 +46,16 @@
       "depends_on": ["market_research"]
     },
     {
+      "id": "stitch_download",
+      "agent": "stitch_agent",
+      "output": "stitch/screens",
+      "depends_on": [
+        "setup_guide",
+        "prompts",
+        "automation_blueprint"
+      ]
+    },
+    {
       "id": "setup_guide_pdf",
       "agent": "render_agent",
       "output": "presentation/setup_guide.pdf",
@@ -102,14 +112,16 @@
       "agent": "gumroad_agent",
       "output": "gumroad/published.json",
       "depends_on": [
-        "gumroad_research"
+        "gumroad_research",
+        "setup_guide_pdf",
+        "diagram_pdf"
       ]
     },
     {
       "id": "landing_page",
       "agent": "landing_agent",
       "output": "landing/deployed.json",
-      "depends_on": ["gumroad_publish"]
+      "depends_on": ["gumroad_publish", "stitch_download"]
     },
     {
       "id": "social_promotion",

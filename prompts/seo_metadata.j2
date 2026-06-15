@@ -1,0 +1,18 @@
+{% if web_results %}{{ web_results }}{% endif %}
+{% if context %}{{ context }}{% endif %}
+{% if post_draft %}Here is the blog post to analyze:
+{{ post_draft }}
+{% endif %}
+You are an SEO specialist for the niche "{{ niche }}".
+
+Based on the blog post provided above, generate SEO metadata in Markdown format:
+
+- **Meta Title** (under 60 chars)
+- **Meta Description** (under 160 chars)
+- **Primary Keyword**
+- **Secondary Keywords** (3-5)
+- **Slug URL suggestion**
+- **Internal linking suggestions**
+- **Tags/Categories** (3-5)
+
+Be specific to the content of the post — no generic suggestions.
