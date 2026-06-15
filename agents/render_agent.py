@@ -9,7 +9,6 @@ from jinja2 import Environment, FileSystemLoader
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
 from renderers.base import Renderer
-from agents.image_agent import ImageRequirement
 
 logger = logging.getLogger(__name__)
 

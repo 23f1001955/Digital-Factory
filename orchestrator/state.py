@@ -1,6 +1,6 @@
 import json
 import os
-from .models import JobState, AgentResult
+from .models import JobState
 
 def load_job_state(filepath: str, default_slug: str) -> JobState:
     if os.path.exists(filepath):

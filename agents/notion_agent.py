@@ -543,13 +543,13 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         os.makedirs(link_dir, exist_ok=True)
         link_path = os.path.join(link_dir, "Notion_Template_Link.md")
         with open(link_path, "w", encoding="utf-8") as f:
-            f.write(f"# Notion Template Access Link\n\n")
-            f.write(f"Your interactive Notion workspace has been successfully created!\n\n")
+            f.write("# Notion Template Access Link\n\n")
+            f.write("Your interactive Notion workspace has been successfully created!\n\n")
             f.write(f"## 🔗 [Click here to open the Notion Template]({root_page_url})\n\n")
-            f.write(f"### How to use this template:\n")
-            f.write(f"1. Open the link above in your browser.\n")
-            f.write(f"2. Click the **'Duplicate'** button in the top-right corner of the page.\n")
-            f.write(f"3. The workspace will copy directly into your own Notion account, ready to be customized or sold!\n")
+            f.write("### How to use this template:\n")
+            f.write("1. Open the link above in your browser.\n")
+            f.write("2. Click the **'Duplicate'** button in the top-right corner of the page.\n")
+            f.write("3. The workspace will copy directly into your own Notion account, ready to be customized or sold!\n")
 
         return AgentResult(status="done", output_path=output_path, error=None)
 

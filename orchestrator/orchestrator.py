@@ -1,9 +1,9 @@
 import os
 import json
 import logging
-from typing import Dict, List
+from typing import List
 
-from .models import JobSpec, JobState, ProductSchema, ComponentSpec, AgentResult
+from .models import JobSpec, ProductSchema, ComponentSpec, AgentResult
 from .state import load_job_state, save_job_state
 from agents.registry import AGENT_REGISTRY
 from renderers.base import get_renderer
@@ -82,7 +82,7 @@ class Orchestrator:
                 context[dep] = dep_state.output_path
                 
             if not deps_ok:
-                self.state.components[component.id] = AgentResult(status="skipped", error=f"dependency not met")
+                self.state.components[component.id] = AgentResult(status="skipped", error="dependency not met")
                 save_job_state(self.state, self.state_path)
                 continue
                 
