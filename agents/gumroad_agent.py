@@ -323,7 +323,8 @@ def _run_publish(
     research_data = None
     for key, path in context.items():
         if (
-            path
+            isinstance(path, str)
+            and path
             and os.path.exists(path)
             and path.endswith(".json")
             and "gumroad_research" in path
@@ -331,16 +332,34 @@ def _run_publish(
             with open(path, "r", encoding="utf-8") as f:
                 research_data = json.load(f)
 
-    # Scan output directory for files: presentation/*.pdf, root *.zip
+    # Scan output directory for files: use delivery_map if available, else fallback
     files_to_upload = []
-    pres_dir = os.path.join(output_dir, "presentation")
-    if os.path.isdir(pres_dir):
-        for fn in os.listdir(pres_dir):
-            if fn.lower().endswith(".pdf"):
-                files_to_upload.append({"path": os.path.join(pres_dir, fn), "name": fn})
-    zip_path = os.path.join(output_dir, f"{job_spec.slug}.zip")
-    if os.path.isfile(zip_path):
-        files_to_upload.append({"path": zip_path, "name": os.path.basename(zip_path)})
+    delivery_map = context.get("_delivery_map")
+
+    if delivery_map:
+        for comp_id, entry in delivery_map.items():
+            if "gumroad" not in entry.get("delivery", []):
+                continue
+            path = entry.get("output")
+            if path and os.path.isfile(path):
+                files_to_upload.append({"path": path, "name": os.path.basename(path)})
+        # Always add ZIP from package component if available
+        for comp_id, entry in delivery_map.items():
+            if comp_id == "package":
+                zip_candidate = entry.get("output")
+                if zip_candidate and os.path.isfile(zip_candidate):
+                    if not any(f["path"] == zip_candidate for f in files_to_upload):
+                        files_to_upload.append({"path": zip_candidate, "name": os.path.basename(zip_candidate)})
+    else:
+        # Fallback: scan presentation/*.pdf and root *.zip
+        pres_dir = os.path.join(output_dir, "presentation")
+        if os.path.isdir(pres_dir):
+            for fn in os.listdir(pres_dir):
+                if fn.lower().endswith(".pdf"):
+                    files_to_upload.append({"path": os.path.join(pres_dir, fn), "name": fn})
+        zip_path = os.path.join(output_dir, f"{job_spec.slug}.zip")
+        if os.path.isfile(zip_path):
+            files_to_upload.append({"path": zip_path, "name": os.path.basename(zip_path)})
 
     suggested_price = 29
     if research_data:
@@ -372,7 +391,7 @@ def _run_publish(
 
     product_name = (
         f"{job_spec.display_name or job_spec.niche} - {job_spec.product_type.replace('_', ' ').title()} Notion Template"
-        if getattr(job_spec, 'notion_only', False)
+        if getattr(job_spec, "notion_only", False)
         else f"{job_spec.display_name or job_spec.niche} - {job_spec.product_type.replace('_', ' ').title()}"
     )
     product_data = {
@@ -407,6 +426,19 @@ def _run_publish(
     except Exception as e:
         logger.warning(f"LLM listing generation failed (non-blocking): {e}")
 
+    cta = getattr(job_spec, "call_to_action", "Buy Now on Gumroad")
+    custom_receipt = (
+        f"Thank you for purchasing {product_name}! "
+        f"Your download links are below. {cta}"
+    )
+    tags = _generate_tags(job_spec.niche, job_spec.product_type)
+    if "custom_summary" not in locals():
+        custom_summary = (
+            f"{product_name} — a standalone Notion workspace template for {job_spec.niche}."
+            if getattr(job_spec, "notion_only", False)
+            else f"{product_name} — a premium {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}."
+        )
+
     token = os.getenv("GUMROAD_ACCESS_TOKEN")
 
     product_id = _get_previous_product_id(output_dir, niche=job_spec.niche)
@@ -414,7 +446,11 @@ def _run_publish(
         logger.info("No existing product found — attempting to create new product")
         create_data = {
             "name": product_name,
-            "custom_permalink": f"{job_spec.slug}-notion" if getattr(job_spec, 'notion_only', False) else job_spec.slug,
+            "custom_permalink": (
+                f"{job_spec.slug}-notion"
+                if getattr(job_spec, "notion_only", False)
+                else job_spec.slug
+            ),
             "price": str(product_data["price"]),
             "description": product_data["description"],
             "custom_receipt": custom_receipt,
@@ -478,30 +514,17 @@ def _run_publish(
             if existing_file_ids:
                 logger.info(f"Preserving {len(existing_file_ids)} existing file(s)")
 
-    # Build custom_receipt text
-    cta = getattr(job_spec, "call_to_action", "Buy Now on Gumroad")
-    custom_receipt = (
-        f"Thank you for purchasing {product_name}! "
-        f"Your download links are below. {cta}"
-    )
-
-    # Generate tags from niche + product_type
-    tags = _generate_tags(job_spec.niche, job_spec.product_type)
-
-    # Generate custom_summary from LLM tagline or fallback
-    custom_summary = (
-        f"{product_name} — a standalone Notion workspace template for {job_spec.niche}."
-        if getattr(job_spec, 'notion_only', False)
-        else f"{product_name} — a premium {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}."
-    )
-
     # First PUT: attach files, set all product fields
     attach_body = {
         "name": product_name,
         "price": str(product_data["price"]),
         "description": product_data["description"],
         "custom_receipt": custom_receipt,
-        "custom_permalink": f"{job_spec.slug}-notion" if getattr(job_spec, 'notion_only', False) else job_spec.slug,
+        "custom_permalink": (
+            f"{job_spec.slug}-notion"
+            if getattr(job_spec, "notion_only", False)
+            else job_spec.slug
+        ),
         "custom_summary": custom_summary,
         "tags": tags,
         "display_product_reviews": "true",
