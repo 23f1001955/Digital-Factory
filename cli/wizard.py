@@ -149,20 +149,6 @@ def run_wizard() -> str | None:
             gemini_key = typer.prompt("Gemini API Key (for image generation)")
             set_key(env_path, "GEMINI_API_KEY", gemini_key)
 
-        stitch_key = os.getenv("STITCH_API_KEY")
-        if not stitch_key:
-            stitch_key = typer.prompt("Google Stitch API Key")
-            set_key(env_path, "STITCH_API_KEY", stitch_key)
-
-        stitch_project_ids = os.getenv("STITCH_PROJECT_IDS")
-        if not stitch_project_ids:
-            stitch_project_ids = typer.prompt(
-                "Stitch project IDs to download screens from (comma-separated, or leave empty for all)",
-                default="",
-            )
-            if stitch_project_ids:
-                set_key(env_path, "STITCH_PROJECT_IDS", stitch_project_ids)
-
         vercel_token = os.getenv("VERCEL_TOKEN")
         if not vercel_token:
             vercel_token = typer.prompt("Vercel Token (for deployment)")
