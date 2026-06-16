@@ -94,6 +94,25 @@ RULES for pipeline_plan:
 3. Every component must depend on "market_research" or another component in this same plan.
 4. Generate 2-6 components based on niche complexity. Simple niche = fewer.
 5. Output paths must not overlap — each must be unique.
+- "design_recommendations": object with:
+  - "design_vibe": string — aesthetic direction that fits this niche's audience.
+    Base this on competitor analysis and audience sentiment.
+    E.g., for luxury audience → "editorial-refined", for dev tools → "dark-tech-minimal",
+    for creative tools → "playful-experimental", for B2B → "professional-clean",
+    for storytelling → "scroll-narrative", for data products → "bento-modern"
+  - "color_strategy": string — color direction based on competitor landscape and brand positioning.
+    E.g., "warm-neutral + deep accent", "cool-tech monochrome", "dark with vibrant accents",
+    "light-clean with pastel touches", "bold saturated brand-forward"
+  - "layout_pattern": string — layout approach based on content complexity.
+    E.g., "hero-features-cta", "bento-grid", "scroll-storytelling", "minimal-single-column",
+    "comparison-table", "video-first", "pricing-page"
+  - "motion_level": string — one of: "subtle" (minimal, elegant), "moderate" (purposeful reveals),
+    or "cinematic" (dramatic scroll-driven animations)
+  - "typography_mood": string — font personality matching the tone.
+    E.g., "serif-elegant" for luxury, "sans-clean" for modern SaaS, "display-bold" for creative,
+    "mono-tech" for developer tools
+  - "reasoning": string — 1-2 sentence explanation of why this design direction fits
+    the niche, mentioning competitors or audience insights
 
 ## Product Type Recommendation
 
