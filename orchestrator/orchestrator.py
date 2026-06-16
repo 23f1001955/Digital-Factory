@@ -298,20 +298,7 @@ class Orchestrator:
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
-            # Skip stitch_download if landing page not enabled
-            if (
-                component.id == "stitch_download"
-                and not self.job_spec.landing_page_enabled
-            ):
-                self.state.components[component.id] = AgentResult(
-                    status="skipped", error="landing page not enabled"
-                )
-                save_job_state(self.state, self.state_path)
-                done_count += 1
-                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
-                continue
-
-            # notion_only mode: skip package, substitute file agents
+# notion_only mode: skip package, substitute file agents
             if self.job_spec.notion_only:
                 if component.id == "package":
                     self.state.components[component.id] = AgentResult(
