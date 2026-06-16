@@ -439,3 +439,70 @@ def test_pipeline_plan_preserves_delivery(tmp_path, monkeypatch):
     diag_comp = next((c for c in orc.schema.components if c.id == "diagrams"), None)
     assert diag_comp is not None
     assert diag_comp.delivery == ["zip"]
+
+
+def test_delivery_map_injected_into_context(tmp_path, monkeypatch):
+    """Test that orchestrator injects _delivery_map into context for packaging agent."""
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    from unittest import mock
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-slug", product_type="research_pack", **extra):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": product_type, "niche": "test niche", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-12T10:00:00Z", **extra}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path, components):
+        path = tmp_path / "schema.json"
+        data = {"product_type": "research_pack", "display_name": "Test Pack", "components": components}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(
+        tmp_path,
+        [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ],
+    )
+
+    actual_context = {}
+
+    def mock_market(comp, js, ctx):
+        output_dir = os.path.join("outputs", js.slug)
+        os.makedirs(output_dir, exist_ok=True)
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        os.makedirs(os.path.dirname(research_path), exist_ok=True)
+        with open(research_path, "w") as f:
+            json.dump({"niche": "test niche"}, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    def mock_package(comp, js, ctx):
+        actual_context.clear()
+        actual_context.update(ctx)
+        return AgentResult(status="done")
+
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock_package)
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-slug" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-slug")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+
+    orc.run()
+
+    assert "_delivery_map" in actual_context
+    dm = actual_context["_delivery_map"]
+    assert isinstance(dm, dict)
+    assert "market_research" in dm
+    assert dm["market_research"]["delivery"] == []
+    assert "package" in dm
+    assert dm["package"]["delivery"] == ["zip"]

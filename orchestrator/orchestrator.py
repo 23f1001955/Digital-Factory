@@ -147,6 +147,23 @@ class Orchestrator:
 
         logger.info(f"Pipeline plan merged: {added} dynamic components")
 
+    def _build_delivery_map(self) -> dict:
+        """Build delivery map from all schema components with resolved output paths."""
+        delivery_map = {}
+        for comp in self.schema.components:
+            output_path = None
+            state = self.state.components.get(comp.id)
+            if state and state.output_path:
+                output_path = state.output_path
+            else:
+                resolved = comp.output.replace("{slug}", self.job_spec.slug)
+                output_path = os.path.join(os.getcwd(), "outputs", self.job_spec.slug, resolved)
+            delivery_map[comp.id] = {
+                "output": output_path,
+                "delivery": comp.delivery,
+            }
+        return delivery_map
+
     def run(self):
         logger.info("Starting pipeline for slug: %s", self.job_spec.slug)
         ordered_components = self._get_execution_order()
@@ -325,6 +342,11 @@ class Orchestrator:
 
             done_count += 1
             logger.info("%s/%s %s...", done_count, total, component.id)
+
+            # Inject delivery_map for agents that need routing info
+            if component.agent in ("packaging_agent", "gumroad_agent"):
+                context["_delivery_map"] = self._build_delivery_map()
+
             try:
                 result = agent_func(component, self.job_spec, context)
             except Exception as e:
