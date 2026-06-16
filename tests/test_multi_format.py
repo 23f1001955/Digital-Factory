@@ -7,9 +7,6 @@ from orchestrator.models import ComponentSpec, JobSpec
 
 def test_csv_export_agent_multi_format(tmp_path):
     """csv_export_agent writes both CSV and XLSX when active_formats has both."""
-    output_dir = tmp_path / "outputs" / "test-multi" / "data"
-    output_dir.mkdir(parents=True)
-
     research_data = {
         "niche": "real estate agents",
         "database": [
@@ -39,12 +36,14 @@ def test_csv_export_agent_multi_format(tmp_path):
     assert "csv" in result.output_paths
     assert "xlsx" in result.output_paths
 
-    # Verify CSV content
     with open(result.output_paths["csv"]) as f:
         content = f.read()
     assert "Agent A" in content
     assert "NYC" in content
 
-    # Verify XLSX exists
-    assert os.path.exists(result.output_paths["xlsx"])
-    assert result.output_paths["xlsx"].endswith(".xlsx")
+    import openpyxl
+    wb = openpyxl.load_workbook(result.output_paths["xlsx"])
+    ws = wb.active
+    assert ws["A1"].value == "name"
+    assert ws["A2"].value == "Agent A"
+    assert ws["B2"].value == "NYC"
