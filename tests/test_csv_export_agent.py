@@ -68,5 +68,16 @@ def test_csv_export_agent(tmp_path):
     assert result.status == "done"
     assert os.path.exists(result.output_path)
 
-    if os.path.exists(result.output_path):
-        os.remove(result.output_path)
+
+def test_csv_export_fails_without_context(tmp_path):
+    """Fails cleanly when neither database nor market_research in context."""
+    comp = ComponentSpec(
+        id="csv",
+        agent="csv_export_agent",
+        output="test_output.csv",
+        depends_on=[],
+    )
+    job = JobSpec(slug="test-slug", product_type="database", niche="test")
+    result = run(comp, job, {})
+    assert result.status == "failed"
+    assert "Neither 'database' nor 'market_research'" in result.error

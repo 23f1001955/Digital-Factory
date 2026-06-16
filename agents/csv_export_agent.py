@@ -19,7 +19,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             with open(research_path, "r") as f:
                 research = json.load(f)
             data = research.get("database")
-            if not data:
+            if data is None:
                 raise ValueError("'database' key not found in market research output")
         else:
             with open(data_path, "r") as f:
