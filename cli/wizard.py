@@ -107,6 +107,23 @@ def run_wizard() -> str | None:
                     )
                     set_key(env_path, "NOTION_PARENT_PAGE_ID", notion_parent_page_id)
 
+    notion_only = False
+    if not notion_sync:
+        notion_only_prompt = typer.prompt(
+            "Notion-only template bechein? (y/n)", default="n"
+        )
+        if notion_only_prompt.lower() == "y":
+            notion_only = True
+            notion_sync = True  # standalone mode requires notion sync
+            notion_api_key = os.getenv("NOTION_API_KEY")
+            if not notion_api_key or notion_api_key == "your_notion_api_key_here":
+                notion_api_key = typer.prompt("Notion API Key missing. Please enter it")
+                set_key(env_path, "NOTION_API_KEY", notion_api_key)
+            notion_parent_page_id = os.getenv("NOTION_PARENT_PAGE_ID")
+            if not notion_parent_page_id or notion_parent_page_id == "your_notion_parent_page_id_here":
+                notion_parent_page_id = typer.prompt("Notion Parent Page ID missing. Please enter it")
+                set_key(env_path, "NOTION_PARENT_PAGE_ID", notion_parent_page_id)
+
     gumroad_enabled = False
 
     gumroad_token = os.getenv("GUMROAD_ACCESS_TOKEN")
@@ -203,6 +220,7 @@ def run_wizard() -> str | None:
         "display_name": display_name,
         "theme": theme,
         "notion_sync": notion_sync,
+        "notion_only": notion_only,
         "notion_parent_page_id": notion_parent_page_id,
         "gumroad_enabled": gumroad_enabled,
         "landing_page_enabled": landing_page_enabled,
