@@ -5,6 +5,7 @@ import logging
 
 import httpx
 
+from design_intelligence.models import DesignBrief
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
 from agents.image_agent import generate_images, ImageRequirement
 
@@ -13,7 +14,12 @@ logger = logging.getLogger(__name__)
 VERCEL_API_BASE = "https://api.vercel.com"
 
 
-def _generate_html(images: dict, gumroad_url: str, job_spec: JobSpec) -> str:
+def _generate_html(
+    images: dict,
+    gumroad_url: str,
+    job_spec: JobSpec,
+    design_brief: DesignBrief | None = None,
+) -> str:
     """Generate landing page HTML using LLM and the landing_generate.j2 template."""
     from agents.llm_client import generate_text as llm_call
     from jinja2 import Environment, FileSystemLoader
@@ -27,6 +33,7 @@ def _generate_html(images: dict, gumroad_url: str, job_spec: JobSpec) -> str:
         images=images,
         cta_text=getattr(job_spec, "call_to_action", "Buy Now on Gumroad"),
         gumroad_url=gumroad_url,
+        design_brief=design_brief.system_prompt_block if design_brief else None,
     )
     result = llm_call(prompt)
     if result and ("<html" in result.lower() or "<!doctype" in result.lower()):
@@ -98,25 +105,6 @@ def _deploy_vercel(html_content: str, slug: str, vercel_token: str) -> str | Non
         return None
 
 
-def _read_stitch_landing_html(context: dict) -> str | None:
-    stitch_path = context.get("stitch_download")
-    if not stitch_path or not os.path.exists(stitch_path):
-        return None
-    try:
-        with open(stitch_path, encoding="utf-8") as f:
-            manifest = json.load(f)
-        landing_html = manifest.get("landing_page_html")
-        if landing_html and os.path.exists(landing_html):
-            with open(landing_html, encoding="utf-8") as f:
-                content = f.read()
-            if "<html" in content.lower() or "<!doctype" in content.lower():
-                logger.info(f"Using Stitch-designed landing page: {landing_html}")
-                return content
-    except Exception as e:
-        logger.warning(f"Failed to read Stitch landing HTML: {e}")
-    return None
-
-
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
     try:
         slug = job_spec.slug
@@ -136,41 +124,40 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             with open(research_path, encoding="utf-8") as f:
                 research_data = json.load(f)
 
-        html_content = None
+        # Generate images for the landing page
+        landing_requirements: list[ImageRequirement] = [
+            {
+                "id": "hero_banner",
+                "purpose": "Hero section background for landing page",
+                "aspect_ratio": "16:9",
+            },
+            {
+                "id": "feature_showcase",
+                "purpose": "Feature highlight section image",
+                "aspect_ratio": "16:9",
+            },
+            {
+                "id": "benefit_visual",
+                "purpose": "Benefit or testimonial section image",
+                "aspect_ratio": "4:5",
+            },
+        ]
+        images = generate_images(
+            requirements=landing_requirements,
+            niche=job_spec.niche,
+            product_type=job_spec.product_type,
+            theme=getattr(job_spec, "theme", "default"),
+            research_data=research_data,
+            output_dir=os.path.join(output_dir, "images"),
+        )
 
-        # Check if Stitch already made a landing page
-        stitch_html = _read_stitch_landing_html(context)
-        if stitch_html:
-            html_content = stitch_html
+        # Generate design brief from market research
+        from design_intelligence.brief import DesignBriefGenerator
 
-        if not html_content:
-            # Generate images for the landing page
-            landing_requirements: list[ImageRequirement] = [
-                {
-                    "id": "hero_banner",
-                    "purpose": "Hero section background for landing page",
-                    "aspect_ratio": "16:9",
-                },
-                {
-                    "id": "feature_showcase",
-                    "purpose": "Feature highlight section image",
-                    "aspect_ratio": "16:9",
-                },
-                {
-                    "id": "benefit_visual",
-                    "purpose": "Benefit or testimonial section image",
-                    "aspect_ratio": "4:5",
-                },
-            ]
-            images = generate_images(
-                requirements=landing_requirements,
-                niche=job_spec.niche,
-                product_type=job_spec.product_type,
-                theme=getattr(job_spec, "theme", "default"),
-                research_data=research_data,
-                output_dir=os.path.join(output_dir, "images"),
-            )
-            html_content = _generate_html(images, gumroad_url, job_spec)
+        brief_gen = DesignBriefGenerator()
+        design_brief = brief_gen.generate(context.get("market_research"))
+
+        html_content = _generate_html(images, gumroad_url, job_spec, design_brief)
 
         html_path = os.path.join(output_dir, "index.html")
         with open(html_path, "w", encoding="utf-8") as f:
@@ -202,16 +189,14 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             "html_path": html_path,
             "zip_path": zip_path,
             "deployed_url": deployed_url or None,
-            "source": "stitch" if stitch_html else "llm",
+            "source": "design-intelligence",
         }
         output_path = os.path.join("outputs", slug, component.output)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2)
 
-        logger.info(
-            f"Landing page {'from Stitch' if stitch_html else 'from LLM'} — {deployed_url or 'local only'}"
-        )
+        logger.info(f"Landing page created via Design Intelligence — {deployed_url or 'local only'}")
         return AgentResult(status="done", output_path=output_path, error=None)
 
     except Exception as e:
