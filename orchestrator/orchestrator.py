@@ -91,7 +91,6 @@ class Orchestrator:
             "gumroad_publish",
             "landing_page",
             "social_promotion",
-            "stitch_download",
         }
 
         existing_ids = {c.id for c in self.schema.components}

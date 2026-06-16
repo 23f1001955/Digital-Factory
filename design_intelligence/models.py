@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +11,5 @@ class LandingPattern(BaseModel):
 
 class DesignBrief(BaseModel):
     design_vibe: str = "default"
-    landing_pattern: Optional[LandingPattern] = None
+    landing_pattern: LandingPattern | None = None
     system_prompt_block: str = ""
-    source: str = "design-intelligence"
