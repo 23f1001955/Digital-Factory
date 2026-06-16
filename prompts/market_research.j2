@@ -140,6 +140,31 @@ Include these three additional fields in your JSON output:
 - "recommendation_confidence": float — 0.0 to 1.0 (how confident you are in this recommendation based on data)
 - "recommendation_reasoning": string — 1-2 sentence explanation of why this type fits the niche
 
+## Format Recommendation
+
+Based on your recommended product type, determine which OUTPUT FORMATS each component of the schema should produce.
+
+Consider:
+- What formats do competitors in this niche sell? (PDF guides, CSV data, Excel files, Notion workspaces?)
+- Will buyers use raw CSV, a formatted PDF, or an Excel sheet with formulas?
+- If the niche needs actionable data → include "csv" or "xlsx"
+- If the niche needs explanation/guidance → include "pdf"
+- If the niche needs organization/tracking → include "notion"
+
+Output your recommendation in the "recommended_formats" field — a JSON object mapping component IDs to arrays of format strings.
+
+Example:
+```json
+{
+  "recommended_formats": {
+    "database_export": ["csv", "xlsx"],
+    "market_research": ["pdf"]
+  }
+}
+```
+
+Only include a component if you want to change its output from the default single format. Leave it out for default behavior.
+
 Rules:
 1. Use the REAL DATA above. Do NOT hallucinate competitors or pricing.
 2. If no real data is available (empty sections), acknowledge gaps rather than making things up.
