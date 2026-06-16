@@ -146,6 +146,38 @@ class Orchestrator:
 
         logger.info(f"Pipeline plan merged: {added} dynamic components")
 
+    def _merge_format_recommendations(self, research_path: str) -> None:
+        """Merge market_agent's recommended_formats into component active_formats."""
+        try:
+            with open(research_path) as f:
+                research = json.load(f)
+            fmt_recs = research.get("recommended_formats", {})
+            if not fmt_recs:
+                return  # legacy mode
+
+            comp_map = {c.id: c for c in self.schema.components}
+            for comp_id, formats in fmt_recs.items():
+                comp = comp_map.get(comp_id)
+                if not comp:
+                    logger.warning(
+                        "recommended_formats references unknown component: %s", comp_id
+                    )
+                    continue
+                if not comp.capabilities:
+                    logger.warning(
+                        "recommended_formats for %s but component has no capabilities",
+                        comp_id,
+                    )
+                    continue
+                active = [f for f in formats if f in comp.capabilities]
+                if active:
+                    comp.active_formats = active
+                    logger.info(
+                        "Component %s active formats: %s", comp_id, active
+                    )
+        except Exception as e:
+            logger.error("Failed to merge format recommendations: %s", e)
+
     def _switch_schema(self, recommended_product_type: str) -> None:
         """Replace current schema with one matching recommended product type."""
         schema_path = os.path.join("schemas", f"{recommended_product_type}.json")
@@ -163,17 +195,19 @@ class Orchestrator:
         """Build delivery map from all schema components with resolved output paths."""
         delivery_map = {}
         for comp in self.schema.components:
-            output_path = None
             state = self.state.components.get(comp.id)
-            if state and state.output_path:
-                output_path = state.output_path
+            entry = {"delivery": list(comp.delivery)}
+
+            if state and state.output_paths:
+                entry["outputs"] = dict(state.output_paths)
+            elif state and state.output_path:
+                entry["outputs"] = {comp.id: state.output_path}
             else:
                 resolved = comp.output.replace("{slug}", self.job_spec.slug)
-                output_path = os.path.join(os.getcwd(), "outputs", self.job_spec.slug, resolved)
-            delivery_map[comp.id] = {
-                "output": output_path,
-                "delivery": comp.delivery,
-            }
+                default_path = os.path.join(os.getcwd(), "outputs", self.job_spec.slug, resolved)
+                entry["outputs"] = {comp.id: default_path}
+
+            delivery_map[comp.id] = entry
         return delivery_map
 
     def run(self):
@@ -385,6 +419,7 @@ class Orchestrator:
                         self._switch_schema("research_pack")
 
                 self._merge_pipeline_plan(result.output_path)
+                self._merge_format_recommendations(result.output_path)
                 ordered_components = self._get_execution_order()
                 idx = 0
                 total = len(ordered_components)

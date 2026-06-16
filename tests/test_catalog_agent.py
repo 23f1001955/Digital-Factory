@@ -1,6 +1,5 @@
 import json, os
 from agents.catalog_agent import run
-from agents import catalog_agent
 from orchestrator.models import ComponentSpec, JobSpec
 
 
@@ -25,17 +24,15 @@ def test_catalog_agent_prompt_mode(tmp_path, monkeypatch):
         delivery=["zip"],
         format="prompt",
     )
+    import agents.catalog_agent
+
     monkeypatch.setattr(
-        catalog_agent,
+        agents.catalog_agent,
         "generate_text",
         lambda p: json.dumps(
             [
-                {"prompt": "Write a {{type}} email about {{topic}}", "category": "email", "use_case": "Email copywriting"},
-                {"prompt": "Create a {{format}} landing page for {{product}}", "category": "landing", "use_case": "Landing page copy"},
-            ]
-        ) if "AI prompt engineer" in p else json.dumps(
-            [
-                {"title": "Item 1", "description": "First item"},
+                {"prompt": "Write a {{type}} email for {{audience}}", "category": "email", "use_case": "Email copywriting"},
+                {"prompt": "Create a {{format}} landing page for {{offer}}", "category": "landing", "use_case": "Landing page copy"},
             ]
         ),
     )
