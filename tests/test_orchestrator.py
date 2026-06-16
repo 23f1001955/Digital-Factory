@@ -516,7 +516,8 @@ def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
     from unittest import mock
-    import json, os
+    import json
+    import os
 
     def _make_job_spec(tmp_path, slug="test-discovery", **extra):
         path = tmp_path / "job_spec.json"
@@ -606,7 +607,8 @@ def test_legacy_product_type_still_works(tmp_path, monkeypatch):
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
     from unittest import mock
-    import json, os
+    import json
+    import os
 
     def _make_job_spec(tmp_path, slug="test-legacy", **extra):
         path = tmp_path / "job_spec.json"
