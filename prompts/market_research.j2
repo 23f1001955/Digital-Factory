@@ -95,6 +95,33 @@ RULES for pipeline_plan:
 4. Generate 2-6 components based on niche complexity. Simple niche = fewer.
 5. Output paths must not overlap — each must be unique.
 
+## Product Type Recommendation
+
+Based on your research, recommend the BEST product type for this niche from the following catalog:
+
+| Product Type | Description | Best For |
+|---|---|---|
+| research_pack | Market research + competitor analysis report | Information products, guides |
+| operating_system | Notion workspace + CRM + dashboards | Agencies, operators, businesses |
+| visual_pack | Image assets + design templates | Creators, marketers, social media |
+| workflow_kit | Automation workflows + SOPs | Tech-savvy operators, agencies |
+| blog_kit | Content packs + SEO research | Bloggers, content publishers |
+| course_launch | Course materials + Notion workspace | Coaches, educators, trainers |
+| saas_docs | Technical docs + API references | Developers, SaaS companies |
+| database | Curated CSV/JSON lists of leads/companies | Sales teams, outreach campaigns |
+| sop_pack | Step-by-step process documentation | Agencies, operators, franchises |
+| prompt_pack | AI prompt collections | AI users, creators, marketers |
+| swipe_file | Copy & paste examples | Copywriters, marketers |
+| checklist | Step-by-step checklists | General audience, task management |
+| excel_template | Spreadsheet systems | Small business owners, freelancers |
+| resource_pack | Curated tool/asset collections | General audience, creators |
+| boilerplate | Starter code templates | Developers, startups |
+
+Include these three additional fields in your JSON output:
+- "recommended_product_type": string — the best match from the table above
+- "recommendation_confidence": float — 0.0 to 1.0 (how confident you are in this recommendation based on data)
+- "recommendation_reasoning": string — 1-2 sentence explanation of why this type fits the niche
+
 Rules:
 1. Use the REAL DATA above. Do NOT hallucinate competitors or pricing.
 2. If no real data is available (empty sections), acknowledge gaps rather than making things up.
