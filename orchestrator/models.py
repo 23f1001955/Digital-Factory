@@ -12,6 +12,8 @@ class ComponentSpec(BaseModel):
     template: Optional[str] = None
     format: Literal["full", "guide", "notion", "prompt", "resource"] = "full"
     delivery: List[str] = Field(default_factory=lambda: ["zip"])
+    capabilities: List[str] = Field(default_factory=list)
+    active_formats: List[str] = Field(default_factory=list)
 
 
 class ProductSchema(BaseModel):
@@ -43,6 +45,7 @@ class AgentResult(BaseModel):
     status: Literal["pending", "running", "done", "failed", "skipped"]
     output_path: Optional[str] = None
     error: Optional[str] = None
+    output_paths: Optional[Dict[str, str]] = None
 
 
 class PipelineComponent(BaseModel):
@@ -54,6 +57,8 @@ class PipelineComponent(BaseModel):
     template: Optional[str] = None
     format: Literal["full", "guide", "notion", "prompt", "resource"] = "full"
     delivery: List[str] = Field(default_factory=lambda: ["zip"])
+    capabilities: List[str] = Field(default_factory=list)
+    active_formats: List[str] = Field(default_factory=list)
 
 
 class PipelinePlan(BaseModel):
