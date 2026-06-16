@@ -38,7 +38,9 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             results[img_id] = file_path
             logger.info(f"Generated {img_id} -> {file_path}")
 
-        output_path = os.path.join("outputs", job_spec.slug, component.output.rstrip("/"), "_manifest.json")
+        output_path = os.path.join(
+            "outputs", job_spec.slug, component.output.rstrip("/"), "_manifest.json"
+        )
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump({"images": results, "count": len(results)}, f, indent=2)

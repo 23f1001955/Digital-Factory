@@ -678,7 +678,9 @@ def test_pipeline_component_with_delivery():
 def test_packaging_agent_with_delivery_map(tmp_path):
     from agents import packaging_agent
     from orchestrator.models import ComponentSpec, JobSpec
-    import os, shutil, zipfile
+    import os
+    import shutil
+    import zipfile
 
     job_spec = JobSpec(
         slug="test-pkg-delivery", product_type="research_pack", niche="test niche"
@@ -747,7 +749,8 @@ def test_packaging_agent_with_delivery_map(tmp_path):
 def test_gumroad_agent_publish_with_delivery_map(tmp_path, monkeypatch):
     from agents import gumroad_agent
     from orchestrator.models import ComponentSpec, JobSpec
-    import httpx, json, os
+    import json
+    import os
 
     monkeypatch.setenv("GUMROAD_ACCESS_TOKEN", "fake_token")
     monkeypatch.setattr(gumroad_agent, "_get_previous_product_id", lambda *a, **kw: "prod_test456")

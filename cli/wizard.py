@@ -120,8 +120,13 @@ def run_wizard() -> str | None:
                 notion_api_key = typer.prompt("Notion API Key missing. Please enter it")
                 set_key(env_path, "NOTION_API_KEY", notion_api_key)
             notion_parent_page_id = os.getenv("NOTION_PARENT_PAGE_ID")
-            if not notion_parent_page_id or notion_parent_page_id == "your_notion_parent_page_id_here":
-                notion_parent_page_id = typer.prompt("Notion Parent Page ID missing. Please enter it")
+            if (
+                not notion_parent_page_id
+                or notion_parent_page_id == "your_notion_parent_page_id_here"
+            ):
+                notion_parent_page_id = typer.prompt(
+                    "Notion Parent Page ID missing. Please enter it"
+                )
                 set_key(env_path, "NOTION_PARENT_PAGE_ID", notion_parent_page_id)
 
     gumroad_enabled = False

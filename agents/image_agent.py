@@ -36,7 +36,9 @@ def _call_gemini(prompt: str, api_key: str) -> Optional[bytes]:
         resp.raise_for_status()
         data = resp.json()
         for part in data.get("candidates", [{}])[0].get("content", {}).get("parts", []):
-            if "inlineData" in part and part["inlineData"].get("mimeType", "").startswith("image/"):
+            if "inlineData" in part and part["inlineData"].get(
+                "mimeType", ""
+            ).startswith("image/"):
                 return base64.b64decode(part["inlineData"]["data"])
         logger.warning("Gemini returned no image data")
         return None
@@ -45,7 +47,9 @@ def _call_gemini(prompt: str, api_key: str) -> Optional[bytes]:
         return None
 
 
-def _call_imagen(prompt: str, api_url: str, api_key: str, aspect_ratio: str = "16:9") -> Optional[bytes]:
+def _call_imagen(
+    prompt: str, api_url: str, api_key: str, aspect_ratio: str = "16:9"
+) -> Optional[bytes]:
     """Generate an image using the Imagen Cloudflare Worker (nano-banana-2). Returns JPEG bytes or None."""
     payload = {
         "model": "google/nano-banana-2",
@@ -90,7 +94,9 @@ def _generate_placeholder(output_path: str, text: str, width: int, height: int):
     logger.info(f"Placeholder SVG generated: {output_path}")
 
 
-def generate_from_prompt(prompt_text: str, output_path: str, aspect_ratio: str = "1:1") -> str:
+def generate_from_prompt(
+    prompt_text: str, output_path: str, aspect_ratio: str = "1:1"
+) -> str:
     """Generate a single image from an existing prompt text (no LLM step).
 
     Uses Imagen → Gemini → SVG fallback chain.
@@ -106,8 +112,12 @@ def generate_from_prompt(prompt_text: str, output_path: str, aspect_ratio: str =
     gemini_key = os.getenv("GEMINI_API_KEY")
 
     aspect_sizes = {
-        "16:9": (1920, 1080), "1:1": (800, 800), "2:3": (1000, 1500),
-        "9:16": (1080, 1920), "4:5": (1000, 1250), "3:2": (1500, 1000),
+        "16:9": (1920, 1080),
+        "1:1": (800, 800),
+        "2:3": (1000, 1500),
+        "9:16": (1080, 1920),
+        "4:5": (1000, 1250),
+        "3:2": (1500, 1000),
     }
     width, height = aspect_sizes.get(aspect_ratio, (800, 800))
 
@@ -134,7 +144,13 @@ def generate_from_prompt(prompt_text: str, output_path: str, aspect_ratio: str =
     return path
 
 
-def _generate_prompt_for_requirement(req: ImageRequirement, niche: str, product_type: str, theme: str, research_data: dict = None) -> str:
+def _generate_prompt_for_requirement(
+    req: ImageRequirement,
+    niche: str,
+    product_type: str,
+    theme: str,
+    research_data: dict = None,
+) -> str:
     """Use LLM to generate a detailed image prompt for a single requirement."""
     from agents.llm_client import generate_text as llm_call
     from jinja2 import Environment, FileSystemLoader
@@ -147,7 +163,9 @@ def _generate_prompt_for_requirement(req: ImageRequirement, niche: str, product_
         theme=theme,
         purpose=req.get("purpose", ""),
         aspect_ratio=req.get("aspect_ratio", "16:9"),
-        market_research=json.dumps(research_data, indent=2)[:3000] if research_data else None,
+        market_research=(
+            json.dumps(research_data, indent=2)[:3000] if research_data else None
+        ),
         all_images=False,
     )
 
@@ -199,7 +217,9 @@ def generate_images(
         ar = req.get("aspect_ratio", "16:9")
         width, height = aspect_sizes.get(ar, (800, 800))
 
-        prompt_text = _generate_prompt_for_requirement(req, niche, product_type, theme, research_data)
+        prompt_text = _generate_prompt_for_requirement(
+            req, niche, product_type, theme, research_data
+        )
 
         if imagen_url and imagen_key:
             img_bytes = _call_imagen(prompt_text, imagen_url, imagen_key, ar)
@@ -242,8 +262,16 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 research_data = json.load(f)
 
         requirements: list[ImageRequirement] = [
-            {"id": "cover", "purpose": "Product cover image for Gumroad listing", "aspect_ratio": "16:9"},
-            {"id": "thumbnail", "purpose": "Square product thumbnail for Gumroad preview", "aspect_ratio": "1:1"},
+            {
+                "id": "cover",
+                "purpose": "Product cover image for Gumroad listing",
+                "aspect_ratio": "16:9",
+            },
+            {
+                "id": "thumbnail",
+                "purpose": "Square product thumbnail for Gumroad preview",
+                "aspect_ratio": "1:1",
+            },
         ]
 
         images = generate_images(

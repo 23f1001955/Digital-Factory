@@ -15,22 +15,27 @@ def _web_search(query: str, max_results: int = 5) -> str:
     """Search the web for real URLs and data about a niche. Returns markdown or empty string."""
     try:
         import httpx
+
         url = "https://html.duckduckgo.com/html/"
         data = {"q": f"{query} tools resources platforms"}
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
         resp = httpx.post(url, data=data, headers=headers, timeout=10.0)
         resp.raise_for_status()
 
         import re
+
         results = []
         for match in re.finditer(
             r'<a rel="nofollow" class="result__a" href="([^"]+)".*?>(.*?)</a>',
-            resp.text, re.DOTALL
+            resp.text,
+            re.DOTALL,
         ):
             href = match.group(1)
             if href.startswith("//"):
                 href = "https:" + href
-            title = re.sub(r'<[^>]+>', '', match.group(2)).strip()
+            title = re.sub(r"<[^>]+>", "", match.group(2)).strip()
             if title and href:
                 results.append(f"- [{title}]({href})")
             if len(results) >= max_results:

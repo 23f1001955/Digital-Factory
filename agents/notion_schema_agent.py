@@ -23,7 +23,17 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 try:
                     with open(dep_path, "r", encoding="utf-8") as f:
                         research_data = json.load(f)
-                    market_research_json = json.dumps(research_data, indent=2)[:4000]
+                    essential = {
+                        k: research_data[k]
+                        for k in (
+                            "competitor_landscape",
+                            "content_recommendations",
+                            "market_insights",
+                            "pipeline_plan",
+                        )
+                        if k in research_data
+                    }
+                    market_research_json = json.dumps(essential, indent=2)
                 except (json.JSONDecodeError, Exception) as e:
                     logger.warning(f"Could not load {dep} as JSON: {e}")
                     market_research_json = ""

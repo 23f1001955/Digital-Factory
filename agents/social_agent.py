@@ -14,9 +14,15 @@ FACEBOOK_API_BASE = "https://graph.facebook.com/v21.0"
 PINTEREST_API_BASE = "https://api.pinterest.com/v5"
 
 
-def _post_to_facebook(page_id: str, page_token: str, message: str, image_url: str = "") -> Optional[dict]:
+def _post_to_facebook(
+    page_id: str, page_token: str, message: str, image_url: str = ""
+) -> Optional[dict]:
     """Post to Facebook Page."""
-    url = f"{FACEBOOK_API_BASE}/{page_id}/photos" if image_url else f"{FACEBOOK_API_BASE}/{page_id}/feed"
+    url = (
+        f"{FACEBOOK_API_BASE}/{page_id}/photos"
+        if image_url
+        else f"{FACEBOOK_API_BASE}/{page_id}/feed"
+    )
     data = {
         "access_token": page_token,
         "message": message,
@@ -32,7 +38,9 @@ def _post_to_facebook(page_id: str, page_token: str, message: str, image_url: st
         return None
 
 
-def _post_to_instagram(ig_user_id: str, page_token: str, caption: str, image_url: str) -> Optional[dict]:
+def _post_to_instagram(
+    ig_user_id: str, page_token: str, caption: str, image_url: str
+) -> Optional[dict]:
     """Post to Instagram Business Account via Graph API."""
     try:
         create_url = f"{FACEBOOK_API_BASE}/{ig_user_id}/media"
@@ -60,7 +68,9 @@ def _post_to_instagram(ig_user_id: str, page_token: str, caption: str, image_url
         return None
 
 
-def _post_to_threads(threads_user_id: str, page_token: str, text: str, image_url: str = "") -> Optional[dict]:
+def _post_to_threads(
+    threads_user_id: str, page_token: str, text: str, image_url: str = ""
+) -> Optional[dict]:
     """Post to Threads via Graph API. Supports text + optional image."""
     try:
         if image_url:
@@ -96,7 +106,14 @@ def _post_to_threads(threads_user_id: str, page_token: str, text: str, image_url
         return None
 
 
-def _post_to_pinterest(pinterest_token: str, board_id: str, title: str, description: str, image_url: str, link: str) -> Optional[dict]:
+def _post_to_pinterest(
+    pinterest_token: str,
+    board_id: str,
+    title: str,
+    description: str,
+    image_url: str,
+    link: str,
+) -> Optional[dict]:
     """Post a Pin to Pinterest."""
     url = f"{PINTEREST_API_BASE}/pins"
     headers = {"Authorization": f"Bearer {pinterest_token}"}
@@ -133,31 +150,50 @@ def _generate_social_copy(job_spec: JobSpec, gumroad_url: str) -> dict:
         )
         result = llm_call(prompt)
         import re
-        match = re.search(r'\{.*\}', result, re.DOTALL)
+
+        match = re.search(r"\{.*\}", result, re.DOTALL)
         if match:
             return json.loads(match.group())
     except Exception as e:
         logger.warning(f"Social copy LLM generation failed: {e}")
 
-    cta = getattr(job_spec, 'call_to_action', 'Buy Now on Gumroad')
+    cta = getattr(job_spec, "call_to_action", "Buy Now on Gumroad")
     name = job_spec.display_name or job_spec.niche
     return {
         "instagram": {
             "caption": f"Introducing {name}! 🚀 Perfect for {job_spec.niche}. {cta} today!",
-            "hashtags": ["digitalproduct", job_spec.niche.lower().replace(" ", ""), "gumroad", "productivity"],
+            "hashtags": [
+                "digitalproduct",
+                job_spec.niche.lower().replace(" ", ""),
+                "gumroad",
+                "productivity",
+            ],
         },
         "threads": {
             "caption": f"Just launched {name} -- built for {job_spec.niche}. Check it out!",
-            "hashtags": ["digital", job_spec.niche.lower().replace(" ", ""), "newlaunch"],
+            "hashtags": [
+                "digital",
+                job_spec.niche.lower().replace(" ", ""),
+                "newlaunch",
+            ],
         },
         "facebook": {
             "caption": f"We're excited to announce {name}, a premium {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}. {cta} at {gumroad_url}",
-            "hashtags": ["newproduct", "digitalproducts", job_spec.niche.lower().replace(" ", ""), "gumroad"],
+            "hashtags": [
+                "newproduct",
+                "digitalproducts",
+                job_spec.niche.lower().replace(" ", ""),
+                "gumroad",
+            ],
         },
         "pinterest": {
             "title": f"{name} -- {job_spec.product_type.replace('_', ' ').title()} for {job_spec.niche}",
             "caption": f"Discover {name}, the ultimate {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}. Perfect for professionals and creators. {cta}",
-            "hashtags": ["digitalproduct", job_spec.niche.lower().replace(" ", ""), "gumroad"],
+            "hashtags": [
+                "digitalproduct",
+                job_spec.niche.lower().replace(" ", ""),
+                "gumroad",
+            ],
         },
     }
 
@@ -194,14 +230,38 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         # Determine runtime image requirements per platform
         social_reqs: list[ImageRequirement] = []
         if facebook_token:
-            social_reqs.append({"id": "fb_post", "purpose": "Facebook post image", "aspect_ratio": "16:9"})
+            social_reqs.append(
+                {
+                    "id": "fb_post",
+                    "purpose": "Facebook post image",
+                    "aspect_ratio": "16:9",
+                }
+            )
         if facebook_token and ig_user_id:
             for i in range(4):
-                social_reqs.append({"id": f"ig_carousel_{i+1}", "purpose": f"Instagram carousel slide {i+1}", "aspect_ratio": "1:1"})
+                social_reqs.append(
+                    {
+                        "id": f"ig_carousel_{i+1}",
+                        "purpose": f"Instagram carousel slide {i+1}",
+                        "aspect_ratio": "1:1",
+                    }
+                )
         if facebook_token and threads_user_id:
-            social_reqs.append({"id": "threads_post", "purpose": "Threads post image", "aspect_ratio": "1:1"})
+            social_reqs.append(
+                {
+                    "id": "threads_post",
+                    "purpose": "Threads post image",
+                    "aspect_ratio": "1:1",
+                }
+            )
         if pinterest_token and pinterest_board_id:
-            social_reqs.append({"id": "pinterest_pin", "purpose": "Pinterest pin image", "aspect_ratio": "2:3"})
+            social_reqs.append(
+                {
+                    "id": "pinterest_pin",
+                    "purpose": "Pinterest pin image",
+                    "aspect_ratio": "2:3",
+                }
+            )
 
         img_output_dir = os.path.join("outputs", slug, "social_images")
         social_images = {}
@@ -219,8 +279,11 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         if facebook_token and copies.get("facebook"):
             fb_img = social_images.get("fb_post", landing_page_url or "")
             fb_result = _post_to_facebook(
-                page_id, facebook_token,
-                copies["facebook"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["facebook"]["hashtags"]),
+                page_id,
+                facebook_token,
+                copies["facebook"]["caption"]
+                + "\n\n"
+                + " ".join(f"#{h}" for h in copies["facebook"]["hashtags"]),
                 fb_img,
             )
             results["facebook"] = "posted" if fb_result else "failed"
@@ -228,8 +291,11 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         if facebook_token and ig_user_id and copies.get("instagram"):
             ig_img = social_images.get("ig_carousel_1", landing_page_url or "")
             ig_result = _post_to_instagram(
-                ig_user_id, facebook_token,
-                copies["instagram"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["instagram"]["hashtags"]),
+                ig_user_id,
+                facebook_token,
+                copies["instagram"]["caption"]
+                + "\n\n"
+                + " ".join(f"#{h}" for h in copies["instagram"]["hashtags"]),
                 ig_img,
             )
             results["instagram"] = "posted" if ig_result else "failed"
@@ -237,8 +303,11 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         if facebook_token and threads_user_id and copies.get("threads"):
             threads_img = social_images.get("threads_post", landing_page_url or "")
             threads_result = _post_to_threads(
-                threads_user_id, facebook_token,
-                copies["threads"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["threads"]["hashtags"]),
+                threads_user_id,
+                facebook_token,
+                copies["threads"]["caption"]
+                + "\n\n"
+                + " ".join(f"#{h}" for h in copies["threads"]["hashtags"]),
                 threads_img,
             )
             results["threads"] = "posted" if threads_result else "failed"
@@ -246,9 +315,12 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         if pinterest_token and pinterest_board_id and copies.get("pinterest"):
             pin_img = social_images.get("pinterest_pin", landing_page_url or "")
             pin_result = _post_to_pinterest(
-                pinterest_token, pinterest_board_id,
+                pinterest_token,
+                pinterest_board_id,
                 copies["pinterest"]["title"],
-                copies["pinterest"]["caption"] + "\n\n" + " ".join(f"#{h}" for h in copies["pinterest"]["hashtags"]),
+                copies["pinterest"]["caption"]
+                + "\n\n"
+                + " ".join(f"#{h}" for h in copies["pinterest"]["hashtags"]),
                 pin_img,
                 gumroad_url,
             )

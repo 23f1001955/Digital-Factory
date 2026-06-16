@@ -24,7 +24,9 @@ def test_notion_content_agent_fallback(tmp_path, monkeypatch, mock_job_spec):
         depends_on=["market_research"],
     )
 
-    mock_content = mock.Mock(return_value=AgentResult(status="done", output_path="content/test_content.md"))
+    mock_content = mock.Mock(
+        return_value=AgentResult(status="done", output_path="content/test_content.md")
+    )
     monkeypatch.setattr("agents.content_agent.run", mock_content)
 
     result = run(component, mock_job_spec, {})
@@ -47,7 +49,9 @@ def test_notion_content_agent_no_context(tmp_path, monkeypatch, mock_job_spec):
     monkeypatch.setenv("NOTION_API_KEY", "test-key")
     monkeypatch.setenv("NOTION_PARENT_PAGE_ID", "test-page")
 
-    mock_content = mock.Mock(return_value=AgentResult(status="done", output_path="content/test_content.md"))
+    mock_content = mock.Mock(
+        return_value=AgentResult(status="done", output_path="content/test_content.md")
+    )
     monkeypatch.setattr("agents.content_agent.run", mock_content)
 
     result = run(component, mock_job_spec, {"market_research": "some_path.json"})

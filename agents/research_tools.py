@@ -12,29 +12,35 @@ def duckduckgo_search(query: str, count: int = 10) -> list[dict]:
     try:
         import httpx
         import re
+
         resp = httpx.post(
             "https://html.duckduckgo.com/html/",
             data={"q": query},
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
             timeout=10.0,
         )
         resp.raise_for_status()
         results = []
         for match in re.finditer(
             r'<a rel="nofollow" class="result__a" href="([^"]+)".*?>(.*?)</a>',
-            resp.text, re.DOTALL
+            resp.text,
+            re.DOTALL,
         ):
             href = match.group(1)
             if href.startswith("//"):
                 href = "https:" + href
-            title = re.sub(r'<[^>]+>', '', match.group(2)).strip()
+            title = re.sub(r"<[^>]+>", "", match.group(2)).strip()
             if title and href:
-                results.append({
-                    "title": title,
-                    "url": href,
-                    "description": "",
-                    "source": "duckduckgo",
-                })
+                results.append(
+                    {
+                        "title": title,
+                        "url": href,
+                        "description": "",
+                        "source": "duckduckgo",
+                    }
+                )
             if len(results) >= count:
                 break
         logger.info(f"DuckDuckGo returned {len(results)} results for: {query}")
@@ -52,6 +58,7 @@ def brave_search(query: str, count: int = 10) -> list[dict]:
         return []
     try:
         import httpx
+
         resp = httpx.get(
             "https://api.search.brave.com/res/v1/web/search",
             headers={
@@ -65,12 +72,14 @@ def brave_search(query: str, count: int = 10) -> list[dict]:
         data = resp.json()
         results = []
         for item in data.get("web", {}).get("results", []):
-            results.append({
-                "title": item.get("title", ""),
-                "url": item.get("url", ""),
-                "description": item.get("description", ""),
-                "source": "brave",
-            })
+            results.append(
+                {
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "description": item.get("description", ""),
+                    "source": "brave",
+                }
+            )
         logger.info(f"Brave search returned {len(results)} results for: {query}")
         return results
     except Exception as e:
@@ -86,6 +95,7 @@ def _reddit_token() -> str | None:
         return None
     try:
         import httpx
+
         resp = httpx.post(
             "https://www.reddit.com/api/v1/access_token",
             auth=(client_id, client_secret),
@@ -109,13 +119,17 @@ def reddit_search(query: str, limit: int = 10) -> list[dict]:
     Falls back to public endpoint if not. Both are free."""
     try:
         import httpx
+
         token = _reddit_token()
         headers = {"User-Agent": "DigitalProductFactory/1.0"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
         resp = httpx.get(
-            "https://oauth.reddit.com/r/all/search" if token
-            else "https://www.reddit.com/r/all/search.json",
+            (
+                "https://oauth.reddit.com/r/all/search"
+                if token
+                else "https://www.reddit.com/r/all/search.json"
+            ),
             params={"q": query, "limit": limit, "sort": "relevance"},
             headers=headers,
             timeout=15.0,
@@ -125,17 +139,21 @@ def reddit_search(query: str, limit: int = 10) -> list[dict]:
         results = []
         for child in data.get("data", {}).get("children", []):
             d = child.get("data", {})
-            results.append({
-                "title": d.get("title", ""),
-                "selftext": d.get("selftext", "")[:500],
-                "subreddit": d.get("subreddit", ""),
-                "score": d.get("score", 0),
-                "url": f"https://reddit.com{d.get('permalink', '')}",
-                "num_comments": d.get("num_comments", 0),
-                "source": "reddit",
-            })
+            results.append(
+                {
+                    "title": d.get("title", ""),
+                    "selftext": d.get("selftext", "")[:500],
+                    "subreddit": d.get("subreddit", ""),
+                    "score": d.get("score", 0),
+                    "url": f"https://reddit.com{d.get('permalink', '')}",
+                    "num_comments": d.get("num_comments", 0),
+                    "source": "reddit",
+                }
+            )
         mode = "OAuth2" if token else "public"
-        logger.info(f"Reddit search ({mode}) returned {len(results)} results for: {query}")
+        logger.info(
+            f"Reddit search ({mode}) returned {len(results)} results for: {query}"
+        )
         return results
     except Exception as e:
         logger.warning(f"Reddit search failed: {e}")
@@ -146,6 +164,7 @@ def gdelt_news(query: str, max_records: int = 10) -> list[dict]:
     """GDelt Project — global news events. Free, no API key needed. Unlimited."""
     try:
         import httpx
+
         resp = httpx.get(
             "https://api.gdeltproject.org/api/v2/doc/doc",
             params={
@@ -161,14 +180,16 @@ def gdelt_news(query: str, max_records: int = 10) -> list[dict]:
         data = resp.json()
         results = []
         for article in data.get("articles", []):
-            results.append({
-                "title": article.get("title", ""),
-                "url": article.get("url", ""),
-                "source": article.get("sourcecountry", ""),
-                "domain": article.get("domain", ""),
-                "date": article.get("seendate", "")[:10],
-                "source_field": "gdelt",
-            })
+            results.append(
+                {
+                    "title": article.get("title", ""),
+                    "url": article.get("url", ""),
+                    "source": article.get("sourcecountry", ""),
+                    "domain": article.get("domain", ""),
+                    "date": article.get("seendate", "")[:10],
+                    "source_field": "gdelt",
+                }
+            )
         logger.info(f"GDelt returned {len(results)} articles for: {query}")
         return results
     except Exception as e:
@@ -193,7 +214,9 @@ def _firecrawl_remaining() -> int:
                 usage = saved
         remaining = FIRECRAWL_MONTHLY_LIMIT - usage["count"]
         if remaining <= 0:
-            logger.warning(f"Firecrawl limit exhausted this month ({FIRECRAWL_MONTHLY_LIMIT}/{FIRECRAWL_MONTHLY_LIMIT})")
+            logger.warning(
+                f"Firecrawl limit exhausted this month ({FIRECRAWL_MONTHLY_LIMIT}/{FIRECRAWL_MONTHLY_LIMIT})"
+            )
         return remaining
     except Exception as e:
         logger.debug(f"Firecrawl usage check failed: {e}")
@@ -231,6 +254,7 @@ def firecrawl_scrape(url: str) -> str | None:
         return None
     try:
         import httpx
+
         resp = httpx.post(
             "https://api.firecrawl.dev/v1/scrape",
             headers={
@@ -246,7 +270,9 @@ def firecrawl_scrape(url: str) -> str | None:
         if markdown:
             _firecrawl_increment()
             remaining_after = _firecrawl_remaining()
-            logger.info(f"Firecrawl scraped: {url} ({len(markdown)} chars, {remaining_after}/{FIRECRAWL_MONTHLY_LIMIT} left)")
+            logger.info(
+                f"Firecrawl scraped: {url} ({len(markdown)} chars, {remaining_after}/{FIRECRAWL_MONTHLY_LIMIT} left)"
+            )
             return markdown[:8000]
         return None
     except Exception as e:
@@ -262,6 +288,7 @@ def newsapi_headlines(query: str, page_size: int = 10) -> list[dict]:
         return []
     try:
         import httpx
+
         resp = httpx.get(
             "https://newsapi.org/v2/everything",
             params={
@@ -277,14 +304,16 @@ def newsapi_headlines(query: str, page_size: int = 10) -> list[dict]:
         data = resp.json()
         results = []
         for article in data.get("articles", []):
-            results.append({
-                "title": article.get("title", ""),
-                "url": article.get("url", ""),
-                "description": article.get("description", ""),
-                "source_name": article.get("source", {}).get("name", ""),
-                "published_at": article.get("publishedAt", "")[:10],
-                "source_api": "newsapi",
-            })
+            results.append(
+                {
+                    "title": article.get("title", ""),
+                    "url": article.get("url", ""),
+                    "description": article.get("description", ""),
+                    "source_name": article.get("source", {}).get("name", ""),
+                    "published_at": article.get("publishedAt", "")[:10],
+                    "source_api": "newsapi",
+                }
+            )
         logger.info(f"NewsAPI returned {len(results)} articles for: {query}")
         return results
     except Exception as e:
@@ -300,7 +329,9 @@ def pytrends_data(keywords: list[str]) -> dict:
         from pytrends.request import TrendReq
 
         pytrends = TrendReq(hl="en-US", tz=360, timeout=(10, 25))
-        pytrends.build_payload(keywords, cat=0, timeframe="today 12-m", geo="", gprop="")
+        pytrends.build_payload(
+            keywords, cat=0, timeframe="today 12-m", geo="", gprop=""
+        )
 
         interest = pytrends.interest_over_time()
         related = pytrends.related_queries()
@@ -342,7 +373,9 @@ def gather_all(niche: str) -> dict:
     product_keywords = niche.lower().split()[:3]
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-        brave_future = executor.submit(brave_search, f"{niche} tools resources market", 10)
+        brave_future = executor.submit(
+            brave_search, f"{niche} tools resources market", 10
+        )
         reddit_future = executor.submit(reddit_search, f"{niche}", 10)
         gdelt_future = executor.submit(gdelt_news, niche, 10)
         news_future = executor.submit(newsapi_headlines, niche, 10)
@@ -360,7 +393,8 @@ def gather_all(niche: str) -> dict:
     if competitor_urls and os.getenv("FIRECRAWL_API_KEY"):
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             fc_futures = {
-                executor.submit(firecrawl_scrape, url): url for url in competitor_urls[:3]
+                executor.submit(firecrawl_scrape, url): url
+                for url in competitor_urls[:3]
             }
             for future in concurrent.futures.as_completed(fc_futures):
                 url = fc_futures[future]
@@ -375,10 +409,13 @@ def gather_all(niche: str) -> dict:
         "newsapi_articles": news_results,
         "google_trends": trends_data,
         "firecrawl_pages": firecrawl_results,
-        "total_sources": sum([
-            1 for r in [brave_results, reddit_results, gdelt_results, news_results]
-            if r
-        ]),
+        "total_sources": sum(
+            [
+                1
+                for r in [brave_results, reddit_results, gdelt_results, news_results]
+                if r
+            ]
+        ),
     }
 
     logger.info(

@@ -89,7 +89,7 @@ AVAILABLE AGENTS CATALOG — use only these:
 - stitch_agent: Stitch AI design screens. Output varies
 
 RULES for pipeline_plan:
-1. Generate DIFFERENT components per niche — real estate needs CRM + lead_tracker, SaaS needs churn_analysis + onboarding, coaching needs student_tracker + session_scheduler.
+1. Generate DIFFERENT components per niche — real estate needs lead_tracker + crm_dashboard (use content_agent + csv_export_agent), SaaS needs churn_analysis + onboarding (use research_agent + content_agent), coaching needs student_tracker + session_scheduler (use csv_export_agent + content_agent).
 2. Do NOT use reserved IDs: images, package, notion_schema, notion_tree, gumroad_research, gumroad_publish, landing_page, social_promotion.
 3. Every component must depend on "market_research" or another component in this same plan.
 4. Generate 2-6 components based on niche complexity. Simple niche = fewer.

@@ -20,6 +20,7 @@ Document:
 Return only a bullet list of 3-5 key points, each 1 sentence.
 """
 
+
 def _extract_context(doc_path: str) -> str:
     """Extract key themes from a dependency document for cross-component context."""
     try:
@@ -77,8 +78,14 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             prompt = template.render(**render_context)
             content = generate_text(prompt)
 
-        if not content.startswith("#"):
-            logger.warning(f"Component {component.id} missing H1, retrying...")
+        for attempt in range(2):
+            if content.startswith("#"):
+                break
+            logger.warning(
+                "Component %s missing H1, retrying (attempt %s)...",
+                component.id,
+                attempt + 1,
+            )
             prompt += "\n\nCRITICAL: Start the response with an # H1 Title."
             content = generate_text(prompt)
 

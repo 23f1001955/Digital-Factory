@@ -3,12 +3,22 @@ import json
 import logging
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
-from agents.research_tools import brave_search, duckduckgo_search, reddit_search, gdelt_news, newsapi_headlines, pytrends_data, firecrawl_scrape
+from agents.research_tools import (
+    brave_search,
+    duckduckgo_search,
+    reddit_search,
+    gdelt_news,
+    newsapi_headlines,
+    pytrends_data,
+    firecrawl_scrape,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _generate_research(niche: str, product_type: str, real_data: dict) -> dict:
+def _generate_research(
+    niche: str, product_type: str, real_data: dict, job_spec: JobSpec
+) -> dict:
     """Generate market research using LLM + real data from all sources."""
     from agents.llm_client import generate_text as llm_call
     from jinja2 import Environment, FileSystemLoader
@@ -26,11 +36,16 @@ def _generate_research(niche: str, product_type: str, real_data: dict) -> dict:
     try:
         result = llm_call(prompt)
         import re
-        match = re.search(r'\{.*\}', result, re.DOTALL)
+
+        match = re.search(r"\{.*\}", result, re.DOTALL)
         if match:
             research = json.loads(match.group())
-            competitors = research.get("competitor_landscape", {}).get("direct_competitors", [])
-            logger.info(f"Market research generated: {len(competitors)} competitors from real data")
+            competitors = research.get("competitor_landscape", {}).get(
+                "direct_competitors", []
+            )
+            logger.info(
+                f"Market research generated: {len(competitors)} competitors from real data"
+            )
             return research
     except Exception as e:
         logger.warning(f"LLM market research failed: {e}")
@@ -66,10 +81,14 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         real_data = {}
         sources_used = []
 
-        search_results = brave_search(f"{niche} {product_type.replace('_', ' ')} tools market", 10)
+        search_results = brave_search(
+            f"{niche} {product_type.replace('_', ' ')} tools market", 10
+        )
         search_source = "Brave Search"
         if not search_results:
-            search_results = duckduckgo_search(f"{niche} {product_type.replace('_', ' ')} tools market", 10)
+            search_results = duckduckgo_search(
+                f"{niche} {product_type.replace('_', ' ')} tools market", 10
+            )
             search_source = "DuckDuckGo"
         if search_results:
             real_data["web_search"] = search_results
@@ -106,7 +125,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             real_data["google_trends"] = trends_data
             sources_used.append("Google Trends")
 
-        research = _generate_research(niche, product_type, real_data)
+        research = _generate_research(niche, product_type, real_data, job_spec)
 
         research["niche"] = niche
         research["product_type"] = product_type
@@ -118,7 +137,9 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(research, f, indent=2)
 
-        logger.info(f"Market research written to {output_path} (sources: {', '.join(sources_used) or 'none'})")
+        logger.info(
+            f"Market research written to {output_path} (sources: {', '.join(sources_used) or 'none'})"
+        )
         return AgentResult(status="done", output_path=output_path, error=None)
 
     except Exception as e:

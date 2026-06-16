@@ -353,7 +353,8 @@ def test_pipeline_plan_preserves_delivery(tmp_path, monkeypatch):
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
     from unittest import mock
-    import json, os
+    import json
+    import os
 
     def _make_job_spec(tmp_path, slug="test-slug", product_type="research_pack", **extra):
         path = tmp_path / "job_spec.json"
@@ -447,8 +448,8 @@ def test_delivery_map_injected_into_context(tmp_path, monkeypatch):
     from orchestrator.state import load_job_state
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
-    from unittest import mock
-    import json, os
+    import json
+    import os
 
     def _make_job_spec(tmp_path, slug="test-slug", product_type="research_pack", **extra):
         path = tmp_path / "job_spec.json"

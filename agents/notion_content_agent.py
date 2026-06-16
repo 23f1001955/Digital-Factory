@@ -20,6 +20,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             return _file_fallback(component, job_spec, context)
 
         from notion_client import Client
+
         notion = Client(auth=notion_api_key, notion_version="2022-06-28")
 
         # Find root page ID from notion_tree output in context
@@ -32,14 +33,18 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 break
 
         if not root_page_id:
-            logger.warning("No root page ID found in context. Falling back to file output.")
+            logger.warning(
+                "No root page ID found in context. Falling back to file output."
+            )
             return _file_fallback(component, job_spec, context)
 
         # Load and render prompt
         env = Environment(loader=FileSystemLoader(PROMPT_DIR))
         template_path = f"{component.id}.j2"
         if not os.path.exists(os.path.join(PROMPT_DIR, template_path)):
-            logger.warning(f"Prompt {template_path} not found. Falling back to file output.")
+            logger.warning(
+                f"Prompt {template_path} not found. Falling back to file output."
+            )
             return _file_fallback(component, job_spec, context)
 
         template = env.get_template(template_path)
@@ -62,6 +67,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         )
 
         from agents.llm_client import generate_text
+
         content = generate_text(prompt)
 
         # Create Notion page under root workspace
@@ -69,7 +75,9 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             parent={"page_id": root_page_id},
             properties={
                 "title": {
-                    "title": [{"text": {"content": component.id.replace("_", " ").title()}}]
+                    "title": [
+                        {"text": {"content": component.id.replace("_", " ").title()}}
+                    ]
                 }
             },
             children=[
@@ -77,7 +85,9 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {
-                        "rich_text": [{"type": "text", "text": {"content": content[:2000]}}]
+                        "rich_text": [
+                            {"type": "text", "text": {"content": content[:2000]}}
+                        ]
                     },
                 }
             ],
@@ -89,7 +99,9 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             "component_id": component.id,
         }
 
-        output_path = os.path.join("outputs", job_spec.slug, f"notion_content_{component.id}.json")
+        output_path = os.path.join(
+            "outputs", job_spec.slug, f"notion_content_{component.id}.json"
+        )
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2)
@@ -101,10 +113,15 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         return _file_fallback(component, job_spec, context)
 
 
-def _file_fallback(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
+def _file_fallback(
+    component: ComponentSpec, job_spec: JobSpec, context: dict
+) -> AgentResult:
     """Fallback: write content as .md file when Notion unavailable."""
     try:
         from agents.content_agent import run as content_run
+
         return content_run(component, job_spec, context)
     except Exception as e:
-        return AgentResult(status="failed", error=f"Notion content + fallback failed: {e}")
+        return AgentResult(
+            status="failed", error=f"Notion content + fallback failed: {e}"
+        )

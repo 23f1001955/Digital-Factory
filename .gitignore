@@ -7,3 +7,4 @@ node_modules/
 stitch/stitch-output/
 .ruff_cache/
 outputs/
+graphify-out/

@@ -19,9 +19,6 @@ DELIVERABLE_EXTENSIONS = {
 
 
 def _is_deliverable(file_path: str, base_dir: str) -> bool:
-    rel = os.path.relpath(file_path, base_dir)
-    parts = rel.replace("\\", "/").split("/")
-
     ext = os.path.splitext(file_path)[1].lower()
     if ext not in DELIVERABLE_EXTENSIONS:
         return False

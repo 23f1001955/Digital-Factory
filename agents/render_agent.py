@@ -28,20 +28,26 @@ def _parse_toc_items(md_text: str) -> list[dict]:
         if in_code_block:
             continue
 
-        m = re.match(r'^(#{2,3})\s+(.+)$', stripped)
+        m = re.match(r"^(#{2,3})\s+(.+)$", stripped)
         if not m:
             continue
 
         level = len(m.group(1))
         title = m.group(2).strip()
-        folded = unicodedata.normalize('NFKD', title).encode('ascii', 'ignore').decode('ascii')
-        anchor_id = re.sub(r'[^a-zA-Z0-9]+', '-', folded.lower()).strip('-')
-        items.append({
-            "level": level,
-            "id": anchor_id,
-            "title": title,
-            "page": "",
-        })
+        folded = (
+            unicodedata.normalize("NFKD", title)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
+        anchor_id = re.sub(r"[^a-zA-Z0-9]+", "-", folded.lower()).strip("-")
+        items.append(
+            {
+                "level": level,
+                "id": anchor_id,
+                "title": title,
+                "page": "",
+            }
+        )
 
     return items
 
@@ -79,9 +85,10 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                     f"Keep it under 1000 words. Make it skimmable with bold key points.\n\n{md_text[:5000]}"
                 )
                 from .llm_client import generate_text
+
                 md_text = generate_text(guide_prompt)
 
-            html_content = markdown.markdown(md_text, extensions=['extra', 'toc'])
+            html_content = markdown.markdown(md_text, extensions=["extra", "toc"])
 
             # Convert fenced mermaid code blocks to mermaid-renderable elements
             html_content = re.sub(
@@ -119,7 +126,9 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                     images_data = json.load(imf)
                 cover_path = images_data.get("images", {}).get("cover", "")
                 if cover_path and os.path.exists(cover_path):
-                    template_vars["cover_image"] = os.path.abspath(cover_path).replace("\\", "/")
+                    template_vars["cover_image"] = os.path.abspath(cover_path).replace(
+                        "\\", "/"
+                    )
             except Exception as e:
                 logger.warning(f"Failed to load cover image for template: {e}")
 
@@ -129,7 +138,9 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             if "visual_assets" in context:
                 images_dir = os.path.abspath(context["visual_assets"])
                 for i, item in enumerate(catalog_data):
-                    item["image_path"] = os.path.join(images_dir, f"image_{i+1}.png").replace('\\', '/')
+                    item["image_path"] = os.path.join(
+                        images_dir, f"image_{i+1}.png"
+                    ).replace("\\", "/")
             template_vars["catalog"] = catalog_data
 
         final_html = template.render(**template_vars)
@@ -138,8 +149,8 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             local_mermaid = os.path.join("templates", "shared", "mermaid.min.js")
             mermaid_src = (
                 f'file:///{os.path.abspath(local_mermaid).replace(chr(92), "/")}'
-                if os.path.exists(local_mermaid) else
-                "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"
+                if os.path.exists(local_mermaid)
+                else "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"
             )
             mermaid_script = (
                 f'<script src="{mermaid_src}"></script>\n'

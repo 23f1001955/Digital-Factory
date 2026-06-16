@@ -57,11 +57,13 @@ def _ensure_vercel_project(slug: str, vercel_token: str) -> bool:
         )
         if resp.status_code in (200, 409):
             return True
-        resp.raise_for_status()
-        return True
+        logger.warning(
+            f"Vercel project creation returned {resp.status_code}: {resp.text[:200]}"
+        )
+        return False
     except Exception as e:
-        logger.warning(f"Vercel project setup failed (may already exist): {e}")
-        return True
+        logger.warning(f"Vercel project setup failed: {e}")
+        return False
 
 
 def _deploy_vercel(html_content: str, slug: str, vercel_token: str) -> str | None:
@@ -113,7 +115,6 @@ def _read_stitch_landing_html(context: dict) -> str | None:
     except Exception as e:
         logger.warning(f"Failed to read Stitch landing HTML: {e}")
     return None
-
 
 
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:

@@ -1966,8 +1966,8 @@
       "source_file": "agents/catalog_agent.py",
       "source_location": 4,
       "weight": 1.0,
-      "source": "agents_llm_client_generate_text",
-      "target": "agents_catalog_agent_run"
+      "source": "agents_catalog_agent_run",
+      "target": "agents_llm_client_generate_text"
     },
     {
       "relation": "calls",
@@ -1976,8 +1976,8 @@
       "source_file": "agents/content_agent.py",
       "source_location": 4,
       "weight": 1.0,
-      "source": "agents_llm_client_generate_text",
-      "target": "agents_content_agent_run"
+      "source": "agents_content_agent_run",
+      "target": "agents_llm_client_generate_text"
     },
     {
       "relation": "calls",
@@ -1986,8 +1986,8 @@
       "source_file": "agents/diagram_agent.py",
       "source_location": 3,
       "weight": 1.0,
-      "source": "agents_llm_client_generate_text",
-      "target": "agents_diagram_agent_run"
+      "source": "agents_diagram_agent_run",
+      "target": "agents_llm_client_generate_text"
     },
     {
       "relation": "calls",
@@ -1996,8 +1996,8 @@
       "source_file": "agents/notion_schema_agent.py",
       "source_location": 5,
       "weight": 1.0,
-      "source": "agents_llm_client_generate_text",
-      "target": "agents_notion_schema_agent_run"
+      "source": "agents_notion_schema_agent_run",
+      "target": "agents_llm_client_generate_text"
     },
     {
       "relation": "calls",
@@ -2006,8 +2006,8 @@
       "source_file": "agents/research_agent.py",
       "source_location": 4,
       "weight": 1.0,
-      "source": "agents_llm_client_generate_text",
-      "target": "agents_research_agent_run"
+      "source": "agents_research_agent_run",
+      "target": "agents_llm_client_generate_text"
     },
     {
       "relation": "calls",
