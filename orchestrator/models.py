@@ -2,6 +2,7 @@ from typing import List, Literal, Dict, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
+
 class ComponentSpec(BaseModel):
     id: str
     agent: str
@@ -10,6 +11,8 @@ class ComponentSpec(BaseModel):
     uses_renderer: bool = False
     template: Optional[str] = None
     format: Literal["full", "guide", "notion"] = "full"
+    delivery: List[str] = Field(default_factory=lambda: ["zip"])
+
 
 class ProductSchema(BaseModel):
     product_type: str
@@ -17,6 +20,7 @@ class ProductSchema(BaseModel):
     components: List[ComponentSpec]
     notion_sync: bool = False
     notion_structure: Optional[dict] = None
+
 
 class JobSpec(BaseModel):
     slug: str
@@ -34,21 +38,27 @@ class JobSpec(BaseModel):
     call_to_action: str = "Buy Now on Gumroad"
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+
 class AgentResult(BaseModel):
     status: Literal["pending", "running", "done", "failed", "skipped"]
     output_path: Optional[str] = None
     error: Optional[str] = None
+
 
 class PipelineComponent(BaseModel):
     id: str
     agent: str
     output: str
     depends_on: List[str] = Field(default_factory=list)
+    uses_renderer: bool = False
     template: Optional[str] = None
     format: Literal["full", "guide", "notion"] = "full"
+    delivery: List[str] = Field(default_factory=lambda: ["zip"])
+
 
 class PipelinePlan(BaseModel):
     components: List[PipelineComponent]
+
 
 class JobState(BaseModel):
     slug: str
