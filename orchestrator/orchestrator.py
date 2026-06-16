@@ -17,20 +17,21 @@ FILE_AGENT_SUBSTITUTIONS = {
 
 logger = logging.getLogger(__name__)
 
+
 class Orchestrator:
     def __init__(self, job_spec_path: str):
         self.job_spec_path = job_spec_path
-        
+
         with open(job_spec_path, "r") as f:
             self.job_spec = JobSpec(**json.load(f))
-            
+
         schema_path = os.path.join("schemas", f"{self.job_spec.product_type}.json")
         with open(schema_path, "r") as f:
             self.schema = ProductSchema(**json.load(f))
-            
+
         self.state_path = os.path.join("outputs", self.job_spec.slug, "job_state.json")
         self.state = load_job_state(self.state_path, self.job_spec.slug)
-        
+
         self.renderer = None
 
     def _get_execution_order(self) -> List[ComponentSpec]:
@@ -38,7 +39,7 @@ class Orchestrator:
         graph = {c.id: set(c.depends_on) for c in self.schema.components}
         ordered = []
         visited = set()
-        
+
         def visit(node_id):
             if node_id in visited:
                 return
@@ -50,10 +51,10 @@ class Orchestrator:
                 if c.id == node_id:
                     ordered.append(c)
                     break
-                    
+
         for c in self.schema.components:
             visit(c.id)
-            
+
         return ordered
 
     def _merge_pipeline_plan(self, research_path: str) -> None:
@@ -62,40 +63,54 @@ class Orchestrator:
             logger.warning("No market_research.json found — core components only")
             return
 
-        with open(research_path, "r") as f:
-            research = json.load(f)
+        try:
+            with open(research_path, "r") as f:
+                research = json.load(f)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Failed to parse market_research.json: {e}")
+            return
 
         raw_plan = research.get("pipeline_plan")
         if not raw_plan or "components" not in raw_plan:
             logger.info("No pipeline_plan in research — core components only")
             return
 
-        plan = PipelinePlan(**raw_plan)
+        try:
+            plan = PipelinePlan(**raw_plan)
+        except Exception as e:
+            logger.warning(f"Failed to validate pipeline_plan: {e}")
+            return
 
         RESERVED_IDS = {
-            "market_research", "images", "package",
-            "notion_schema", "notion_tree",
-            "gumroad_research", "gumroad_publish",
-            "landing_page", "social_promotion",
+            "market_research",
+            "images",
+            "package",
+            "notion_schema",
+            "notion_tree",
+            "gumroad_research",
+            "gumroad_publish",
+            "landing_page",
+            "social_promotion",
+            "stitch_download",
         }
 
         existing_ids = {c.id for c in self.schema.components}
         allowed_agents = set(AGENT_REGISTRY.keys())
 
         added = 0
+        accepted_ids = set(existing_ids)
         for comp in plan.components:
             if comp.id in RESERVED_IDS:
                 logger.warning(f"Skipping reserved ID '{comp.id}'")
                 continue
-            if comp.id in existing_ids:
+            if comp.id in accepted_ids:
                 logger.warning(f"Skipping duplicate '{comp.id}'")
                 continue
             if comp.agent not in allowed_agents:
                 logger.warning(f"Skipping unknown agent '{comp.agent}' for '{comp.id}'")
                 continue
 
-            all_valid_ids = existing_ids | {c.id for c in plan.components}
-            if not all(dep in all_valid_ids for dep in comp.depends_on):
+            if not all(dep in accepted_ids for dep in comp.depends_on):
                 logger.warning(f"Skipping '{comp.id}' — invalid dependencies")
                 continue
 
@@ -106,9 +121,10 @@ class Orchestrator:
                 depends_on=comp.depends_on,
                 template=comp.template,
                 format=comp.format,
+                delivery=comp.delivery,
             )
             self.schema.components.append(spec)
-            existing_ids.add(comp.id)
+            accepted_ids.add(comp.id)
             added += 1
             logger.info(f"Added dynamic component: {comp.id} ({comp.agent})")
 
@@ -116,9 +132,16 @@ class Orchestrator:
         for c in self.schema.components:
             if c.id == "package":
                 c.depends_on = [
-                    comp.id for comp in self.schema.components
+                    comp.id
+                    for comp in self.schema.components
                     if comp.id != "package"
-                    and comp.id not in ("gumroad_research", "gumroad_publish", "landing_page", "social_promotion")
+                    and comp.id
+                    not in (
+                        "gumroad_research",
+                        "gumroad_publish",
+                        "landing_page",
+                        "social_promotion",
+                    )
                 ]
                 break
 
@@ -127,15 +150,15 @@ class Orchestrator:
     def run(self):
         logger.info("Starting pipeline for slug: %s", self.job_spec.slug)
         ordered_components = self._get_execution_order()
-        
+
         # Check if we need a renderer
         needs_renderer = any(c.uses_renderer for c in ordered_components)
         if needs_renderer and not self.renderer:
             self.renderer = get_renderer()
-            
+
         total = len(ordered_components)
         done_count = 0
-        
+
         logger.info("Pipeline: %s components", total)
 
         idx = 0
@@ -147,56 +170,112 @@ class Orchestrator:
                 done_count += 1
                 logger.info("%s/%s %s (already done)", done_count, total, component.id)
                 continue
-                
+
             # Check dependencies
             deps_ok = True
             context = {}
             for dep in component.depends_on:
                 dep_state = self.state.components.get(dep)
-                if not dep_state or dep_state.status != "done":
+                if not dep_state:
                     deps_ok = False
-                    logger.warning("Component %s blocked by dependency %s", component.id, dep)
+                    logger.warning(
+                        "Component %s blocked by dependency %s (not found)",
+                        component.id,
+                        dep,
+                    )
                     break
-                context[dep] = dep_state.output_path
-                
+                if dep_state.status == "done":
+                    context[dep] = dep_state.output_path
+                elif dep_state.status == "skipped":
+                    context[dep] = None
+                    logger.info(
+                        "Component %s dependency %s was skipped — continuing",
+                        component.id,
+                        dep,
+                    )
+                else:
+                    deps_ok = False
+                    logger.warning(
+                        "Component %s blocked by dependency %s (status: %s)",
+                        component.id,
+                        dep,
+                        dep_state.status,
+                    )
+                    break
+
             if not deps_ok:
-                self.state.components[component.id] = AgentResult(status="skipped", error="dependency not met")
+                self.state.components[component.id] = AgentResult(
+                    status="skipped", error="dependency not met"
+                )
                 save_job_state(self.state, self.state_path)
                 continue
-                
+
             # Inject renderer if needed
             if component.uses_renderer:
                 context["renderer"] = self.renderer
-                
+
             agent_func = AGENT_REGISTRY.get(component.agent)
 
             # Skip landing_page if not enabled
-            if component.id == "landing_page" and not self.job_spec.landing_page_enabled:
-                self.state.components[component.id] = AgentResult(status="skipped", error="landing page not enabled")
+            if (
+                component.id == "landing_page"
+                and not self.job_spec.landing_page_enabled
+            ):
+                self.state.components[component.id] = AgentResult(
+                    status="skipped", error="landing page not enabled"
+                )
                 save_job_state(self.state, self.state_path)
                 done_count += 1
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
             # Skip social_promotion if not enabled
-            if component.id == "social_promotion" and not self.job_spec.social_promotion_enabled:
-                self.state.components[component.id] = AgentResult(status="skipped", error="social promotion not enabled")
+            if (
+                component.id == "social_promotion"
+                and not self.job_spec.social_promotion_enabled
+            ):
+                self.state.components[component.id] = AgentResult(
+                    status="skipped", error="social promotion not enabled"
+                )
                 save_job_state(self.state, self.state_path)
                 done_count += 1
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
             # Skip gumroad if not enabled
-            if component.id in ("gumroad_research", "gumroad_publish") and not self.job_spec.gumroad_enabled:
-                self.state.components[component.id] = AgentResult(status="skipped", error="gumroad not enabled")
+            if (
+                component.id in ("gumroad_research", "gumroad_publish")
+                and not self.job_spec.gumroad_enabled
+            ):
+                self.state.components[component.id] = AgentResult(
+                    status="skipped", error="gumroad not enabled"
+                )
                 save_job_state(self.state, self.state_path)
                 done_count += 1
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
             # Skip notion_schema/notion_tree if notion_sync not enabled
-            if component.id in ("notion_schema", "notion_tree") and not self.job_spec.notion_sync:
-                self.state.components[component.id] = AgentResult(status="skipped", error="notion sync not enabled")
+            if (
+                component.id in ("notion_schema", "notion_tree")
+                and not self.job_spec.notion_sync
+            ):
+                self.state.components[component.id] = AgentResult(
+                    status="skipped", error="notion sync not enabled"
+                )
+                save_job_state(self.state, self.state_path)
+                done_count += 1
+                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
+                continue
+
+            # Skip stitch_download if landing page not enabled
+            if (
+                component.id == "stitch_download"
+                and not self.job_spec.landing_page_enabled
+            ):
+                self.state.components[component.id] = AgentResult(
+                    status="skipped", error="landing page not enabled"
+                )
                 save_job_state(self.state, self.state_path)
                 done_count += 1
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
@@ -205,24 +284,42 @@ class Orchestrator:
             # notion_only mode: skip package, substitute file agents
             if self.job_spec.notion_only:
                 if component.id == "package":
-                    self.state.components[component.id] = AgentResult(status="skipped", error="notion_only mode: no ZIP")
+                    self.state.components[component.id] = AgentResult(
+                        status="skipped", error="notion_only mode: no ZIP"
+                    )
                     save_job_state(self.state, self.state_path)
                     done_count += 1
-                    logger.warning("%s/%s %s (notion_only — skipped)", done_count, total, component.id)
+                    logger.warning(
+                        "%s/%s %s (notion_only — skipped)",
+                        done_count,
+                        total,
+                        component.id,
+                    )
                     continue
                 substituted = FILE_AGENT_SUBSTITUTIONS.get(component.agent)
                 if substituted:
                     agent_func = AGENT_REGISTRY.get(substituted)
-                    logger.info("%s/%s %s (%s → %s)", done_count, total, component.id, component.agent, substituted)
+                    logger.info(
+                        "%s/%s %s (%s → %s)",
+                        done_count,
+                        total,
+                        component.id,
+                        component.agent,
+                        substituted,
+                    )
 
             if not agent_func:
                 logger.error("Agent %s not found in registry", component.agent)
-                self.state.components[component.id] = AgentResult(status="failed", error=f"Agent {component.agent} not in registry")
+                self.state.components[component.id] = AgentResult(
+                    status="failed", error=f"Agent {component.agent} not in registry"
+                )
                 save_job_state(self.state, self.state_path)
                 done_count += 1
-                logger.error("%s/%s %s - agent not found", done_count, total, component.id)
+                logger.error(
+                    "%s/%s %s - agent not found", done_count, total, component.id
+                )
                 continue
-                
+
             self.state.components[component.id] = AgentResult(status="running")
             save_job_state(self.state, self.state_path)
 
@@ -231,9 +328,14 @@ class Orchestrator:
             try:
                 result = agent_func(component, self.job_spec, context)
             except Exception as e:
-                logger.error("Agent %s (%s) raised unhandled exception: %s", component.agent, component.id, e)
+                logger.error(
+                    "Agent %s (%s) raised unhandled exception: %s",
+                    component.agent,
+                    component.id,
+                    e,
+                )
                 result = AgentResult(status="failed", error=f"Unhandled exception: {e}")
-            
+
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
 
@@ -241,16 +343,19 @@ class Orchestrator:
             if component.id == "market_research" and result.status == "done":
                 self._merge_pipeline_plan(result.output_path)
                 ordered_components = self._get_execution_order()
+                idx = 0
                 total = len(ordered_components)
                 logger.info("Pipeline re-planned: %s total components", total)
 
             if result.status == "done":
                 logger.info("%s/%s %s", done_count, total, component.id)
             elif result.status == "failed":
-                logger.error("%s/%s %s - %s", done_count, total, component.id, result.error)
+                logger.error(
+                    "%s/%s %s - %s", done_count, total, component.id, result.error
+                )
             else:
                 logger.warning("%s/%s %s", done_count, total, component.id)
-                
+
         logger.info("Pipeline complete")
         logger.info("Orchestrator run complete. Generating summary report...")
         self._generate_run_summary()
@@ -263,13 +368,17 @@ class Orchestrator:
             f.write(f"**Product Type:** {self.job_spec.product_type}  \n")
             f.write(f"**Theme:** {getattr(self.job_spec, 'theme', 'default')}  \n\n")
             f.write("## Component Status\n\n")
-            
+
             for comp_id, result in self.state.components.items():
-                icon = "✅" if result.status == "done" else "❌" if result.status == "failed" else "⏭️"
+                icon = (
+                    "✅"
+                    if result.status == "done"
+                    else "❌" if result.status == "failed" else "⏭️"
+                )
                 f.write(f"- {icon} **{comp_id}**: {result.status}\n")
                 if result.error:
                     f.write(f"  - *Error: {result.error}*\n")
                 if result.output_path:
                     f.write(f"  - *Output: `{result.output_path}`*\n")
-                    
+
         logger.info("Run summary generated at %s", summary_path)
