@@ -202,3 +202,57 @@ def test_pipeline_plan_invalid_deps_skipped(tmp_path, monkeypatch):
 
     # bad_comp should not be in state at all (never added to schema)
     assert "bad_comp" not in orc.state.components
+
+
+def test_notion_only_skips_package(tmp_path, monkeypatch):
+    """Test that notion_only mode skips package component."""
+    schema_path = _make_schema(tmp_path, [
+        {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+        {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"]},
+    ])
+
+    mock_market = mock.Mock(return_value=AgentResult(status="done", output_path="data/market_research.json"))
+    mock_package = mock.Mock()
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock_package)
+
+    job_spec_path = _make_job_spec(tmp_path, notion_only=True, notion_sync=False)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-slug" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-slug")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+
+    orc.run()
+
+    assert orc.state.components["package"].status == "skipped"
+    assert orc.state.components["package"].error == "notion_only mode: no ZIP"
+    mock_package.assert_not_called()
+
+
+def test_notion_only_substitutes_content_agent(tmp_path, monkeypatch):
+    """Test that notion_only substitutes content_agent with notion_content_agent."""
+    schema_path = _make_schema(tmp_path, [
+        {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+        {"id": "test_content", "agent": "content_agent", "output": "content/test_content.md", "depends_on": ["market_research"]},
+    ])
+
+    mock_market = mock.Mock(return_value=AgentResult(status="done", output_path="data/market_research.json"))
+    mock_notion_content = mock.Mock(return_value=AgentResult(status="done"))
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "content_agent", mock.Mock())  # should NOT be called
+    monkeypatch.setitem(AGENT_REGISTRY, "notion_content_agent", mock_notion_content)
+
+    job_spec_path = _make_job_spec(tmp_path, notion_only=True, notion_sync=False)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-slug" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-slug")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+
+    orc.run()
+
+    assert orc.state.components["test_content"].status == "done"
+    mock_notion_content.assert_called_once()
