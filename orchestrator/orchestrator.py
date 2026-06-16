@@ -8,6 +8,13 @@ from .state import load_job_state, save_job_state
 from agents.registry import AGENT_REGISTRY
 from renderers.base import get_renderer
 
+FILE_AGENT_SUBSTITUTIONS = {
+    "content_agent": "notion_content_agent",
+    "csv_export_agent": "notion_content_agent",
+    "render_agent": "notion_content_agent",
+    "diagram_agent": "notion_content_agent",
+}
+
 logger = logging.getLogger(__name__)
 
 class Orchestrator:
@@ -194,6 +201,19 @@ class Orchestrator:
                 done_count += 1
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
+
+            # notion_only mode: skip package, substitute file agents
+            if self.job_spec.notion_only:
+                if component.id == "package":
+                    self.state.components[component.id] = AgentResult(status="skipped", error="notion_only mode: no ZIP")
+                    save_job_state(self.state, self.state_path)
+                    done_count += 1
+                    logger.warning("%s/%s %s (notion_only — skipped)", done_count, total, component.id)
+                    continue
+                substituted = FILE_AGENT_SUBSTITUTIONS.get(component.agent)
+                if substituted:
+                    agent_func = AGENT_REGISTRY.get(substituted)
+                    logger.info("%s/%s %s (%s → %s)", done_count, total, component.id, component.agent, substituted)
 
             if not agent_func:
                 logger.error("Agent %s not found in registry", component.agent)
