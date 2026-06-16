@@ -1,0 +1,73 @@
+You are a Notion database architect specializing in {{ niche }}.
+
+Design a FUNCTIONAL Notion workspace blueprint for a "{{ niche }}" {{ product_type }} product. This is NOT a content delivery system — do NOT create databases for storing guides, SOPs, templates, or other static content. Instead, create DYNAMIC operational databases that serve as functional tools (CRM, trackers, dashboards, pipelines).
+
+## Market Research Context
+{{ market_research_json }}
+
+## Allowed Database Archetypes
+- Client CRM (leads, prospects, active clients, past clients)
+- Project Dashboard (status, milestones, deadlines)
+- Content Calendar (posts, topics, publish dates)
+- Revenue Tracker (invoices, payments, income)
+- SOP Tracker (procedures, review dates, owners)
+- Task Manager (to-dos, assignees, priorities)
+- Pipeline Tracker (stages, conversion, value)
+- Automation Workflow (triggers, actions, status)
+- Student Pipeline (enrollments, progress, completion)
+- Lesson Planner (lessons, durations, formats)
+- Marketing Tracker (campaigns, channels, ROI)
+- Invoice Tracker (billing, paid/unpaid, due dates)
+
+## Generate a JSON object with a 'databases' array
+
+Return ONLY valid JSON. No markdown, no code blocks, no explanation.
+
+```json
+{
+  "databases": [
+    {
+      "name": "Client CRM",
+      "description": "Track clients through the sales and retention pipeline",
+      "icon": "👥",
+      "properties": {
+        "Client Name": {"type": "title"},
+        "Status": {"type": "select", "options": ["Lead", "Prospect", "Active", "Past Client"]},
+        "Email": {"type": "email"},
+        "Phone": {"type": "phone"},
+        "Notes": {"type": "rich_text"},
+        "Last Contacted": {"type": "date"}
+      },
+      "views": [
+        {"name": "All Clients", "type": "table"},
+        {"name": "Pipeline", "type": "board", "group_by": "Status"}
+      ],
+      "sample_entries": [
+        {"Client Name": "Acme Corp", "Status": "Active", "Email": "contact@acme.com", "Notes": "Key account"},
+        {"Client Name": "Beta LLC", "Status": "Lead", "Email": "info@beta.com", "Notes": "Cold outreach"}
+      ]
+    }
+  ]
+}
+```
+
+## Rules
+1. Create exactly 3-5 connected databases that work together as a system
+2. Use relations to link related databases (e.g., Client CRM → Invoice Tracker)
+3. Each database must have 5-8 realistic sample entries with meaningful data
+4. Include at least one board view, one calendar view, and one table view across all databases
+5. Properties must include a mix of: title, select, date, number, email, url, checkbox, status, relation, rollup, formula, rich_text, phone, multi_select, files
+6. Use the market research context to make the databases feel tailored to the specific niche — property names, options, and sample data should reflect real client types, pricing tiers, and workflows relevant to {{ niche }}
+7. IMPORTANT: No content storage databases. No "Guide Repository", "SOP Archive", "Template Library", or similar pages — those belong in the ZIP deliverable, not in Notion
+
+## Example Database Sets by Product Type
+
+{% if product_type == "operating_system" %}
+Recommended databases: Client CRM, SOP Tracker, Project Dashboard, Content Calendar, Revenue Tracker
+{% elif product_type == "course_launch" %}
+Recommended databases: Student Pipeline, Lesson Planner, Marketing Tracker, Revenue Dashboard, Content Calendar
+{% elif product_type == "workflow_kit" %}
+Recommended databases: Client CRM, Task Manager, Automation Workflow, Invoice Tracker, Project Dashboard
+{% endif %}
+
+Return ONLY valid JSON. No markdown, no code blocks, no text outside the JSON.

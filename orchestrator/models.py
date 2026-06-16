@@ -25,6 +25,7 @@ class JobSpec(BaseModel):
     display_name: Optional[str] = None
     theme: str = "default"
     notion_sync: bool = False
+    notion_only: bool = False
     notion_parent_page_id: Optional[str] = None
     landing_page_enabled: bool = False
     social_promotion_enabled: bool = False

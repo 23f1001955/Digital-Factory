@@ -1,6 +1,6 @@
 import os
 import json
-import re
+
 import time
 import random
 import logging
@@ -40,8 +40,6 @@ DB_ICONS = {
 SELECT_COLORS = [
     "default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red",
 ]
-
-
 
 
 def _retry_call(fn: Callable[..., T], *args, max_retries: int = 4, **kwargs) -> T:
@@ -205,92 +203,6 @@ def _create_sample_entries(
     return created
 
 
-def _md_to_notion_blocks(md: str) -> list:
-    """Convert basic Markdown to Notion API block objects."""
-    blocks = []
-    lines = md.split("\n")
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        stripped = line.strip()
-
-        if not stripped:
-            i += 1
-            continue
-
-        # H1
-        if stripped.startswith("# ") and not stripped.startswith("## "):
-            text = stripped[2:].strip()
-            blocks.append({
-                "object": "block", "type": "heading_1",
-                "heading_1": {"rich_text": [{"text": {"content": text}}]},
-            })
-        # H2
-        elif stripped.startswith("## ") and not stripped.startswith("### "):
-            text = stripped[3:].strip()
-            blocks.append({
-                "object": "block", "type": "heading_2",
-                "heading_2": {"rich_text": [{"text": {"content": text}}]},
-            })
-        # H3
-        elif stripped.startswith("### "):
-            text = stripped[4:].strip()
-            blocks.append({
-                "object": "block", "type": "heading_3",
-                "heading_3": {"rich_text": [{"text": {"content": text}}]},
-            })
-        # Bullet list
-        elif stripped.startswith("* ") or stripped.startswith("- "):
-            text = stripped[2:].strip()
-            blocks.append({
-                "object": "block", "type": "bulleted_list_item",
-                "bulleted_list_item": {"rich_text": [{"text": {"content": text}}]},
-            })
-        # Numbered list
-        elif re.match(r"^\d+[.)]\s", stripped):
-            text = re.sub(r"^\d+[.)]\s", "", stripped)
-            blocks.append({
-                "object": "block", "type": "numbered_list_item",
-                "numbered_list_item": {"rich_text": [{"text": {"content": text}}]},
-            })
-        # Code block
-        elif stripped.startswith("```"):
-            lang = stripped[3:].strip()
-            code_lines = []
-            i += 1
-            while i < len(lines) and not lines[i].strip().startswith("```"):
-                code_lines.append(lines[i])
-                i += 1
-            code_text = "\n".join(code_lines)
-            blocks.append({
-                "object": "block", "type": "code",
-                "code": {
-                    "rich_text": [{"text": {"content": code_text}}],
-                    "language": lang if lang else "plain text",
-                },
-            })
-        # Blockquote
-        elif stripped.startswith("> "):
-            text = stripped[2:].strip()
-            blocks.append({
-                "object": "block", "type": "quote",
-                "quote": {"rich_text": [{"text": {"content": text}}]},
-            })
-        # Horizontal rule
-        elif stripped in ("---", "***", "___"):
-            blocks.append({"object": "block", "type": "divider", "divider": {}})
-        # Paragraph (default)
-        else:
-            blocks.append({
-                "object": "block", "type": "paragraph",
-                "paragraph": {"rich_text": [{"text": {"content": stripped}}]},
-            })
-
-        i += 1
-
-    return blocks
-
-
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
     try:
         notion_api_key = os.getenv("NOTION_API_KEY")
@@ -342,55 +254,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             "root_page_id": root_page_id,
             "root_page_url": root_page_url,
             "databases": {},
-            "content_pages": {},
         }
-
-        # === PHASE 1: Create content pages from schema's notion_structure ===
-        schema_path = os.path.join("schemas", f"{job_spec.product_type}.json")
-        notion_structure = None
-        if os.path.exists(schema_path):
-            with open(schema_path, "r", encoding="utf-8") as f:
-                schema_data = json.load(f)
-            notion_structure = schema_data.get("notion_structure")
-
-        if notion_structure and "pages" in notion_structure:
-            for page_def in notion_structure["pages"]:
-                page_name = page_def["name"]
-                source_comp = page_def.get("source", "")
-                content_path = context.get(source_comp) if source_comp else None
-
-                page_icon = _pick_icon(page_name)
-                page = _retry_call(
-                    notion.pages.create,
-                    parent={"page_id": root_page_id},
-                    icon={"type": "emoji", "emoji": page_icon},
-                    properties={
-                        "title": {
-                            "title": [{"text": {"content": page_name}}]
-                        }
-                    }
-                )
-
-                blocks = []
-                if content_path and os.path.exists(content_path):
-                    with open(content_path, "r", encoding="utf-8") as cf:
-                        md_content = cf.read()
-                    blocks = _md_to_notion_blocks(md_content)
-
-                if blocks:
-                    for i in range(0, len(blocks), 100):
-                        chunk = blocks[i:i + 100]
-                        try:
-                            _retry_call(notion.blocks.children.append, block_id=page["id"], children=chunk)
-                        except Exception as e:
-                            logger.error(f"Failed to append blocks to {page_name}: {e}")
-
-                sync_result["content_pages"][page_name] = {
-                    "id": page["id"],
-                    "url": page.get("url", ""),
-                    "source": source_comp,
-                }
-                logger.info(f"Created notion page: {page_name}")
 
         # === PHASE 2: Create databases from LLM-generated blueprint ===
         db_id_map: Dict[str, str] = {}

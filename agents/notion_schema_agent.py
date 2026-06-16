@@ -1,65 +1,39 @@
 import os
 import json
 import logging
+from jinja2 import Environment, FileSystemLoader
 from .llm_client import generate_text
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_PROMPT = """You are a Notion database architect specializing in {niche}.
-
-Design a complete Notion workspace blueprint for a "{niche}" professional or team.
-
-Generate a JSON object with a 'databases' array. Each database has:
-
-{{
-  "databases": [
-    {{
-      "name": "Database Name",
-      "description": "What this database tracks",
-      "icon": "emoji (e.g. 📁)",
-      "properties": {{
-        "Property Name": {{"type": "title", "options": []}},
-        "Status": {{"type": "select", "options": ["Option 1", "Option 2", "Option 3"]}},
-        "Date": {{"type": "date"}},
-        "Related": {{"type": "relation", "target": "Other Database Name"}},
-        "Formula": {{"type": "formula", "expression": "prop(\\"Property Name\\")"}},
-        "Number": {{"type": "number", "format": "number"}},
-        "URL": {{"type": "url"}},
-        "Email": {{"type": "email"}},
-        "Phone": {{"type": "phone"}},
-        "Checkbox": {{"type": "checkbox"}},
-        "Files": {{"type": "files"}}
-      }}
-    }}
-  ]
-}}
-
-Supported property types: title, text, number, select, multi_select, date, person, files, checkbox, url, email, phone, formula, relation, rollup, created_time, created_by, last_edited_time, last_edited_by, status
-
-Relations: use 'target' field to match database name. Use 'type': 'rollup' with 'rollup_property', 'rollup_function' for rollups.
-
-Create 3-5 databases that form a connected system. Use relations to link them.
-
-Return ONLY raw JSON — no markdown, no explanation, no code block wrapping.
-"""
+PROMPT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts")
 
 
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
     try:
-        prompt = SCHEMA_PROMPT.format(niche=job_spec.niche)
+        env = Environment(loader=FileSystemLoader(PROMPT_DIR))
+        template = env.get_template("notion_schema.j2")
 
-        context_text = ""
+        market_research_json = ""
         for dep in component.depends_on:
             dep_path = context.get(dep)
             if dep_path and os.path.exists(dep_path):
-                with open(dep_path, "r", encoding="utf-8") as f:
-                    excerpt = f.read()[:2000]
-                context_text += f"\n\nContent from {dep}:\n{excerpt[:2000]}"
+                try:
+                    with open(dep_path, "r", encoding="utf-8") as f:
+                        research_data = json.load(f)
+                    market_research_json = json.dumps(research_data, indent=2)[:4000]
+                except (json.JSONDecodeError, Exception) as e:
+                    logger.warning(f"Could not load {dep} as JSON: {e}")
+                    market_research_json = ""
+                break
 
-        if context_text:
-            prompt += f"\n\nUse this context to inform the database design:\n{context_text}"
+        prompt = template.render(
+            niche=job_spec.niche,
+            product_type=job_spec.product_type,
+            market_research_json=market_research_json,
+        )
 
         content = generate_text(prompt)
 

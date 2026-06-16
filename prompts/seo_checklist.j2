@@ -1,0 +1,48 @@
+You are an SEO auditor for the niche: "{{ niche }}".
+
+Based on the blog post and SEO metadata below, generate a comprehensive SEO checklist in Markdown.
+
+## Blog Post
+{{ database[:2000] if database else 'N/A' }}
+
+## SEO Metadata
+{{ context }}
+
+Format your output as:
+
+# SEO Checklist: {{ niche }}
+
+## Pre-Publish Checklist
+- [ ] Title tag optimized (50-60 chars)
+- [ ] Meta description written (150-160 chars)
+- [ ] URL slug optimized
+- [ ] H1 tag matches target keyword
+- [ ] Keyword in first 100 words
+- [ ] Internal links added (min 3)
+- [ ] External links added (min 2)
+- [ ] Image alt text added
+- [ ] Schema markup applied
+- [ ] Reading time calculated
+
+## On-Page SEO Scorecard
+| Factor | Score (1-10) | Optimization Tip |
+|--------|-------------|------------------|
+| Title | X | ... |
+| Headings | X | ... |
+| Content | X | ... |
+| Images | X | ... |
+| Links | X | ... |
+
+## Technical SEO Checks
+- Page speed recommendations
+- Mobile responsiveness
+- Core Web Vitals
+- Canonical URL
+
+## Content Quality Checks
+- Readability score (target: 8th grade)
+- Word count recommendation
+- Media inclusion
+- Fact-checking notes
+
+Be specific with actionable recommendations for {{ niche }}.

@@ -7,7 +7,7 @@ from orchestrator.models import ComponentSpec, JobSpec, AgentResult
 logger = logging.getLogger(__name__)
 
 DELIVERABLE_EXTENSIONS = {".pdf", ".zip", ".md", ".jpg", ".jpeg", ".png", ".svg", ".html"}
-DELIVERABLE_PREFIXES = {"content", "presentation", "landing", "assets", "gumroad"}
+DELIVERABLE_PREFIXES = {"content", "presentation", "assets", "gumroad"}
 
 
 def _is_deliverable(file_path: str, base_dir: str) -> bool:

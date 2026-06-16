@@ -115,25 +115,6 @@ def _read_stitch_landing_html(context: dict) -> str | None:
     return None
 
 
-def _upload_zip_to_gumroad(zip_path: str, product_id: str, gumroad_token: str):
-    from agents.gumroad_agent import _gumroad_upload_file
-
-    file_url = _gumroad_upload_file(zip_path)
-    if not file_url:
-        logger.warning("Failed to upload landing ZIP to Gumroad")
-        return
-    import urllib.parse
-
-    form_items = [("access_token", gumroad_token), ("files[][url]", file_url)]
-    resp = httpx.put(
-        f"https://api.gumroad.com/v2/products/{product_id}",
-        content=urllib.parse.urlencode(form_items),
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        timeout=30.0,
-    )
-    resp.raise_for_status()
-    logger.info(f"Landing ZIP uploaded to Gumroad product {product_id}")
-
 
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
     try:
@@ -207,18 +188,6 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                     if os.path.isfile(img_full):
                         zf.write(img_full, f"images/{img}")
         logger.info(f"Landing package created: {zip_path}")
-
-        if gumroad_publish_path and os.path.exists(gumroad_publish_path):
-            try:
-                with open(gumroad_publish_path, encoding="utf-8") as f:
-                    gp_data = json.load(f)
-                product_id = gp_data.get("product_id", "")
-                if product_id and os.path.exists(zip_path):
-                    gumroad_token = os.getenv("GUMROAD_ACCESS_TOKEN")
-                    if gumroad_token:
-                        _upload_zip_to_gumroad(zip_path, product_id, gumroad_token)
-            except Exception as e:
-                logger.warning(f"Gumroad ZIP upload failed: {e}")
 
         vercel_token = os.getenv("VERCEL_TOKEN")
         deployed_url = None

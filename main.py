@@ -2,6 +2,7 @@ import os
 import sys
 import csv
 import json
+import time
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
@@ -73,6 +74,9 @@ def process_batch(csv_path: str):
             logger.info(f"Orchestrating {slug}...")
             orchestrator = Orchestrator(job_spec_path)
             orchestrator.run()
+
+            # Rate-limit between batch runs — respect API free tiers
+            time.sleep(3)
 
 
 def main():
