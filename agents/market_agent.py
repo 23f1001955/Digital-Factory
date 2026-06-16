@@ -58,6 +58,9 @@ def _fallback_research(niche: str, product_type: str) -> dict:
     return {
         "niche": niche,
         "product_type": product_type,
+        "recommended_product_type": "research_pack",
+        "recommendation_confidence": 0.3,
+        "recommendation_reasoning": "Insufficient data for recommendation \u2014 falling back to research_pack",
         "competitor_landscape": {
             "direct_competitors": [],
             "pricing_tiers": {"budget": "$5-15", "mid": "$15-35", "premium": "$35-100"},

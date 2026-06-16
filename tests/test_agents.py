@@ -741,6 +741,59 @@ def test_packaging_agent_with_delivery_map(tmp_path):
         shutil.rmtree(base_dir)
 
 
+def test_market_agent_recommends_product_type(monkeypatch):
+    """Test that market_agent returns recommended_product_type in output."""
+    from agents import market_agent
+    from orchestrator.models import ComponentSpec, JobSpec
+    import json
+
+    monkeypatch.setattr(
+        "agents.llm_client.generate_text",
+        lambda p: json.dumps({
+            "competitor_landscape": {"direct_competitors": [], "pricing_tiers": {}, "recommended_price": 29, "quality_gaps": [], "trending_keywords": []},
+            "content_recommendations": {"tone": "professional", "key_themes": [], "seo_keywords": []},
+            "market_insights": {},
+            "recommended_product_type": "database",
+            "recommendation_confidence": 0.85,
+            "recommendation_reasoning": "High demand for lead lists in this niche",
+            "pipeline_plan": {"components": []},
+        }),
+    )
+
+    monkeypatch.setattr("agents.research_tools.brave_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.duckduckgo_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.reddit_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.gdelt_news", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.newsapi_headlines", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.pytrends_data", lambda q: {})
+    monkeypatch.setattr("agents.research_tools.firecrawl_scrape", lambda u: None)
+
+    job_spec = JobSpec(
+        slug="test-market-rec", product_type="discovery", niche="real estate agents"
+    )
+    comp = ComponentSpec(
+        id="market_research", agent="market_agent", output="data/market_research.json", depends_on=[]
+    )
+    context = {}
+
+    result = market_agent.run(comp, job_spec, context)
+    assert result.status == "done"
+    assert result.output_path is not None
+
+    with open(result.output_path) as f:
+        research = json.load(f)
+
+    assert "recommended_product_type" in research
+    assert research["recommended_product_type"] == "database"
+    assert "recommendation_confidence" in research
+    assert research["recommendation_confidence"] == 0.85
+    assert "recommendation_reasoning" in research
+
+    output_dir = os.path.join("outputs", "test-market-rec")
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+
+
 def test_gumroad_agent_publish_with_delivery_map(tmp_path, monkeypatch):
     from agents import gumroad_agent
     from orchestrator.models import ComponentSpec, JobSpec
