@@ -121,6 +121,7 @@ class Orchestrator:
                 template=comp.template,
                 format=comp.format,
                 delivery=comp.delivery,
+                capabilities=comp.capabilities,
             )
             self.schema.components.append(spec)
             accepted_ids.add(comp.id)
