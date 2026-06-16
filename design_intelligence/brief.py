@@ -1,11 +1,13 @@
 import csv
 import json
+import logging
 import os
+import re
 from pathlib import Path
-from typing import Optional
-
 from .models import DesignBrief, LandingPattern
 from .registry import load_rules
+
+logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).parent / "data"
 PATTERNS_CSV = DATA_DIR / "landing_patterns.csv"
@@ -23,10 +25,18 @@ class DesignBriefGenerator:
         if not research_path or not os.path.exists(research_path):
             return None
 
-        with open(research_path, encoding="utf-8") as f:
-            research = json.load(f)
+        try:
+            with open(research_path, encoding="utf-8") as f:
+                research = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Failed to read market research: %s", e)
+            return None
 
-        design_recs = research.get("design_recommendations", {})
+        if not isinstance(research, dict):
+            logger.warning("Market research is not a JSON object")
+            return None
+
+        design_recs = research.get("design_recommendations", {}) or {}
         vibe = design_recs.get("design_vibe", "default")
         layout_pattern = design_recs.get("layout_pattern", "")
         color_strategy = design_recs.get("color_strategy", "")
@@ -34,13 +44,8 @@ class DesignBriefGenerator:
         typography_mood = design_recs.get("typography_mood", "")
         reasoning = design_recs.get("reasoning", "")
 
-        # Load relevant design rules
         rules_text = load_rules(vibe)
-
-        # Match landing pattern from CSV
         pattern = self._match_pattern(layout_pattern)
-
-        # Build the system prompt block
         system_prompt = self._build_prompt(
             rules_text=rules_text,
             pattern=pattern,
@@ -57,36 +62,39 @@ class DesignBriefGenerator:
             system_prompt_block=system_prompt,
         )
 
-    def _match_pattern(self, layout_pattern: str) -> Optional[LandingPattern]:
+    def _match_pattern(self, layout_pattern: str) -> LandingPattern | None:
         """Match a layout pattern string to a CSV pattern entry."""
         if not PATTERNS_CSV.exists():
             return None
 
-        with open(PATTERNS_CSV, encoding="utf-8", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                keywords = row.get("Keywords", "").lower()
-                if layout_pattern.lower() in keywords or any(
-                    kw.strip() in keywords
-                    for kw in layout_pattern.lower().replace("-", " ").split()
-                ):
-                    return LandingPattern(
-                        name=row.get("Pattern Name", ""),
-                        section_order=[
-                            s.strip().lstrip("0123456789. ")
-                            for s in row.get("Section Order", "").split(",")
-                        ],
-                        cta_placement=row.get("Primary CTA Placement", ""),
-                        color_strategy=row.get("Color Strategy", ""),
-                        recommended_effects=row.get("Recommended Effects", ""),
-                    )
+        try:
+            with open(PATTERNS_CSV, encoding="utf-8", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    keywords = row.get("Keywords", "").lower()
+                    if layout_pattern.lower() in keywords or any(
+                        kw.strip() in keywords
+                        for kw in layout_pattern.lower().replace("-", " ").split()
+                    ):
+                        return LandingPattern(
+                            name=row.get("Pattern Name", ""),
+                            section_order=[
+                                re.sub(r"^\d+\.\s*", "", s).strip()
+                                for s in row.get("Section Order", "").split(",")
+                            ],
+                            cta_placement=row.get("Primary CTA Placement", ""),
+                            color_strategy=row.get("Color Strategy", ""),
+                            recommended_effects=row.get("Recommended Effects", ""),
+                        )
+        except (csv.Error, OSError) as e:
+            logger.warning("Failed to read landing patterns CSV: %s", e)
 
         return None
 
+    @staticmethod
     def _build_prompt(
-        self,
         rules_text: str,
-        pattern: Optional[LandingPattern],
+        pattern: LandingPattern | None,
         vibe: str,
         color_strategy: str,
         motion_level: str,
