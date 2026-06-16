@@ -25,7 +25,7 @@ def process_batch(csv_path: str):
     with open(csv_path, mode="r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            product_type = row.get("product_type", "research_pack")
+            product_type = row.get("product_type", "discovery")
             niche = row.get("niche", "default niche")
             theme = row.get("theme", "default")
             slug = row.get("slug", slugify(niche))

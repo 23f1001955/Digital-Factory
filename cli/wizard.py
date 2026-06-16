@@ -26,30 +26,7 @@ def run_wizard() -> str | None:
         api_key = typer.prompt("Anthropic API Key missing. Please enter it")
         set_key(env_path, "ANTHROPIC_API_KEY", api_key)
 
-    print("\nAvailable Product Types:")
-    print("1. Research Pack (research_pack)")
-    print("2. Operating System (operating_system)")
-    print("3. Visual Pack (visual_pack)")
-    print("4. Workflow Kit (workflow_kit)")
-    print("5. Blog Kit (blog_kit)")
-    print("6. Course Launch Kit (course_launch)")
-    print("7. SaaS Documentation (saas_docs)")
-
-    choice = typer.prompt("Select a product type (1-7)", default="1")
-    if choice.strip() == "7":
-        product_type = "saas_docs"
-    elif choice.strip() == "6":
-        product_type = "course_launch"
-    elif choice.strip() == "5":
-        product_type = "blog_kit"
-    elif choice.strip() == "4":
-        product_type = "workflow_kit"
-    elif choice.strip() == "3":
-        product_type = "visual_pack"
-    elif choice.strip() == "2":
-        product_type = "operating_system"
-    else:
-        product_type = "research_pack"
+    product_type = "discovery"
 
     niche = typer.prompt("What is the niche/topic?")
 
@@ -77,35 +54,28 @@ def run_wizard() -> str | None:
     notion_sync = False
     notion_parent_page_id = None
 
-    # Load schema to check if notion sync is supported
-    schema_path = os.path.join("schemas", f"{product_type}.json")
-    if os.path.exists(schema_path):
-        with open(schema_path, "r") as f:
-            schema = json.load(f)
+    sync = typer.prompt(
+        "Do you want to sync this to Notion? (y/n)", default="y"
+    )
+    if sync.lower() == "y":
+        notion_sync = True
 
-        if schema.get("notion_sync"):
-            sync = typer.prompt(
-                "Do you want to sync this to Notion? (y/n)", default="y"
+        notion_api_key = os.getenv("NOTION_API_KEY")
+        if not notion_api_key or notion_api_key == "your_notion_api_key_here":
+            notion_api_key = typer.prompt(
+                "Notion API Key missing. Please enter it"
             )
-            if sync.lower() == "y":
-                notion_sync = True
+            set_key(env_path, "NOTION_API_KEY", notion_api_key)
 
-                notion_api_key = os.getenv("NOTION_API_KEY")
-                if not notion_api_key or notion_api_key == "your_notion_api_key_here":
-                    notion_api_key = typer.prompt(
-                        "Notion API Key missing. Please enter it"
-                    )
-                    set_key(env_path, "NOTION_API_KEY", notion_api_key)
-
-                notion_parent_page_id = os.getenv("NOTION_PARENT_PAGE_ID")
-                if (
-                    not notion_parent_page_id
-                    or notion_parent_page_id == "your_notion_parent_page_id_here"
-                ):
-                    notion_parent_page_id = typer.prompt(
-                        "Notion Parent Page ID missing. Please enter it"
-                    )
-                    set_key(env_path, "NOTION_PARENT_PAGE_ID", notion_parent_page_id)
+        notion_parent_page_id = os.getenv("NOTION_PARENT_PAGE_ID")
+        if (
+            not notion_parent_page_id
+            or notion_parent_page_id == "your_notion_parent_page_id_here"
+        ):
+            notion_parent_page_id = typer.prompt(
+                "Notion Parent Page ID missing. Please enter it"
+            )
+            set_key(env_path, "NOTION_PARENT_PAGE_ID", notion_parent_page_id)
 
     notion_only = False
     if not notion_sync:

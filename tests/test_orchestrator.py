@@ -574,3 +574,26 @@ def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
     assert orc.job_spec.product_type == "research_pack"
     # research_pack has package component — should have run
     mock_package.assert_called_once()
+
+
+def test_discovery_job_spec_has_no_product_type(tmp_path):
+    """Test that job_spec created by wizard in discovery mode has product_type='discovery'."""
+    import json
+    path = tmp_path / "job_spec.json"
+    data = {
+        "slug": "test-no-type",
+        "product_type": "discovery",
+        "niche": "test niche",
+        "notion_sync": False,
+        "notion_only": False,
+        "notion_parent_page_id": None,
+        "gumroad_enabled": False,
+        "landing_page_enabled": False,
+        "social_promotion_enabled": False,
+        "call_to_action": "",
+        "created_at": "2026-06-16T10:00:00Z",
+    }
+    path.write_text(json.dumps(data), encoding="utf-8")
+    spec = json.loads(path.read_text(encoding="utf-8"))
+    assert spec["product_type"] == "discovery"
+    assert "recommended_product_type" not in spec
