@@ -187,6 +187,14 @@ class Orchestrator:
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
+            # Skip notion_schema/notion_tree if notion_sync not enabled
+            if component.id in ("notion_schema", "notion_tree") and not self.job_spec.notion_sync:
+                self.state.components[component.id] = AgentResult(status="skipped", error="notion sync not enabled")
+                save_job_state(self.state, self.state_path)
+                done_count += 1
+                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
+                continue
+
             if not agent_func:
                 logger.error("Agent %s not found in registry", component.agent)
                 self.state.components[component.id] = AgentResult(status="failed", error=f"Agent {component.agent} not in registry")
