@@ -174,6 +174,17 @@ def _gumroad_upload_file(file_path: str) -> str | None:
         return None
 
 
+def _get_gumroad_username() -> str:
+    """Get Gumroad username from env var or derive from API."""
+    username = os.getenv("GUMROAD_USERNAME")
+    if username:
+        return username
+    user_data = _gumroad_form_api("GET", "user")
+    if user_data and "user" in user_data:
+        return user_data["user"].get("subdomain", "")
+    return ""
+
+
 def _run_research(
     component: ComponentSpec, job_spec: JobSpec, context: dict
 ) -> AgentResult:
@@ -359,7 +370,11 @@ def _run_publish(
     )
     logger.info(f"Review written to {review_path}")
 
-    product_name = f"{job_spec.display_name or job_spec.niche} - {job_spec.product_type.replace('_', ' ').title()}"
+    product_name = (
+        f"{job_spec.display_name or job_spec.niche} - {job_spec.product_type.replace('_', ' ').title()} Notion Template"
+        if getattr(job_spec, 'notion_only', False)
+        else f"{job_spec.display_name or job_spec.niche} - {job_spec.product_type.replace('_', ' ').title()}"
+    )
     product_data = {
         "name": product_name,
         "price": suggested_price * 100,
@@ -394,13 +409,27 @@ def _run_publish(
 
     token = os.getenv("GUMROAD_ACCESS_TOKEN")
 
-    # Only update existing products (rate limit: 10 creations/day)
     product_id = _get_previous_product_id(output_dir, niche=job_spec.niche)
     if not product_id:
-        logger.error(
-            "No existing product found — run publish once with a created product first"
-        )
-        return AgentResult(status="failed", error="No existing product ID to update")
+        logger.info("No existing product found — attempting to create new product")
+        create_data = {
+            "name": product_name,
+            "custom_permalink": f"{job_spec.slug}-notion" if getattr(job_spec, 'notion_only', False) else job_spec.slug,
+            "price": str(product_data["price"]),
+            "description": product_data["description"],
+            "custom_receipt": custom_receipt,
+            "custom_summary": custom_summary,
+            "tags": tags,
+        }
+        create_result = _gumroad_form_api("POST", "products", create_data)
+        if create_result and create_result.get("success"):
+            product_id = create_result["product"]["id"]
+            product_url = create_result["product"].get("short_url", "")
+            logger.info(f"Created new Gumroad product: {product_id}")
+        else:
+            msg = "Failed to create product (rate limit: 10/day)"
+            logger.error(msg)
+            return AgentResult(status="failed", error=msg)
 
     logger.info(f"Using existing product ID: {product_id}")
 
@@ -460,7 +489,11 @@ def _run_publish(
     tags = _generate_tags(job_spec.niche, job_spec.product_type)
 
     # Generate custom_summary from LLM tagline or fallback
-    custom_summary = f"{product_name} — a premium {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}."
+    custom_summary = (
+        f"{product_name} — a standalone Notion workspace template for {job_spec.niche}."
+        if getattr(job_spec, 'notion_only', False)
+        else f"{product_name} — a premium {job_spec.product_type.replace('_', ' ')} for {job_spec.niche}."
+    )
 
     # First PUT: attach files, set all product fields
     attach_body = {
@@ -468,7 +501,7 @@ def _run_publish(
         "price": str(product_data["price"]),
         "description": product_data["description"],
         "custom_receipt": custom_receipt,
-        "custom_permalink": job_spec.slug,
+        "custom_permalink": f"{job_spec.slug}-notion" if getattr(job_spec, 'notion_only', False) else job_spec.slug,
         "custom_summary": custom_summary,
         "tags": tags,
         "display_product_reviews": "true",
@@ -632,7 +665,8 @@ def _run_publish(
             logger.warning(f"Publish call failed: {e}")
 
     if not product_url:
-        product_url = f"https://kundanalpk.gumroad.com/l/{job_spec.slug}"
+        username = _get_gumroad_username() or "yourusername"
+        product_url = f"https://{username}.gumroad.com/l/{job_spec.slug}"
 
     publish_result = {
         "status": "published",

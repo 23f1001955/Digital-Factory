@@ -256,6 +256,164 @@ def test_social_agent(monkeypatch):
         shutil.rmtree(output_dir)
 
 
+def test_gumroad_agent_publish(tmp_path, monkeypatch):
+    from agents import gumroad_agent
+    import httpx
+
+    monkeypatch.setenv("GUMROAD_ACCESS_TOKEN", "fake_token")
+
+    # Mock product ID lookup
+    monkeypatch.setattr(
+        gumroad_agent, "_get_previous_product_id", lambda *a, **kw: "prod_test123"
+    )
+
+    # Mock file uploads
+    urls = iter(
+        [
+            "https://s3.example.com/report.pdf",
+            "https://s3.example.com/package.zip",
+            "https://s3.example.com/cover.png",
+        ]
+    )
+    monkeypatch.setattr(gumroad_agent, "_gumroad_upload_file", lambda p: next(urls))
+
+    # Mock PUT with Rails params (both attach + rich_content calls)
+    monkeypatch.setattr(
+        gumroad_agent,
+        "_gumroad_put_with_rails_params",
+        lambda pid, body: {
+            "success": True,
+            "product": {
+                "id": pid,
+                "short_url": "https://testuser.gumroad.com/l/test-publish",
+                "files": [
+                    {"id": "f1", "url": "https://s3.example.com/report.pdf"},
+                    {"id": "f2", "url": "https://s3.example.com/package.zip"},
+                    {"id": "f3", "url": "https://s3.example.com/cover.png"},
+                ],
+            },
+        },
+    )
+
+    # Mock httpx.request for GET /products/{id} reads
+    def mock_request(method, url, **kwargs):
+        class MockResponse:
+            status_code = 200
+
+            def json(self):
+                if "user" in url.lower():
+                    return {"user": {"subdomain": "testuser"}}
+                return {
+                    "product": {
+                        "id": "prod_test123",
+                        "short_url": "https://testuser.gumroad.com/l/test-publish",
+                        "files": [{"id": "f0", "url": "https://s3.example.com/old.pdf"}],
+                    }
+                }
+
+            @property
+            def text(self):
+                return json.dumps(self.json())
+
+        return MockResponse()
+
+    monkeypatch.setattr("httpx.request", mock_request)
+
+    # Mock httpx.put for enable endpoint
+    def mock_put(url, **kwargs):
+        class MockResponse:
+            status_code = 200
+
+            def json(self):
+                return {
+                    "success": True,
+                    "product": {
+                        "short_url": "https://testuser.gumroad.com/l/test-publish"
+                    },
+                }
+
+            @property
+            def text(self):
+                return json.dumps(self.json())
+
+        return MockResponse()
+
+    monkeypatch.setattr("httpx.put", mock_put)
+
+    # Mock httpx.post for cover + thumbnail uploads
+    def mock_post(url, **kwargs):
+        class MockResponse:
+            status_code = 200
+
+            def json(self):
+                return {"success": True}
+
+            @property
+            def text(self):
+                return json.dumps(self.json())
+
+        return MockResponse()
+
+    monkeypatch.setattr("httpx.post", mock_post)
+
+    # Mock LLM listing generation
+    monkeypatch.setattr(
+        "agents.llm_client.generate_text",
+        lambda p: json.dumps(
+            {
+                "product_name": "Test Product",
+                "tagline": "A great test product",
+                "description": "Full description of the test product",
+            }
+        ),
+    )
+
+    # Set up fake output directory with files
+    job_spec = JobSpec(
+        slug="test-publish",
+        product_type="research_pack",
+        niche="test niche",
+        display_name="Test Product",
+    )
+    comp = ComponentSpec(
+        id="gumroad_publish",
+        agent="gumroad_agent",
+        output="gumroad/published.json",
+        depends_on=["gumroad_research"],
+    )
+
+    output_dir = os.path.join("outputs", "test-publish")
+    os.makedirs(os.path.join(output_dir, "presentation"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "assets"), exist_ok=True)
+
+    with open(os.path.join(output_dir, "presentation", "report.pdf"), "w") as f:
+        f.write("fake pdf content")
+    with open(os.path.join(output_dir, "test-publish.zip"), "w") as f:
+        f.write("fake zip content")
+    with open(os.path.join(output_dir, "assets", "cover.png"), "w") as f:
+        f.write("fake png content")
+
+    context = {}
+
+    result = gumroad_agent.run(comp, job_spec, context)
+    assert result.status == "done"
+    assert os.path.exists(result.output_path)
+
+    with open(result.output_path) as f:
+        data = json.load(f)
+    assert data["status"] == "published"
+    assert data["product_id"] == "prod_test123"
+    assert "testuser.gumroad.com" in data["product_url"]
+
+    # Validate Gumroad_Product_Link.md was written
+    link_path = os.path.join(output_dir, "presentation", "Gumroad_Product_Link.md")
+    assert os.path.exists(link_path)
+
+    # Clean up
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+
+
 def test_market_agent(monkeypatch):
     from agents import market_agent
 
