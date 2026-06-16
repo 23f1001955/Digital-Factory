@@ -1,10 +1,41 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environments
 .env
-.DS_Store
+.env.*
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Caches
 .pytest_cache/
-node_modules/
-stitch/stitch-output/
 .ruff_cache/
-outputs/
 graphify-out/
+
+# Generated outputs
+outputs/
+
+# Logs
+*.log
+
+# Archives
+*.zip
+*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
