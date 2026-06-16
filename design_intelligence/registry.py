@@ -1,5 +1,8 @@
-import os
+import logging
+import re
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 RULES_DIR = Path(__file__).parent / "rules"
 
@@ -22,20 +25,14 @@ _DEFAULT_FILES = ["impeccable.md", "frontend-design.md"]
 
 
 def _match_vibe(vibe: str | None) -> list[str]:
-    """Match a design vibe keyword to rule filenames."""
+    """Match a design vibe keyword to rule filenames using word-boundary matching."""
     if not vibe:
         return _DEFAULT_FILES
 
     vibe_lower = vibe.lower().replace("-", " ").replace("_", " ")
 
-    # Direct match
     for key, files in VIBE_RULE_MAP.items():
-        if key in vibe_lower:
-            return files
-
-    # Keyword match: check if any vibe keyword appears in the input
-    for key, files in VIBE_RULE_MAP.items():
-        if key in vibe_lower.split():
+        if re.search(rf"\b{re.escape(key)}\b", vibe_lower):
             return files
 
     return _DEFAULT_FILES
@@ -53,6 +50,7 @@ def load_rules(vibe: str | None = None) -> str:
     for filename in rule_files:
         filepath = RULES_DIR / filename
         if not filepath.exists():
+            logger.warning("Rule file not found: %s", filepath)
             continue
         content = filepath.read_text(encoding="utf-8").strip()
         label = filename.replace(".md", "").replace("-", " ").title()
