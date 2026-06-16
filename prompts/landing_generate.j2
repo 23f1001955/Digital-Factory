@@ -1,4 +1,6 @@
-You are a frontend developer. Create a premium landing page HTML for a Gumroad digital product.
+{% if design_brief %}
+{{ design_brief }}
+{% endif %}
 
 Product:
 - Name: {{ display_name }}
@@ -12,16 +14,4 @@ Available images (use these URLs in the page):
 - {{ name }}: {{ url }}
 {% endfor %}
 
-Requirements:
-1. Single self-contained HTML file with embedded CSS
-2. Responsive design (mobile-first)
-3. Clean, modern, premium aesthetic with smooth animations
-4. Hero section with the hero_banner image
-5. Feature section showcasing key value props
-6. Use benefit_visual and feature_showcase images
-7. Prominent CTA button linking to {{ gumroad_url }} with text "{{ cta_text }}"
-8. No external dependencies (no CDN links, no external fonts)
-9. Dark or light theme - choose based on the product type
-10. Smooth scroll and hover effects using CSS only (no JavaScript libraries)
-
-Output ONLY the complete HTML. No explanations, no markdown formatting.
+Remember: Output ONLY the complete HTML. No explanations, no markdown formatting.
