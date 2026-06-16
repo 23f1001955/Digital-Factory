@@ -18,7 +18,7 @@ DELIVERABLE_EXTENSIONS = {
 }
 
 
-def _is_deliverable(file_path: str, base_dir: str) -> bool:
+def _is_deliverable(file_path: str) -> bool:
     ext = os.path.splitext(file_path)[1].lower()
     if ext not in DELIVERABLE_EXTENSIONS:
         return False
@@ -53,7 +53,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
 
 
 def _add_delivery_map_files(zf, delivery_map, base_dir):
-    """Add files from delivery_map entries with 'zip' delivery to ZIP archive."""
+    """Add files from delivery_map + assets/ to ZIP archive."""
     added = set()
     for comp_id, entry in delivery_map.items():
         if "zip" not in entry.get("delivery", []):
@@ -84,13 +84,27 @@ def _add_delivery_map_files(zf, delivery_map, base_dir):
                         zf.write(fpath, frel)
                         added.add(frel)
 
+    # Always include assets/ — images are not component outputs
+    assets_dir = os.path.join(base_dir, "assets")
+    if os.path.isdir(assets_dir):
+        for root, _dirs, files in os.walk(assets_dir):
+            for file in files:
+                fpath = os.path.join(root, file)
+                frel = os.path.relpath(fpath, base_dir)
+                if frel in added:
+                    continue
+                ext = os.path.splitext(file)[1].lower()
+                if ext in DELIVERABLE_EXTENSIONS:
+                    zf.write(fpath, frel)
+                    added.add(frel)
+
 
 def _walk_filesystem(zf, base_dir):
     """Fallback: walk filesystem and filter by _is_deliverable."""
     for root, _dirs, files in os.walk(base_dir):
         for file in files:
             file_path = os.path.join(root, file)
-            if not _is_deliverable(file_path, base_dir):
+            if not _is_deliverable(file_path):
                 continue
             arcname = os.path.relpath(file_path, base_dir)
             zf.write(file_path, arcname)

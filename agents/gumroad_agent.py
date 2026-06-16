@@ -709,15 +709,6 @@ def _run_publish(
     with open(cached_publish_path, "w", encoding="utf-8") as f:
         json.dump(publish_result, f, indent=2)
 
-    link_dir = os.path.join(output_dir, "presentation")
-    os.makedirs(link_dir, exist_ok=True)
-    link_path = os.path.join(link_dir, "Gumroad_Product_Link.md")
-    with open(link_path, "w", encoding="utf-8") as f:
-        f.write("# Gumroad Product Published\n\n")
-        f.write(f"## [View on Gumroad]({product_url})\n\n")
-        f.write(f"- **Product ID:** {product_id}\n")
-        f.write(f"- **Price:** ${suggested_price}\n")
-
     return AgentResult(status="done", output_path=output_path, error=None)
 
 

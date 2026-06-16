@@ -320,7 +320,6 @@ def test_social_agent(monkeypatch):
 
 def test_gumroad_agent_publish(tmp_path, monkeypatch):
     from agents import gumroad_agent
-    import httpx
 
     monkeypatch.setenv("GUMROAD_ACCESS_TOKEN", "fake_token")
 
@@ -468,10 +467,6 @@ def test_gumroad_agent_publish(tmp_path, monkeypatch):
     assert data["status"] == "published"
     assert data["product_id"] == "prod_test123"
     assert "testuser.gumroad.com" in data["product_url"]
-
-    # Validate Gumroad_Product_Link.md was written
-    link_path = os.path.join(output_dir, "presentation", "Gumroad_Product_Link.md")
-    assert os.path.exists(link_path)
 
     # Clean up
     if os.path.exists(output_dir):
@@ -738,8 +733,8 @@ def test_packaging_agent_with_delivery_map(tmp_path):
     assert not any("cheatsheet.pdf" in n for n in names), "cheatsheet.pdf should NOT be in ZIP"
     # internal.json should NOT be in ZIP
     assert not any("internal.json" in n for n in names), "internal.json should NOT be in ZIP"
-    # hero.png should NOT be in ZIP (not in delivery_map)
-    assert not any("hero.png" in n for n in names), "hero.png should NOT be in ZIP (not in delivery_map)"
+    # hero.png should be in ZIP (assets/ always included)
+    assert any("hero.png" in n for n in names), "hero.png should be in ZIP (assets/ always included)"
 
     # Clean up
     if os.path.exists(base_dir):
