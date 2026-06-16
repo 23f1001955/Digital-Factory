@@ -10,7 +10,7 @@ class ComponentSpec(BaseModel):
     depends_on: List[str] = Field(default_factory=list)
     uses_renderer: bool = False
     template: Optional[str] = None
-    format: Literal["full", "guide", "notion"] = "full"
+    format: Literal["full", "guide", "notion", "prompt", "resource"] = "full"
     delivery: List[str] = Field(default_factory=lambda: ["zip"])
 
 
@@ -52,7 +52,7 @@ class PipelineComponent(BaseModel):
     depends_on: List[str] = Field(default_factory=list)
     uses_renderer: bool = False
     template: Optional[str] = None
-    format: Literal["full", "guide", "notion"] = "full"
+    format: Literal["full", "guide", "notion", "prompt", "resource"] = "full"
     delivery: List[str] = Field(default_factory=lambda: ["zip"])
 
 
