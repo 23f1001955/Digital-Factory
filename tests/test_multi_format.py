@@ -1,8 +1,17 @@
 import json
 import os
+import shutil
+
 import pytest
 from agents.csv_export_agent import run
+from agents import market_agent
 from orchestrator.models import ComponentSpec, JobSpec
+
+
+def _clean_output(slug: str):
+    path = os.path.join("outputs", slug)
+    if os.path.exists(path):
+        shutil.rmtree(path)
 
 
 def test_csv_export_agent_multi_format(tmp_path):
@@ -30,6 +39,7 @@ def test_csv_export_agent_multi_format(tmp_path):
     job = JobSpec(slug="test-multi", product_type="database", niche="real estate")
     context = {"market_research": str(research_path)}
 
+    _clean_output("test-multi")
     result = run(comp, job, context)
     assert result.status == "done"
     assert result.output_paths is not None
@@ -50,10 +60,7 @@ def test_csv_export_agent_multi_format(tmp_path):
 
 
 def test_market_agent_recommends_formats(monkeypatch):
-    """Test that market_agent returns recommended_formats in output."""
-    from agents import market_agent
-    from orchestrator.models import ComponentSpec, JobSpec
-
+    """Market_agent includes recommended_formats when LLM provides them."""
     monkeypatch.setattr(
         "agents.llm_client.generate_text",
         lambda p: json.dumps({
@@ -83,6 +90,7 @@ def test_market_agent_recommends_formats(monkeypatch):
     comp = ComponentSpec(id="market_research", agent="market_agent", output="data/market_research.json", depends_on=[])
     context = {}
 
+    _clean_output("test-format-rec")
     result = market_agent.run(comp, job_spec, context)
     assert result.status == "done"
 
@@ -92,3 +100,33 @@ def test_market_agent_recommends_formats(monkeypatch):
     assert "recommended_formats" in research
     assert "database_export" in research["recommended_formats"]
     assert "xlsx" in research["recommended_formats"]["database_export"]
+
+
+def test_market_agent_fallback_formats(monkeypatch):
+    """Market_agent fallback includes empty recommended_formats."""
+    monkeypatch.setattr(
+        "agents.llm_client.generate_text",
+        lambda p: (_ for _ in ()).throw(Exception("LLM unavailable")),
+    )
+
+    monkeypatch.setattr("agents.research_tools.brave_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.duckduckgo_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.reddit_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.gdelt_news", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.newsapi_headlines", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.pytrends_data", lambda q: {})
+    monkeypatch.setattr("agents.research_tools.firecrawl_scrape", lambda u: None)
+
+    job_spec = JobSpec(slug="test-fallback-rec", product_type="discovery", niche="test")
+    comp = ComponentSpec(id="market_research", agent="market_agent", output="data/market_research.json", depends_on=[])
+    context = {}
+
+    _clean_output("test-fallback-rec")
+    result = market_agent.run(comp, job_spec, context)
+    assert result.status == "done"
+
+    with open(result.output_path) as f:
+        research = json.load(f)
+
+    assert "recommended_formats" in research
+    assert research["recommended_formats"] == {}
