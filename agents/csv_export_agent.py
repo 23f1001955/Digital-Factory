@@ -4,6 +4,7 @@ import json
 import logging
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,6 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
     try:
         data_path = context.get("database")
         if not data_path:
-            # Fallback: read from market_research output
             research_path = context.get("market_research")
             if not research_path:
                 raise ValueError("Neither 'database' nor 'market_research' found in context")
@@ -25,20 +25,46 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             with open(data_path, "r") as f:
                 data = json.load(f)
 
-        output_path = os.path.join("outputs", job_spec.slug, component.output)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
         if not data:
-            raise ValueError("Database is empty")
+            raise ValueError("No data to export")
 
-        keys = data[0].keys()
+        base_dir = os.path.join("outputs", job_spec.slug)
+        output_dir = os.path.dirname(os.path.join(base_dir, component.output))
+        os.makedirs(output_dir, exist_ok=True)
 
-        with open(output_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=keys)
-            writer.writeheader()
-            writer.writerows(data)
+        active_formats = getattr(component, "active_formats", []) or []
+        output_paths: Dict[str, str] = {}
 
-        return AgentResult(status="done", output_path=output_path, error=None)
+        if not active_formats or "csv" in active_formats:
+            csv_path = os.path.join(output_dir, f"{component.id}.csv")
+            with open(csv_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=data[0].keys())
+                writer.writeheader()
+                writer.writerows(data)
+            output_paths["csv"] = csv_path
+
+        if "xlsx" in active_formats:
+            import openpyxl
+            xlsx_path = os.path.join(output_dir, f"{component.id}.xlsx")
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = component.id
+            if data:
+                ws.append(list(data[0].keys()))
+                for row in data:
+                    ws.append(list(row.values()))
+            wb.save(xlsx_path)
+            output_paths["xlsx"] = xlsx_path
+
+        if not output_paths:
+            raise ValueError("No formats produced")
+
+        primary_path = list(output_paths.values())[0]
+        return AgentResult(
+            status="done",
+            output_path=primary_path,
+            output_paths=output_paths,
+        )
 
     except Exception as e:
         logger.error(f"CSV export agent failed: {e}")
