@@ -47,3 +47,48 @@ def test_csv_export_agent_multi_format(tmp_path):
     assert ws["A1"].value == "name"
     assert ws["A2"].value == "Agent A"
     assert ws["B2"].value == "NYC"
+
+
+def test_market_agent_recommends_formats(monkeypatch):
+    """Test that market_agent returns recommended_formats in output."""
+    from agents import market_agent
+    from orchestrator.models import ComponentSpec, JobSpec
+
+    monkeypatch.setattr(
+        "agents.llm_client.generate_text",
+        lambda p: json.dumps({
+            "competitor_landscape": {"direct_competitors": [], "pricing_tiers": {}, "recommended_price": 29, "quality_gaps": [], "trending_keywords": []},
+            "content_recommendations": {"tone": "professional", "key_themes": [], "seo_keywords": []},
+            "market_insights": {},
+            "recommended_product_type": "database",
+            "recommendation_confidence": 0.85,
+            "recommendation_reasoning": "High demand for lead lists",
+            "recommended_formats": {
+                "database_export": ["csv", "xlsx"],
+                "market_research": ["pdf"],
+            },
+            "pipeline_plan": {"components": []},
+        }),
+    )
+
+    monkeypatch.setattr("agents.research_tools.brave_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.duckduckgo_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.reddit_search", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.gdelt_news", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.newsapi_headlines", lambda q, n: [])
+    monkeypatch.setattr("agents.research_tools.pytrends_data", lambda q: {})
+    monkeypatch.setattr("agents.research_tools.firecrawl_scrape", lambda u: None)
+
+    job_spec = JobSpec(slug="test-format-rec", product_type="database", niche="real estate")
+    comp = ComponentSpec(id="market_research", agent="market_agent", output="data/market_research.json", depends_on=[])
+    context = {}
+
+    result = market_agent.run(comp, job_spec, context)
+    assert result.status == "done"
+
+    with open(result.output_path) as f:
+        research = json.load(f)
+
+    assert "recommended_formats" in research
+    assert "database_export" in research["recommended_formats"]
+    assert "xlsx" in research["recommended_formats"]["database_export"]
