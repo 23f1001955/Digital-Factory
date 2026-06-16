@@ -507,3 +507,70 @@ def test_delivery_map_injected_into_context(tmp_path, monkeypatch):
     assert dm["market_research"]["delivery"] == []
     assert "package" in dm
     assert dm["package"]["delivery"] == ["zip"]
+
+
+def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
+    """Test that orchestrator switches schema after market_agent recommends a type in discovery mode."""
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    from unittest import mock
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-discovery", **extra):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "discovery", "niche": "test niche", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-12T10:00:00Z", **extra}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_discovery_schema(tmp_path):
+        path = tmp_path / "discovery.json"
+        data = {"product_type": "discovery", "display_name": "Discovery", "components": [{"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []}]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_research_pack_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Research Pack", "components": [{"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []}, {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]}]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    _make_research_pack_schema(tmp_path)
+    discovery_schema_path = _make_discovery_schema(tmp_path)
+
+    def mock_market_agent(component, job_spec, context):
+        output_dir = os.path.join("outputs", job_spec.slug)
+        os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        research = {
+            "niche": "test niche",
+            "recommended_product_type": "research_pack",
+            "recommendation_confidence": 0.9,
+            "recommendation_reasoning": "Test reason",
+            "pipeline_plan": {"components": []},
+        }
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        with open(research_path, "w") as f:
+            json.dump(research, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    mock_package = mock.Mock(return_value=AgentResult(status="done"))
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market_agent)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock_package)
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(discovery_schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-discovery" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-discovery")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+
+    orc.run()
+
+    # Schema should have been switched to research_pack
+    assert orc.schema.product_type == "research_pack"
+    # job_spec should be updated
+    assert orc.job_spec.product_type == "research_pack"
+    # research_pack has package component — should have run
+    mock_package.assert_called_once()

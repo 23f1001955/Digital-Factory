@@ -147,6 +147,19 @@ class Orchestrator:
 
         logger.info(f"Pipeline plan merged: {added} dynamic components")
 
+    def _switch_schema(self, recommended_product_type: str) -> None:
+        """Replace current schema with one matching recommended product type."""
+        schema_path = os.path.join("schemas", f"{recommended_product_type}.json")
+        if not os.path.exists(schema_path):
+            logger.warning(
+                f"Schema {recommended_product_type}.json not found \u2014 falling back to research_pack"
+            )
+            schema_path = os.path.join("schemas", "research_pack.json")
+        with open(schema_path) as f:
+            self.schema = ProductSchema(**json.load(f))
+        self.job_spec.product_type = recommended_product_type
+        logger.info(f"Schema switched to: {recommended_product_type}")
+
     def _build_delivery_map(self) -> dict:
         """Build delivery map from all schema components with resolved output paths."""
         delivery_map = {}
@@ -361,8 +374,30 @@ class Orchestrator:
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
 
-            # After market_agent completes, merge pipeline_plan
+            # After market_agent completes, check for schema switch + merge pipeline_plan
             if component.id == "market_research" and result.status == "done":
+                # Check if we're in discovery mode and need to switch schema
+                if self.job_spec.product_type == "discovery":
+                    try:
+                        with open(result.output_path) as f:
+                            research = json.load(f)
+                        recommended = research.get("recommended_product_type")
+                        confidence = research.get("recommendation_confidence", 0)
+                        if recommended and confidence >= 0.5:
+                            self._switch_schema(recommended)
+                        elif recommended:
+                            logger.warning(
+                                "Low confidence (%.2f) for '%s' \u2014 falling back to research_pack",
+                                confidence, recommended,
+                            )
+                            self._switch_schema("research_pack")
+                        else:
+                            logger.warning("No product type recommendation \u2014 falling back to research_pack")
+                            self._switch_schema("research_pack")
+                    except Exception as e:
+                        logger.error("Failed to read market_research.json for schema switch: %s", e)
+                        self._switch_schema("research_pack")
+
                 self._merge_pipeline_plan(result.output_path)
                 ordered_components = self._get_execution_order()
                 idx = 0
