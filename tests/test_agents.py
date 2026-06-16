@@ -673,3 +673,72 @@ def test_pipeline_component_with_delivery():
         delivery=[],
     )
     assert comp3.delivery == []
+
+
+def test_packaging_agent_with_delivery_map(tmp_path):
+    from agents import packaging_agent
+    from orchestrator.models import ComponentSpec, JobSpec
+    import os, shutil, zipfile
+
+    job_spec = JobSpec(
+        slug="test-pkg-delivery", product_type="research_pack", niche="test niche"
+    )
+    comp = ComponentSpec(
+        id="package",
+        agent="packaging_agent",
+        output="{slug}.zip",
+        depends_on=[],
+        delivery=["zip"],
+    )
+
+    base_dir = os.path.join("outputs", "test-pkg-delivery")
+    os.makedirs(os.path.join(base_dir, "presentation"), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, "assets"), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, "data"), exist_ok=True)
+
+    # File that should be in ZIP (delivery=["zip"])
+    zip_file = os.path.join(base_dir, "presentation", "report.pdf")
+    with open(zip_file, "w") as f:
+        f.write("zip content")
+
+    # File that should NOT be in ZIP (delivery=["gumroad"])
+    gumroad_file = os.path.join(base_dir, "presentation", "cheatsheet.pdf")
+    with open(gumroad_file, "w") as f:
+        f.write("gumroad only content")
+
+    # A data file that should not be in ZIP (delivery=[])
+    data_file = os.path.join(base_dir, "data", "internal.json")
+    with open(data_file, "w") as f:
+        f.write("internal")
+
+    # A file not in delivery_map at all — should NOT be in ZIP
+    asset_img = os.path.join(base_dir, "assets", "hero.png")
+    with open(asset_img, "w") as f:
+        f.write("png")
+
+    delivery_map = {
+        "report_pdf": {"output": zip_file, "delivery": ["zip"]},
+        "cheatsheet": {"output": gumroad_file, "delivery": ["gumroad"]},
+        "internal_data": {"output": data_file, "delivery": []},
+        "package": {"output": os.path.join(base_dir, "test-pkg-delivery.zip"), "delivery": ["zip"]},
+    }
+    context = {"_delivery_map": delivery_map}
+
+    result = packaging_agent.run(comp, job_spec, context)
+    assert result.status == "done"
+
+    with zipfile.ZipFile(result.output_path, "r") as zf:
+        names = zf.namelist()
+
+    # report.pdf should be in ZIP
+    assert any("report.pdf" in n for n in names), "report.pdf should be in ZIP"
+    # cheatsheet.pdf should NOT be in ZIP
+    assert not any("cheatsheet.pdf" in n for n in names), "cheatsheet.pdf should NOT be in ZIP"
+    # internal.json should NOT be in ZIP
+    assert not any("internal.json" in n for n in names), "internal.json should NOT be in ZIP"
+    # hero.png should NOT be in ZIP (not in delivery_map)
+    assert not any("hero.png" in n for n in names), "hero.png should NOT be in ZIP (not in delivery_map)"
+
+    # Clean up
+    if os.path.exists(base_dir):
+        shutil.rmtree(base_dir)
