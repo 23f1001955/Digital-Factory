@@ -68,24 +68,10 @@
       "delivery": []
     },
     {
-      "id": "gumroad_publish",
-      "agent": "gumroad_agent",
-      "output": "gumroad/published.json",
-      "depends_on": [
-        "gumroad_research",
-        "market_research",
-        "package",
-        "notion_tree"
-      ],
-      "delivery": []
-    },
-    {
       "id": "landing_page",
       "agent": "landing_agent",
       "output": "landing/deployed.json",
-      "depends_on": [
-        "gumroad_publish"
-      ],
+      "depends_on": [],
       "delivery": []
     },
     {

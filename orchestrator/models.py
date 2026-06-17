@@ -79,16 +79,19 @@ class ChannelConfig(BaseModel):
 class QualityIssue(BaseModel):
     category: str = "general"
     severity: str = "warning"  # "error" | "warning" | "info"
-    message: str = ""
+    message: str
     location: Optional[str] = None
 
 
 class QualityReport(BaseModel):
     component_id: str
-    score: float = 1.0
+    score: float = 0.0
     threshold: float = 0.6
-    passed: bool = True
     issues: List[QualityIssue] = Field(default_factory=list)
     hallucination_flags: List[str] = Field(default_factory=list)
     needs_human_review: bool = False
     fix_prompt: Optional[str] = None
+
+    @property
+    def passed(self) -> bool:
+        return self.score >= self.threshold
