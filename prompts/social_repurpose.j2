@@ -1,0 +1,15 @@
+You are a content repurposing expert. Take the following content from a digital product pack and turn it into 10+ standalone social media posts.
+
+Content:
+{{ content_snippets }}
+
+Product: {{ display_name or niche }}
+Niche: {{ niche }}
+Type: {{ product_type }}
+
+Generate 10+ posts as a JSON array. Each post:
+- "content": post text (1-3 sentences)
+- "sequence": "repurpose"
+- "angle": "statistic", "tip", "quote", "comparison", or "pain_point"
+
+Return ONLY valid JSON, no markdown, no code blocks.
