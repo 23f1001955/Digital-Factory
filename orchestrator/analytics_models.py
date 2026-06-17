@@ -33,8 +33,6 @@ class Insights(BaseModel):
     @classmethod
     def from_records(cls, records: list[SalesRecord]) -> "Insights":
         total_revenue = sum(r.revenue for r in records)
-        total_views = sum(r.views for r in records)
-        total_sales = sum(r.sales for r in records)
         num = len(records)
         avg_conv = (sum(r.conversion_rate for r in records) / num) if num > 0 else 0.0
 
