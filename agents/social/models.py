@@ -14,10 +14,12 @@ class SocialPost:
     platform: str = ""
     content: str = ""
     media_urls: list[str] = field(default_factory=list)
+    hashtags: list[str] = field(default_factory=list)
     scheduled_at: Optional[datetime] = None
     sequence: str = "launch"
     day: int = 0
     status: str = "draft"
+    angle: str = ""
 
 
 @dataclass

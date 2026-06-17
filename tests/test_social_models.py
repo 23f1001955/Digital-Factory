@@ -57,3 +57,9 @@ def test_platform_config_defaults():
     c = PlatformConfig(platform="instagram")
     assert c.platform == "instagram"
     assert c.max_hashtags == 30
+
+
+def test_social_post_with_hashtags_and_angle():
+    p = SocialPost(platform="instagram", content="Post", hashtags=["#ai", "#tech"], angle="statistic")
+    assert p.hashtags == ["#ai", "#tech"]
+    assert p.angle == "statistic"
