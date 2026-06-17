@@ -6,7 +6,7 @@ from collections import Counter
 logger = logging.getLogger(__name__)
 
 try:
-    from agents.llm_client import call_llm
+    from agents.llm_client import generate_text as call_llm
 except ImportError:
     call_llm = None
 
@@ -62,13 +62,6 @@ def generate_optimized_tags(
     scored[ptype_tag] += 1
 
     sorted_tags = [t for t, _ in scored.most_common()]
-    for nt in niche_tags:
-        if nt in sorted_tags:
-            sorted_tags.remove(nt)
-            sorted_tags.insert(0, nt)
-    if ptype_tag in sorted_tags:
-        sorted_tags.remove(ptype_tag)
-        sorted_tags.insert(0, ptype_tag)
 
     seen: set[str] = set()
     result: list[str] = []
