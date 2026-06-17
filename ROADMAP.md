@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-17
-**Current phase:** Phase 0–2 completed → Phase 3 recommended
+**Current phase:** Phase 3 completed → Phase 4 recommended
 
 ---
 
@@ -79,12 +79,12 @@
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 3.1 | Add pricing optimization | `pending` | P1 | 0.5d | `channels/gumroad_channel.py` |
-| 3.2 | Improve listing description generation (AIDA) | `pending` | P1 | 1d | `prompts/gumroad_listing.j2` |
-| 3.3 | Add cover/thumbnail A/B testing support | `pending` | P2 | 1d | `channels/gumroad_channel.py` |
-| 3.4 | Improve keyword/tag generation | `pending` | P1 | 0.5d | `channels/gumroad_channel.py:_generate_tags` |
-| 3.5 | Add Gumroad analytics pull | `pending` | P0 | 1d | `channels/gumroad_channel.py:get_analytics()` |
-| 3.6 | Add listing quality score | `pending` | P2 | 0.5d | `channels/gumroad_channel.py` |
+| 3.1 | Add pricing optimization | `completed` | P1 | 0.5d | `channels/gumroad_listing.py` |
+| 3.2 | Improve listing description generation (AIDA) | `completed` | P1 | 1d | `channels/gumroad_listing.py` |
+| 3.3 | Add cover/thumbnail A/B testing support | `completed` | P2 | 1d | `channels/gumroad_ab_testing.py` |
+| 3.4 | Improve keyword/tag generation | `completed` | P1 | 0.5d | `channels/gumroad_listing.py` |
+| 3.5 | Add Gumroad analytics pull | `completed` | P0 | 1d | `channels/gumroad_analytics.py` |
+| 3.6 | Add listing quality score | `completed` | P2 | 0.5d | `channels/gumroad_analytics.py` |
 
 ---
 
@@ -248,10 +248,10 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | 0 — Architecture Redesign | 6 | 0 | 0 | 6 |
 | 1 — Offer Selection Engine | 5 | 0 | 0 | 5 |
 | 2 — Quality Validation | 6 | 0 | 0 | 6 |
-| 3 — Gumroad Listing Opt. | 6 | 6 | 0 | 0 |
+| 3 — Gumroad Listing Opt. | 6 | 0 | 0 | 6 |
 | 4 — Social Strategy | 6 | 6 | 0 | 0 |
 | 5 — Analytics & Feedback | 7 | 7 | 0 | 0 |
 | 6 — Dynamic Pipeline Safety | 5 | 5 | 0 | 0 |
 | 7 — Platform Expansion | 5 | 5 | 0 | 0 |
 | 8 — Production Hardening | 6 | 6 | 0 | 0 |
-| **Total** | **52** | **41** | **0** | **11** |
+| **Total** | **52** | **29** | **0** | **23** |
