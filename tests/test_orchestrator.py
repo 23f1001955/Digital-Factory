@@ -158,15 +158,17 @@ def test_pipeline_plan_merge(tmp_path, monkeypatch):
                 "components": [
                     {
                         "id": "lead_tracker",
-                        "agent": "csv_export_agent",
-                        "output": "data/lead_tracker.csv",
+                        "agent": "content_agent",
+                        "output": "content/lead_tracker.md",
                         "depends_on": ["market_research"],
+                        "template": "faq_section",
                     },
                     {
                         "id": "email_templates",
                         "agent": "content_agent",
                         "output": "content/email_templates.md",
                         "depends_on": ["market_research"],
+                        "template": "step_by_step_guide",
                     },
                 ]
             },
@@ -178,13 +180,11 @@ def test_pipeline_plan_merge(tmp_path, monkeypatch):
         return AgentResult(status="done", output_path=research_path)
 
     mock_image = mock.Mock(return_value=AgentResult(status="done"))
-    mock_csv = mock.Mock(return_value=AgentResult(status="done"))
     mock_content = mock.Mock(return_value=AgentResult(status="done"))
     mock_packaging = mock.Mock(return_value=AgentResult(status="done"))
 
     monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market_agent)
     monkeypatch.setitem(AGENT_REGISTRY, "image_agent", mock_image)
-    monkeypatch.setitem(AGENT_REGISTRY, "csv_export_agent", mock_csv)
     monkeypatch.setitem(AGENT_REGISTRY, "content_agent", mock_content)
     monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock_packaging)
 
@@ -201,11 +201,10 @@ def test_pipeline_plan_merge(tmp_path, monkeypatch):
 
     assert orc.state.components["market_research"].status == "done"
     assert orc.state.components["images"].status == "done"
-    assert orc.state.components["lead_tracker"].status == "done"
-    assert orc.state.components["email_templates"].status == "done"
+    assert orc.state.components["faq_section"].status == "done"
+    assert orc.state.components["step_by_step_guide"].status == "done"
     assert orc.state.components["package"].status == "done"
-    mock_csv.assert_called_once()
-    mock_content.assert_called_once()
+    assert mock_content.call_count == 2
 
 
 def test_pipeline_plan_invalid_deps_skipped(tmp_path, monkeypatch):
@@ -231,9 +230,10 @@ def test_pipeline_plan_invalid_deps_skipped(tmp_path, monkeypatch):
                 "components": [
                     {
                         "id": "bad_comp",
-                        "agent": "csv_export_agent",
+                        "agent": "content_agent",
                         "output": "data/bad.csv",
                         "depends_on": ["nonexistent_dep"],
+                        "template": "case_study",
                     },
                 ]
             },
@@ -245,7 +245,7 @@ def test_pipeline_plan_invalid_deps_skipped(tmp_path, monkeypatch):
         return AgentResult(status="done", output_path=research_path)
 
     monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market_agent)
-    monkeypatch.setitem(AGENT_REGISTRY, "csv_export_agent", mock.Mock())
+    monkeypatch.setitem(AGENT_REGISTRY, "content_agent", mock.Mock())
 
     job_spec_path = _make_job_spec(tmp_path)
     orc = Orchestrator(str(job_spec_path))
@@ -258,7 +258,7 @@ def test_pipeline_plan_invalid_deps_skipped(tmp_path, monkeypatch):
     orc.run()
 
     # bad_comp should not be in state at all (never added to schema)
-    assert "bad_comp" not in orc.state.components
+    assert "case_study" not in orc.state.components
 
 
 def test_notion_only_skips_package(tmp_path, monkeypatch):
@@ -398,16 +398,18 @@ def test_pipeline_plan_preserves_delivery(tmp_path, monkeypatch):
                 "components": [
                     {
                         "id": "report_pdf",
-                        "agent": "render_agent",
+                        "agent": "content_agent",
                         "output": "presentation/report.pdf",
                         "depends_on": ["market_research"],
                         "delivery": ["gumroad"],
+                        "template": "case_study",
                     },
                     {
                         "id": "diagrams",
-                        "agent": "diagram_agent",
+                        "agent": "content_agent",
                         "output": "content/diagrams.svg",
                         "depends_on": ["market_research"],
+                        "template": "faq_section",
                     },
                 ]
             },
@@ -420,6 +422,7 @@ def test_pipeline_plan_preserves_delivery(tmp_path, monkeypatch):
 
     monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market_agent)
     monkeypatch.setitem(AGENT_REGISTRY, "image_agent", mock.Mock(return_value=AgentResult(status="done")))
+    monkeypatch.setitem(AGENT_REGISTRY, "content_agent", mock.Mock(return_value=AgentResult(status="done")))
     monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock.Mock(return_value=AgentResult(status="done")))
 
     job_spec_path = _make_job_spec(tmp_path)
@@ -433,13 +436,204 @@ def test_pipeline_plan_preserves_delivery(tmp_path, monkeypatch):
 
     orc.run()
 
-    report_comp = next((c for c in orc.schema.components if c.id == "report_pdf"), None)
+    report_comp = next((c for c in orc.schema.components if c.id == "case_study"), None)
     assert report_comp is not None
     assert report_comp.delivery == ["gumroad"]
 
-    diag_comp = next((c for c in orc.schema.components if c.id == "diagrams"), None)
+    diag_comp = next((c for c in orc.schema.components if c.id == "faq_section"), None)
     assert diag_comp is not None
     assert diag_comp.delivery == ["zip"]
+
+
+def test_pipeline_plan_rejects_unknown_template(tmp_path, monkeypatch):
+    """Pipeline plan component with unknown template is rejected."""
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    from unittest import mock
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-reject"):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z"}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Test", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(tmp_path)
+
+    def mock_market(comp, js, ctx):
+        output_dir = os.path.join("outputs", js.slug)
+        os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        research = {
+            "niche": "test",
+            "pipeline_plan": {
+                "components": [
+                    {
+                        "id": "unknown_comp",
+                        "agent": "content_agent",
+                        "output": "content/unknown.md",
+                        "depends_on": ["market_research"],
+                        "template": "nonexistent_template",
+                    },
+                ]
+            },
+        }
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        with open(research_path, "w") as f:
+            json.dump(research, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock.Mock(return_value=AgentResult(status="done")))
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-reject" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-reject")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+    orc.run()
+
+    assert "unknown_comp" not in orc.state.components
+
+
+def test_pipeline_plan_rejects_missing_template(tmp_path, monkeypatch):
+    """Pipeline plan component without template field is rejected."""
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    from unittest import mock
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-no-template"):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z"}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Test", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(tmp_path)
+
+    def mock_market(comp, js, ctx):
+        output_dir = os.path.join("outputs", js.slug)
+        os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        research = {
+            "niche": "test",
+            "pipeline_plan": {
+                "components": [
+                    {
+                        "id": "no_template_comp",
+                        "agent": "content_agent",
+                        "output": "content/no_template.md",
+                        "depends_on": ["market_research"],
+                    },
+                ]
+            },
+        }
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        with open(research_path, "w") as f:
+            json.dump(research, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock.Mock(return_value=AgentResult(status="done")))
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-no-template" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-no-template")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+    orc.run()
+
+    assert "no_template_comp" not in orc.state.components
+
+
+def test_pipeline_plan_accepts_valid_template(tmp_path, monkeypatch):
+    """Pipeline plan component with valid template is accepted."""
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    from unittest import mock
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-valid-template"):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z"}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Test", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(tmp_path)
+
+    def mock_market(comp, js, ctx):
+        output_dir = os.path.join("outputs", js.slug)
+        os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        research = {
+            "niche": "test",
+            "pipeline_plan": {
+                "components": [
+                    {
+                        "id": "faq_section",
+                        "agent": "content_agent",
+                        "output": "content/{slug}/faq.md",
+                        "depends_on": ["market_research"],
+                        "template": "faq_section",
+                    },
+                ]
+            },
+        }
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        with open(research_path, "w") as f:
+            json.dump(research, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    mock_content = mock.Mock(return_value=AgentResult(status="done"))
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "content_agent", mock_content)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock.Mock(return_value=AgentResult(status="done")))
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-valid-template" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-valid-template")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+    orc.run()
+
+    assert orc.state.components["faq_section"].status == "done"
+    mock_content.assert_called_once()
 
 
 def test_delivery_map_injected_into_context(tmp_path, monkeypatch):

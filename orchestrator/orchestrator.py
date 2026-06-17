@@ -68,7 +68,7 @@ class Orchestrator:
     def _merge_pipeline_plan(self, research_path: str) -> None:
         """Load market_research.json, extract pipeline_plan, merge into schema."""
         if not os.path.exists(research_path):
-            logger.warning("No market_research.json found — core components only")
+            logger.warning("No market_research.json found \u2014 core components only")
             return
 
         try:
@@ -80,7 +80,7 @@ class Orchestrator:
 
         raw_plan = research.get("pipeline_plan")
         if not raw_plan or "components" not in raw_plan:
-            logger.info("No pipeline_plan in research — core components only")
+            logger.info("No pipeline_plan in research \u2014 core components only")
             return
 
         try:
@@ -88,6 +88,8 @@ class Orchestrator:
         except Exception as e:
             logger.warning(f"Failed to validate pipeline_plan: {e}")
             return
+
+        from orchestrator.component_templates import validate_template, resolve_template
 
         RESERVED_IDS = {
             "market_research",
@@ -107,35 +109,38 @@ class Orchestrator:
         accepted_ids = set(existing_ids)
         for comp in plan.components:
             if comp.id in RESERVED_IDS:
-                logger.warning(f"Skipping reserved ID '{comp.id}'")
+                logger.warning("[pipeline_plan] Rejected component '%s': reserved ID. See orchestrator/component_templates.py for allowed templates.", comp.id)
                 continue
             if comp.id in accepted_ids:
-                logger.warning(f"Skipping duplicate '{comp.id}'")
+                logger.warning("[pipeline_plan] Rejected component '%s': duplicate ID.", comp.id)
                 continue
             if comp.agent not in allowed_agents:
-                logger.warning(f"Skipping unknown agent '{comp.agent}' for '{comp.id}'")
+                logger.warning("[pipeline_plan] Rejected component '%s': unknown agent '%s'. Template: %s. See orchestrator/component_templates.py for allowed templates.", comp.id, comp.agent, comp.template)
+                continue
+            if not comp.template:
+                logger.warning("[pipeline_plan] Rejected component '%s': missing template field. Agent: %s. See orchestrator/component_templates.py for allowed templates.", comp.id, comp.agent)
+                continue
+            if not validate_template(comp.template):
+                logger.warning("[pipeline_plan] Rejected component '%s': unknown template '%s'. Agent: %s. See orchestrator/component_templates.py for allowed templates.", comp.id, comp.template, comp.agent)
                 continue
 
-            if not all(dep in accepted_ids for dep in comp.depends_on):
-                logger.warning(f"Skipping '{comp.id}' — invalid dependencies")
+            overrides = {
+                "depends_on": comp.depends_on,
+                "delivery": comp.delivery,
+                "format": comp.format,
+            }
+            spec = resolve_template(comp.template, overrides)
+
+            if not all(dep in accepted_ids for dep in spec.depends_on):
+                logger.warning("[pipeline_plan] Rejected component '%s': invalid dependencies %s. Template: %s.", comp.id, spec.depends_on, comp.template)
                 continue
 
-            spec = ComponentSpec(
-                id=comp.id,
-                agent=comp.agent,
-                output=comp.output,
-                depends_on=comp.depends_on,
-                template=comp.template,
-                format=comp.format,
-                delivery=comp.delivery,
-                capabilities=comp.capabilities,
-            )
             self.schema.components.append(spec)
-            accepted_ids.add(comp.id)
+            accepted_ids.add(spec.id)
             added += 1
-            logger.info(f"Added dynamic component: {comp.id} ({comp.agent})")
+            logger.info("[pipeline_plan] Accepted component '%s' (template=%s, agent=%s)", comp.id, comp.template, comp.agent)
 
-        # Ensure package runs last — depends on all non-wizard-gated components
+        # Ensure package runs last \u2014 depends on all non-wizard-gated components
         for c in self.schema.components:
             if c.id == "package":
                 c.depends_on = [
