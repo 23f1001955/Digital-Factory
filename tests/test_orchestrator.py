@@ -980,6 +980,68 @@ def test_circuit_breaker_tracks_failures(tmp_path, monkeypatch):
     assert orc._component_failures.get("faq_section", 0) == 1
 
 
+def test_circuit_breaker_blocks_after_3_failures(tmp_path, monkeypatch):
+    """Component is skipped when its template has 3+ failures."""
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-cb-block"):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z"}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = tmp_path / "research_pack.json"
+    schema_data = {"product_type": "research_pack", "display_name": "Test", "components": [
+        {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+        {"id": "comp_a", "agent": "test_agent", "output": "a.md", "depends_on": ["market_research"], "template": "faq_section"},
+        {"id": "comp_b", "agent": "test_agent", "output": "b.md", "depends_on": ["market_research"], "template": "faq_section"},
+        {"id": "comp_c", "agent": "test_agent", "output": "c.md", "depends_on": ["market_research"], "template": "faq_section"},
+        {"id": "comp_d", "agent": "test_agent", "output": "d.md", "depends_on": ["market_research"], "template": "faq_section"},
+        {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research", "comp_a", "comp_b", "comp_c", "comp_d"], "delivery": ["zip"]},
+    ]}
+    schema_path.write_text(json.dumps(schema_data), encoding="utf-8")
+
+    call_count = [0]
+
+    def mock_market(comp, js, ctx):
+        output_dir = os.path.join("outputs", js.slug)
+        os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        with open(research_path, "w") as f:
+            json.dump({"niche": "test"}, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    def mock_test_agent(comp, js, ctx):
+        call_count[0] += 1
+        return AgentResult(status="failed", error="simulated")
+
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "test_agent", mock_test_agent)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", type("Mock", (), {"__call__": lambda self, comp, js, ctx: AgentResult(status="done")})())
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-cb-block" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-cb-block")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+
+    orc.run()
+
+    # comp_a, comp_b, comp_c failed (3 failures)
+    assert orc.state.components["comp_a"].status == "failed"
+    assert orc.state.components["comp_b"].status == "failed"
+    assert orc.state.components["comp_c"].status == "failed"
+    # comp_d should be blocked by circuit breaker
+    assert orc.state.components["comp_d"].status == "skipped"
+    assert "Circuit breaker" in (orc.state.components["comp_d"].error or "")
+
+
 def test_circuit_breaker_resets_with_new_orchestrator(tmp_path):
     """Circuit breaker state is per-Orchestrator instance."""
     from orchestrator.orchestrator import Orchestrator

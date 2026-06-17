@@ -478,6 +478,18 @@ class Orchestrator:
                 )
                 continue
 
+            # Circuit breaker: skip if template has failed >= 3 times
+            cb_key = component.template or component.id
+            if self._component_failures.get(cb_key, 0) >= 3:
+                logger.warning("[circuit_breaker] Skipping component '%s': template '%s' blocked after %d failures",
+                               component.id, cb_key, self._component_failures[cb_key])
+                self.state.components[component.id] = AgentResult(
+                    status="skipped", error=f"Circuit breaker: template '{cb_key}' blocked after 3 failures"
+                )
+                save_job_state(self.state, self.state_path)
+                done_count += 1
+                continue
+
             self.state.components[component.id] = AgentResult(status="running")
             save_job_state(self.state, self.state_path)
 
