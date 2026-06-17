@@ -60,3 +60,9 @@ def test_adapt_post_returns_post():
     adapted = adapt_post_for_platform(post, "instagram")
     assert isinstance(adapted, SocialPost)
     assert adapted.platform == "instagram"
+
+
+def test_adapt_post_truncates_hashtags():
+    post = SocialPost(content="Test", platform="facebook", hashtags=[f"#tag{i}" for i in range(20)])
+    adapted = adapt_post_for_platform(post, "facebook")
+    assert len(adapted.hashtags) <= 10

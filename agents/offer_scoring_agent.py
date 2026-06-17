@@ -21,7 +21,8 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         with open(research_path, "r", encoding="utf-8") as f:
             research = json.load(f)
 
-        framework = run_scoring(research, schemas_dir="schemas")
+        adjustments = context.get("_scoring_adjustments", {})
+        framework = run_scoring(research, schemas_dir="schemas", adjustments=adjustments)
 
         scored_data = []
         for offer in framework.offers:

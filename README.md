@@ -22,25 +22,42 @@ User Input (CLI wizard / batch CSV)
          ├── diagram_agent     → Mermaid.js diagrams
          ├── evaluation_agent → Quality validation (pattern checks + LLM hallucination detection)
          ├── review_agent     → Human-in-the-loop review logs for flagged content
-         ├── packaging_agent   → ZIP all deliverables
-         ├── landing_agent     → Design Intelligence + LLM → HTML → ZIP → Vercel deploy
-         └── social_agent      → Copy + images → Facebook / Instagram / Threads / Pinterest
+          ├── packaging_agent   → ZIP all deliverables
+          ├── landing_agent     → Design Intelligence + LLM → HTML → ZIP → Vercel deploy
+          ├── social_agent      → Calendar + sequences + repurposing + platform adaptation
+          └── analytics_agent   → Sales records + insights + feedback loop
+              └── social/       → models, calendar, sequences, repurposing, engagement,
+                                  platform_strategy, automation, scheduler
+                                  → Facebook / Instagram / Threads / Pinterest
                                   │
                                   ▼
-    Channel Layer ──── runs after pipeline, consumes artifacts
-         │
-         └── gumroad_channel  → Publish product + files to Gumroad API
+     Channel Layer ──── runs after pipeline, consumes artifacts
+          │
+          ├── gumroad_listing  → Tag/pricing/AIDA optimization from market research
+          ├── gumroad_analytics → Analytics pull + listing quality scoring
+          ├── gumroad_ab_testing → Cover/thumbnail variant management
+          └── gumroad_channel  → Publish product + files to Gumroad API
 ```
 
 ## Key Features
 
 - **Channel Layer** — Pluggable publishing abstraction: `BaseChannel` ABC, `GumroadChannel`, `CHANNEL_REGISTRY`. Channels run after the pipeline, consuming artifacts instead of being embedded in schemas. Easy to add new channels (Etsy, Shopify).
+- **Listing Optimization** — Auto-optimizes Gumroad tags (from competitor research), pricing (median from marketplace data), and descriptions (AIDA framework via LLM) before publishing.
+- **Listing Quality Score** — Post-publish quality check across 5 weighted dimensions (description, tags, cover, price, research alignment) with pass/fail gate.
+- **Analytics Pull** — `get_analytics()` on `GumroadChannel` returns structured `AnalyticsData` (views, sales, revenue, refunds, conversion rate).
+- **Cover/Thumbnail A/B Testing** — Multiple variant support with persistence and round-robin cycling on publish runs.
 - **Discovery Mode** — Enter just a niche; the system researches and recommends the best product type via data-driven scoring (6 weighted metrics, 15+ product types)
 - **Offer Scoring Engine** — Deterministic scoring framework (`orchestrator/scoring.py`) evaluates niche data against weighted metrics using real marketplace signals from Etsy and Gumroad — no LLM opinion, pure data
 - **16 Product Schemas** — Research Pack, Blog Kit, Visual Pack, SaaS Docs, Course Launch Kit, Operating System, Workflow Kit, Curated Database, SOP Pack, Prompt Pack, Resource Pack, Swipe File, Checklist, Excel Template, Boilerplate, and discovery
 - **Design Intelligence** — Landing pages generated via LLM + curated design skill rules (6 rule files, 12 design vibes, 12 layout patterns) — no external design service dependency
 - **Multi-Format Delivery** — Agents produce CSV + XLSX, recommended formats based on niche analysis
 - **Quality Validation** — Pattern-based checks (AI-isms, word count, empty sections) + LLM hallucination cross-referencing with auto-retry on failure
+- **Social Strategy** — Multi-post sequences with 7–14 day content calendars per launch; content repurposing extracts 10+ posts from one pack; platform-specific adaptation per platform rules
+- **Engagement Tracking** — Post-performance metrics (likes, comments, shares, impressions) via Graph API with engagement rate calculation
+- **DM/Comment Automation** — Webhook-based auto-reply for Facebook/Instagram with trigger phrase detection
+- **Cross-Product Analytics** — Post-pipeline analytics agent aggregates sales data from all channels, deduplicates, and computes insights (top products, best channel, monthly revenue trends)
+- **Feedback Loop** — Past performance data injected into market research prompts and scoring weight adjustments; each run learns from previous runs
+- **CLI Dashboard** — `python -m cli.dashboard` displays sales summary with ASCII bar charts and formatted insights
 - **Dynamic Pipeline** — Market research LLM generates custom pipeline components per niche
 - **Notion-Only Mode** — Generate standalone Notion template products
 - **Resumable** — Failed pipelines resume from last successful component
@@ -154,7 +171,8 @@ digital-factory/
 ├── .env.example                 # Environment template
 │
 ├── cli/
-│   └── wizard.py                # Interactive CLI wizard
+│   ├── wizard.py                # Interactive CLI wizard
+│   └── dashboard.py             # Analytics dashboard (Phase 5)
 │
 ├── orchestrator/
 │   ├── models.py                # Pydantic models (ComponentSpec, JobSpec, QualityReport, etc.)
@@ -162,7 +180,9 @@ digital-factory/
 │   ├── scoring.py               # Offer scoring engine (6 weighted metrics, deterministic)
 │   ├── quality.py               # Quality scoring criteria (word count, AI-isms, headings, etc.)
 │   ├── notify.py                # Alert dispatch (log + optional webhook)
-│   └── state.py                 # Job state persistence
+│   ├── state.py                 # Job state persistence
+│   ├── analytics_models.py      # SalesRecord + Insights models, JSON persistence (Phase 5)
+│   └── feedback_loop.py         # Past perf → market prompts + scoring adjustments (Phase 5)
 │
 ├── agents/
 │   ├── registry.py              # Agent function registry
@@ -186,12 +206,26 @@ digital-factory/
 │   ├── review_agent.py          # Human-in-the-loop review logs
 │   ├── gumroad_agent.py         # Gumroad market research (publish → channels/)
 │   ├── landing_agent.py         # Landing page HTML + deploy
-│   └── social_agent.py          # Social media promotion
+ │   ├── social_agent.py          # Social media promotion (Phase 4: strategy)
+ │   ├── analytics_agent.py       # Analytics collection + insights (Phase 5)
+ │   └── social/                  # Social strategy modules
+ │       ├── __init__.py
+ │       ├── models.py            # SocialPost, ContentCalendar, PostResult, etc.
+ │       ├── calendar.py          # 7-14 day content calendars
+ │       ├── sequences.py         # Multi-post sequence templates
+ │       ├── repurposing.py       # 1 pack → 10+ social posts
+ │       ├── engagement.py        # Post-performance tracking
+ │       ├── platform_strategy.py # Platform-specific content rules
+ │       ├── automation.py        # DM/comment webhooks
+ │       └── scheduler.py         # Post queue + dispatch
 │
 ├── channels/
-│   ├── __init__.py              # CHANNEL_REGISTRY export
-│   ├── base.py                  # BaseChannel ABC, ProductArtifact, PublishResult
-│   └── gumroad_channel.py       # GumroadChannel (publish via presigned uploads)
+│   ├── __init__.py              # CHANNEL_REGISTRY + model exports
+│   ├── base.py                  # BaseChannel ABC, ProductArtifact, PublishResult, AnalyticsData, ListingQualityScore
+│   ├── gumroad_channel.py       # GumroadChannel (publish via presigned uploads)
+│   ├── gumroad_listing.py       # Tag/pricing/AIDA optimization (consumes market_research.json)
+│   ├── gumroad_analytics.py     # Analytics pull + listing quality scoring
+│   └── gumroad_ab_testing.py    # Cover/thumbnail A/B variant management
 │
 ├── design_intelligence/
 │   ├── models.py                # LandingPattern, DesignBrief
@@ -211,7 +245,7 @@ digital-factory/
 ├── prompts/                     # 33 Jinja2 prompt templates
 ├── templates/                   # HTML/CSS render templates
 ├── renderers/                   # PDF rendering engines
-├── tests/                       # 126+ pytest tests
+├── tests/                       # 230+ pytest tests (70 added in Phase 4-5)
 └── docs/superpowers/            # Design specs & implementation plans
 ```
 
@@ -221,13 +255,17 @@ digital-factory/
 pytest tests/ -v
 ```
 
-Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only, channel publishing), all agents (with API mocks), channel base ABC + GumroadChannel, schema validation (all 16 schemas), scoring engine (14 tests across 6 weighted metrics), multi-format delivery, pipeline plan merging.
+Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only, channel publishing), all agents (with API mocks), channel base ABC + GumroadChannel, schema validation (all 16 schemas), scoring engine (14 tests across 6 weighted metrics), multi-format delivery, pipeline plan merging, listing optimization (tags, pricing, AIDA), analytics pull + quality scoring, A/B variant management, social strategy (60 tests across calendar, sequences, repurposing, engagement, platform strategy, automation, scheduler modules), analytics models (9 tests), analytics agent (5 tests), dashboard (5 tests), feedback loop (14 tests).
 
 ## Output Structure
 
-Each run produces files under `outputs/{slug}/`:
+Pipeline-wide analytics are stored in `outputs/_analytics/` (aggregated across all runs). Each run produces files under `outputs/{slug}/`:
 
 ```
+outputs/_analytics/
+├── sales_records.json           # Aggregated sales from all channels (deduped)
+└── insights.json                # Top products, avg conversion, best channel, trends
+
 outputs/{slug}/
 ├── job_spec.json                # Original run configuration
 ├── job_state.json               # Pipeline state (resumable)

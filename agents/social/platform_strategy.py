@@ -46,12 +46,13 @@ def get_platform_limits(platform: str) -> dict:
 def adapt_post_for_platform(post: SocialPost, platform: str) -> SocialPost:
     limits = get_platform_limits(platform)
     max_chars = limits.get("character_limit", 5000)
+    max_tags = limits.get("max_hashtags", 30)
     adapted = SocialPost(
         id=post.id,
         platform=platform,
         content=post.content[:max_chars] if len(post.content) > max_chars else post.content,
         media_urls=post.media_urls,
-        hashtags=post.hashtags,
+        hashtags=post.hashtags[:max_tags],
         scheduled_at=post.scheduled_at,
         sequence=post.sequence,
         day=post.day,

@@ -134,21 +134,32 @@ def _run_research(
         else "research_pack"
     )
 
+    top_products = [
+        {
+            "name": p.get("name", ""),
+            "price": p.get("price", 0),
+            "sales": p.get("sales_count", 0),
+            "description_length": len(p.get("description", "") or ""),
+        }
+        for p in niche_products[:10]
+    ]
+
     research = {
         "niche": niche,
         "products_analyzed": len(niche_products),
         "product_type_distribution": type_distribution,
         "recommended_product_type": recommended_type,
-        "top_products": [
+        "top_products": top_products,
+        "competitor_count": len(niche_products),
+        "competitors": [
             {
                 "name": p.get("name", ""),
-                "price": p.get("price", 0),
-                "sales": p.get("sales_count", 0),
-                "description_length": len(p.get("description", "") or ""),
+                "price_cents": int(float(p["price"]) * 100) if isinstance(p.get("price"), (int, float)) and p["price"] > 0 else 0,
+                "sales_count": p.get("sales_count", 0),
+                "tags": [],
             }
             for p in niche_products[:10]
         ],
-        "competitor_count": len(niche_products),
     }
 
     try:

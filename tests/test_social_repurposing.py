@@ -11,9 +11,9 @@ def test_extract_snippets_from_markdown(tmp_path):
         "- 2x faster delivery\n"
         "- 50% cost reduction\n\n"
         "## Tips\n"
-        "Start with small changes.\n"
-        "Measure everything.\n"
-        "Iterate fast.\n\n"
+        "- Start with small changes.\n"
+        "- Measure everything.\n"
+        "- Iterate fast.\n\n"
         "> The best time to start is now.\n"
     )
     snippets = _extract_snippets_from_content([str(md_file)])

@@ -261,7 +261,7 @@ MARKETPLACE_DATA_KEYS = {
 }
 
 
-def run(research_data: dict, schemas_dir: Optional[str] = None) -> ScoringFramework:
+def run(research_data: dict, schemas_dir: Optional[str] = None, adjustments: Optional[dict[str, float]] = None) -> ScoringFramework:
     product_types = dict(PRODUCT_TYPE_MAP)
 
     if schemas_dir and os.path.isdir(schemas_dir):
@@ -309,5 +309,13 @@ def run(research_data: dict, schemas_dir: Optional[str] = None) -> ScoringFramew
         )
 
     offers.sort(key=lambda o: o.total_score, reverse=True)
+
+    # Phase 5: Apply feedback-driven scoring adjustments
+    if adjustments:
+        for offer in offers:
+            adj = adjustments.get(offer.product_type, 0.0)
+            if adj != 0.0:
+                offer.total_score = max(0.0, offer.total_score + adj)
+        offers.sort(key=lambda o: o.total_score, reverse=True)
 
     return ScoringFramework(offers=offers, source_data=research_data)

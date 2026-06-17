@@ -62,7 +62,7 @@ flowchart TB
         R["packaging_agent<br/><i>collects all deliverables from<br/>_delivery_map → {slug}.zip</i>"]
         S["gumroad_agent<br/><i>Gumroad market research only<br/>(publish moved to channel layer)</i>"]
         T["landing_agent<br/><i>Design Intelligence brief →<br/>LLM HTML → Vercel deploy</i>"]
-        U["social_agent<br/><i>post to Facebook / Instagram<br/>Threads / Pinterest</i>"]
+        U["social_agent + social/ package<br/><i>Phase 4 strategy: calendar → sequences<br/>→ repurpose → adapt → schedule → dispatch<br/>social/ (models, calendar, sequences,<br/>repurposing, engagement, platform_strategy,<br/>automation, scheduler)</i>"]
     end
 
     subgraph Channels["Channel Layer (post-pipeline)"]
@@ -81,6 +81,7 @@ flowchart TB
         W4["outputs/{slug}/<br/>assets/cover.png"]
         W5["outputs/{slug}/<br/>data/*.csv/*.xlsx"]
         W6["outputs/{slug}/<br/>{slug}.zip"]
+        W7["outputs/{slug}/<br/>gumroad/research.json"]
         W8["outputs/{slug}/<br/>landing/index.html"]
         W9["PublishResult<br/><i>status • product_url • product_id</i>"]
     end
@@ -96,6 +97,7 @@ flowchart TB
     E2 -->|"schema switch<br/>(scored_recommendations)"| B
     E --> E2
     E --> F
+    E --> S
     E2 --> G
     E --> H
     E --> I
@@ -138,6 +140,7 @@ flowchart TB
     U -.->|"post-pipeline"| X
 
     B --> W1
+    S --> W7
     G --> W2
     M --> W3
     J --> W4
@@ -208,7 +211,7 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 
 ---
 
-## Agents Implemented (19 + 3 channel components)
+## Agents Implemented (20 agents + 7 social modules + 6 channel components + 3 analytics modules)
 
 | Agent | File | Lines | Role |
 |-------|------|-------|------|
@@ -230,9 +233,23 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 | `notion_content_agent` | `agents/notion_content_agent.py` | 127 | Notion block content writer |
 | `gumroad_agent` | `agents/gumroad_agent.py` | 134 | Gumroad market research (publish → channels/) |
 | `landing_agent` | `agents/landing_agent.py` | 204 | Design Intelligence + Vercel deploy |
-| `social_agent` | `agents/social_agent.py` | 345 | Cross-platform social media promotion |
-| `BaseChannel` | `channels/base.py` | 99 | ABC: validate, publish, update, get_analytics |
-| `GumroadChannel` | `channels/gumroad_channel.py` | 285 | Full Gumroad publish: create, upload, cover, thumb, rich content |
+| `social_agent` | `agents/social_agent.py` | 355 | Social promotion with strategy (calendar, sequences, repurposing) |
+| `social_scheduler` | `agents/social/scheduler.py` | 127 | JSON post queue + dispatch to API clients |
+| `social_calendar` | `agents/social/calendar.py` | 90 | 7-14 day content calendar generation |
+| `social_sequences` | `agents/social/sequences.py` | 45 | Multi-post sequence templates |
+| `social_repurposing` | `agents/social/repurposing.py` | 83 | 1 pack → 10+ posts via content mining |
+| `social_engagement` | `agents/social/engagement.py` | 79 | Post-performance tracking via Graph API |
+| `social_platform_strategy` | `agents/social/platform_strategy.py` | 63 | Platform-specific content rules |
+| `social_automation` | `agents/social/automation.py` | 86 | DM/comment webhooks + auto-reply |
+| `analytics_agent` | `agents/analytics_agent.py` | 85 | Post-pipeline analytics: collects from all channels, deduplicates, computes insights |
+| `analytics_models` | `orchestrator/analytics_models.py` | 102 | SalesRecord + Insights Pydantic models with JSON persistence |
+| `feedback_loop` | `orchestrator/feedback_loop.py` | 157 | Past performance → market prompts + scoring weight adjustments |
+| `dashboard` | `cli/dashboard.py` | 120 | CLI sales dashboard with ASCII bar charts |
+| `BaseChannel` | `channels/base.py` | 76 | ABC: validate, publish, update, get_analytics; AnalyticsData, ListingQualityScore models |
+| `GumroadChannel` | `channels/gumroad_channel.py` | 436 | Full Gumroad publish with listing optimization, quality scoring, A/B variants |
+| `gumroad_listing` | `channels/gumroad_listing.py` | 147 | Tag/pricing/AIDA description optimization (consumes market_research.json) |
+| `gumroad_analytics` | `channels/gumroad_analytics.py` | 165 | Analytics pull (views, sales, revenue) + listing quality scoring |
+| `gumroad_ab_testing` | `channels/gumroad_ab_testing.py` | 80 | Cover/thumbnail A/B variant management |
 | `CHANNEL_REGISTRY` | `channels/__init__.py` | 8 | Channel name → class mapping |
 
 ---
@@ -273,7 +290,7 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 
 ---
 
-## Testing (126+ tests)
+## Testing (234 tests — 60 added in Phase 4, 33 added in Phase 5)
 
 ```
 tests/
@@ -282,13 +299,28 @@ tests/
 ├── test_scoring.py               # 14 tests — scoring models, 6 metric functions, integration, empty data
 ├── test_offer_scoring_agent.py   # 3 tests — enrichment, missing file, mocked scoring
 ├── test_agents.py                # 16 tests — all agents with mocked LLM/API
-├── test_channel_base.py          # 7 tests — base channel ABC, publish result, artifact
-├── test_gumroad_channel.py       # 8 tests — gumroad channel, tags, rails params
+├── test_channel_base.py          # 8 tests — base channel ABC, models, analytics defaults, quality score
+├── test_gumroad_channel.py       # 13 tests — gumroad channel, tags, rails, variants, research data
+├── test_gumroad_analytics.py     # 6 tests — analytics pull, quality scoring (5 dimensions)
+├── test_gumroad_listing.py       # 7 tests — tag optimization, pricing, AIDA description
 ├── test_csv_export_agent.py      # 3 tests — CSV/XLSX generation
 ├── test_multi_format.py          # 7 tests — multi-format delivery, format recs, delivery_map
 ├── test_catalog_agent.py         # 1 test — prompt mode
 ├── test_notion_content_agent.py  # 2 tests — notion content + file fallback
-└── test_schemas_phase2.py        # 9 tests — schema validation (Phase 2 schemas)
+├── test_schemas_phase2.py        # 9 tests — schema validation (Phase 2 schemas)
+├── test_social_models.py         # 9 tests — SocialPost, ContentCalendar, PostResult, etc.
+├── test_social_calendar.py       # 7 tests — calendar generation, day count, platform allocation
+├── test_social_sequences.py      # 8 tests — all 5 sequence types, platform adaptation
+├── test_social_repurposing.py    # 5 tests — content mining from markdown
+├── test_social_engagement.py     # 7 tests — Graph API insights, fallback, rate calc
+├── test_social_platform_strategy.py     # 10 tests — platform rules, hashtag/content adaptation
+├── test_social_automation.py     # 8 tests — webhook registration, auto-reply, trigger phrases
+├── test_social_scheduler.py      # 5 tests — queue, dequeue, dispatch
+├── test_analytics_models.py      # 9 tests — SalesRecord, Insights, dedup, monthly trends, persistence
+├── test_analytics_agent.py       # 5 tests — analytics collection, channel iteration, dedup, empty, insights
+├── test_dashboard.py             # 5 tests — format_summary, format_insights, empty data, slug filter, bar chart
+├── test_feedback_loop.py         # 7 tests — build_past_performance, prompt section, injection, adjustments
+└── test_scoring_feedback.py      # 7 tests — score adjustment application, empty history, normalization
 ```
 
 Run with: `pytest tests/ -v`
@@ -320,6 +352,9 @@ Key milestones in order:
 18. Cleanup — removed stitch_agent, old plans/specs
 19. **Phase 1: Offer Scoring Engine** — scoring framework with 6 weighted metrics, `offer_scoring_agent`, Etsy/Gumroad marketplace data sources, orchestrator scoring-based schema switching (126+ tests)
 20. Quality Validation — evaluation_agent, pattern + LLM checks, auto-retry, review_agent, alerts
+21. **Phase 3: Listing Optimization** — analytics pull (`gumroad_analytics.py`), listing quality scoring, AIDA description generation, research-driven tags/pricing, cover/thumbnail A/B variant management (`gumroad_ab_testing.py`)
+22. **Phase 4: Social Strategy** — multi-post sequences, 7-14 day content calendars, content repurposing engine (1 pack → 10+ posts), platform-specific adaptation, engagement tracking, DM/comment automation, post scheduler with dispatch; `agents/social/` package with 7 submodules (60 tests)
+23. **Phase 5: Analytics & Feedback Loop** — `analytics_models.py` (SalesRecord, Insights with JSON persistence), `analytics_agent` (post-pipeline collector across all channels), `feedback_loop.py` (past performance → market prompts + scoring adjustments), `cli/dashboard.py` (table + ASCII bar chart + insights); wired into orchestrator before market_agent and before offer_scoring_agent (33 new tests)
 
 ---
 
@@ -327,4 +362,4 @@ Key milestones in order:
 
 9 phases across: Channel Layer, Offer Scoring, Quality Validation, Analytics, Platform Expansion, Advanced Delivery, AI Improvements, Enterprise Features, Monitoring.
 
-**Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6).
+**Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6). Phase 3 — Gumroad Listing Optimization (6/6). Phase 4 — Social Strategy (6/6). **Phase 5 — Analytics & Feedback Loop (7/7).**

@@ -198,6 +198,25 @@ class GumroadChannel(BaseChannel):
             except Exception as e:
                 logger.warning(f"Failed to load research data: {e}")
 
+        gumroad_research_path = os.path.join(
+            "outputs", artifact.slug, "gumroad", "research.json"
+        )
+        if os.path.isfile(gumroad_research_path):
+            try:
+                with open(gumroad_research_path) as f:
+                    gr_data = json.load(f)
+                gr_competitors = gr_data.get("competitors", [])
+                if gr_competitors:
+                    if research_data is None:
+                        research_data = {}
+                    existing = research_data.get("competitors", []) or []
+                    research_data["competitors"] = existing + gr_competitors
+                    logger.info(
+                        f"Merged {len(gr_competitors)} competitors from gumroad/agent research"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to merge gumroad/agent research: {e}")
+
         artifact.tags = generate_optimized_tags(
             artifact.niche, artifact.product_type, research_data
         )
@@ -249,6 +268,22 @@ class GumroadChannel(BaseChannel):
                     research_data = json.load(f)
             except Exception as e:
                 logger.warning(f"Failed to load research data: {e}")
+
+        gumroad_research_path = os.path.join(
+            "outputs", artifact.slug, "gumroad", "research.json"
+        )
+        if os.path.isfile(gumroad_research_path):
+            try:
+                with open(gumroad_research_path) as f:
+                    gr_data = json.load(f)
+                gr_competitors = gr_data.get("competitors", [])
+                if gr_competitors:
+                    if research_data is None:
+                        research_data = {}
+                    existing = research_data.get("competitors", []) or []
+                    research_data["competitors"] = existing + gr_competitors
+            except Exception as e:
+                logger.warning(f"Failed to merge gumroad/agent research: {e}")
 
         artifact.tags = generate_optimized_tags(
             artifact.niche, artifact.product_type, research_data

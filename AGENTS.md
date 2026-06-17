@@ -62,13 +62,26 @@ Runs automatically after each content-producing agent to prevent garbage from re
   * **Role**: Creates human-in-the-loop review logs when content has hallucination flags or missing citations. Generates structured markdown with issue details and verdict checklist.
   * **Outputs**: `outputs/{slug}/review/*_review.md`.
 ---
-## 7. Frontend & Web Agents
+## 7. Analytics & Feedback Loop Agents
+Agents responsible for collecting sales data, computing insights, and closing the feedback loop so future runs learn from past performance.
+* **`analytics_agent.py`**
+  * **Role**: Post-pipeline analytics collector. Iterates all channels in `CHANNEL_REGISTRY`, calls `get_analytics()` per channel, converts `AnalyticsData` into `SalesRecord`, merges with existing records (dedup by product_slug+channel+date), and computes `Insights` (top products, avg conversion, best channel, monthly revenue trends).
+  * **Inputs**: `channel_results` from orchestrator context, `outputs/_analytics/sales_records.json`.
+  * **Outputs**: Enriched `outputs/_analytics/` (`sales_records.json`, `insights.json`).
+* **`orchestrator/analytics_models.py`**
+  * **Role**: Pydantic models (`SalesRecord`, `Insights`) and JSON persistence helpers (`load_sales_records`, `save_sales_records`, `load_insights`, `save_insights`). Dedup by `(product_slug, channel, date)`, monthly revenue trend grouping.
+* **`orchestrator/feedback_loop.py`**
+  * **Role**: Pipeline feedback engine. `build_past_performance()` summarizes historical data, `generate_prompt_section()` creates a research-prompt appendix, `inject_feedback()` merges into market_agent context, `compute_score_adjustment()` boosts scoring weights for high-conversion product types, `apply_score_adjustments()` modifies the scoring run. Wired into orchestrator before market_agent and before offer_scoring_agent.
+* **`cli/dashboard.py`**
+  * **Role**: CLI dashboard. `format_summary()` produces a table + ASCII bar chart of sales data, `format_insights()` displays best channel, top products, and monthly revenue trend. Usage: `python -m cli.dashboard --slug <slug>`.
+  * **Outputs**: Formatted terminal output (no file persistence).
+## 8. Frontend & Web Agents
 Creates and deploys live web interfaces for the generated products.
 * **`landing_agent.py`**
   * **Role**: Takes the product copy and Design Intelligence brief, generates a landing page HTML, and deploys it to Vercel.
   * **Outputs**: `landing/deployed.json`.
 ---
-## 8. Packaging, Publishing & Promotion Agents
+## 9. Packaging, Publishing & Promotion Agents
 The final stages of the pipeline: bundling the product, selling it, and marketing it.
 * **`packaging_agent.py`**
   * **Role**: Reads the orchestrator's `_delivery_map` to collect all PDFs, images, and data files designated for the final bundle and compresses them.
@@ -78,16 +91,56 @@ The final stages of the pipeline: bundling the product, selling it, and marketin
   * **Outputs**: `gumroad/research.json`.
   * **Note**: Publishing logic moved to `channels/gumroad_channel.py` as part of the Channel Layer.
 * **`social_agent.py`**
-  * **Role**: Generates social media posts (e.g., Twitter threads) promoting the newly deployed landing page and Gumroad product, then pushes them via social APIs. Reads URLs from orchestrator-injected context (no direct file coupling).
-  * **Outputs**: `landing/social_results.json`.
+  * **Role**: Orchestrates social media promotion with multi-post sequences, content calendar, and repurposing. Reads URLs from orchestrator-injected context (no direct file coupling).
+  * **Outputs**: `landing/social_results.json` (includes `scheduled_posts`, `dispatch_results`, `automation`).
+* **`social/__init__.py`**
+  * **Role**: Package init exporting all social strategy modules.
+* **`social/models.py`**
+  * **Role**: Data models: `SocialPost`, `ContentCalendar`, `PostResult`, `EngagementMetrics`, `PlatformConfig`.
+* **`social/calendar.py`**
+  * **Role**: Generates 7–14 day content calendars with teaser→launch→followup→testimonial→repurpose cadence across 4 platforms (Facebook, Instagram, Threads, Pinterest).
+  * **Outputs**: `ContentCalendar` with scheduled `SocialPost` objects.
+* **`social/sequences.py`**
+  * **Role**: Multi-post sequence templates (`teaser`, `launch`, `followup`, `testimonial`, `repurpose`) with platform-adapted content.
+* **`social/repurposing.py`**
+  * **Role**: Content repurposing engine. Extracts 10+ social-ready posts from generated markdown by mining statistics, bullet points, and blockquotes.
+* **`social/engagement.py`**
+  * **Role**: Post-performance tracking. Fetches likes, comments, shares, impressions via Graph API. Calculates engagement rate.
+  * **Fallback**: Returns zeros when API unavailable.
+* **`social/platform_strategy.py`**
+  * **Role**: Platform-specific content rules (character limits, hashtag caps, image requirements, best posting times) for Instagram, Facebook, Threads, Pinterest.
+* **`social/automation.py`**
+  * **Role**: DM and comment webhook registration for Facebook/Instagram. Auto-reply with trigger phrase detection. Threads/Pinterest stubbed (no API).
+* **`social/scheduler.py`**
+  * **Role**: JSON-based post queue. `queue_posts()` persists calendar, `dequeue_due()` returns ready posts, `dispatch()` routes to existing `_post_to_facebook/instagram/threads/pinterest` API clients.
 ---
-## 9. Channel Layer
+## 10. Channel Layer
 The channel layer is a post-pipeline abstraction for publishing generated products to external platforms. Channels run **after** the main pipeline DAG completes, consuming artifacts instead of being embedded in the product schemas.
 * **`channels/base.py`**
-  * **Role**: Defines the `BaseChannel` abstract base class with `validate()`, `publish()`, `update()`, and `get_analytics()` interface. Also provides `ProductArtifact`, `PublishResult`, and `ArtifactFile` data models.
+  * **Role**: Defines the `BaseChannel` abstract base class with `validate()`, `publish()`, `update()`, and `get_analytics()` interface. Also provides `ProductArtifact`, `PublishResult`, `ArtifactFile`, `AnalyticsData`, and `ListingQualityScore` data models.
   * **Design**: Each channel extends `BaseChannel` and implements the publish flow for its platform. The orchestrator calls channel publish after pipeline completion.
 * **`channels/gumroad_channel.py`**
-  * **Role**: Implements full Gumroad publishing: product creation/update, file upload via presigned URLs, cover/thumbnail images, and rich content (thank-you page). Extracted from the legacy `gumroad_agent.py`.
+  * **Role**: Implements full Gumroad publishing: product creation/update, file upload via presigned URLs, cover/thumbnail images, and rich content (thank-you page). Extracted from the legacy `gumroad_agent.py`. Wires listing optimization (tags, pricing, AIDA description) before publish.
   * **Outputs**: `PublishResult` with status, product URL, and product ID.
+* **`channels/gumroad_listing.py`**
+  * **Role**: Listing optimization module: `generate_optimized_tags()` extracts competitor tags from market research, `suggest_price()` calculates median competitor pricing, `generate_aida_description()` produces AIDA-format product descriptions via LLM with fallback. Consumes `market_research.json`.
+  * **Design**: Pure functions with graceful fallback — no research data = deterministic defaults.
+* **`channels/gumroad_analytics.py`**
+  * **Role**: Analytics module: `pull_analytics()` fetches product stats (views, sales, revenue, refunds, conversion rate) from Gumroad API into `AnalyticsData`. `score_listing_quality()` evaluates listing quality across 5 weighted dimensions (description, tags, cover, price, research alignment) and returns `ListingQualityScore`.
+* **`channels/gumroad_ab_testing.py`**
+  * **Role**: Cover/thumbnail A/B testing module: `VariantSet` dataclass for managing multiple variants, `save_variant_state()`/`load_variant_state()` for persistence, `upload_variants()` for deploying the active variant to Gumroad.
 * **`channels/__init__.py`**
-  * **Role**: Exports `CHANNEL_REGISTRY` — a dict mapping channel names to channel classes. New channels register here.
+  * **Role**: Exports `CHANNEL_REGISTRY` — a dict mapping channel names to channel classes. Also re-exports all data models from `base.py`.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

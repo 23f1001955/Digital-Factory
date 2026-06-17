@@ -99,7 +99,7 @@ def test_offer_scoring_agent_with_mocked_scoring(tmp_path, monkeypatch):
     mock_framework = ScoringFramework(offers=[mock_offer], source_data=research)
 
     import agents.offer_scoring_agent as osa_mod
-    monkeypatch.setattr(osa_mod, "run_scoring", lambda d, schemas_dir=None: mock_framework)
+    monkeypatch.setattr(osa_mod, "run_scoring", lambda d, schemas_dir=None, adjustments=None: mock_framework)
 
     component = ComponentSpec(
         id="offer_scoring", agent="offer_scoring_agent",

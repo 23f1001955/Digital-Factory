@@ -558,7 +558,7 @@ def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
         return AgentResult(status="done", output_path=research_path)
 
     # Mock the scoring module so offer_scoring_agent produces predictable results
-    def mock_scoring_run(research_data, schemas_dir=None):
+    def mock_scoring_run(research_data, schemas_dir=None, adjustments=None):
         return ScoringFramework(
             offers=[
                 ScoredOffer(

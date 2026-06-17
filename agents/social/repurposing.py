@@ -22,16 +22,18 @@ def _extract_snippets_from_content(content_paths: list[str]) -> list[str]:
             continue
 
         for line in text.split("\n"):
-            line = line.strip().lstrip("- *").strip()
-            if re.search(r'\d+%', line) or re.search(r'^\d+[xX]', line):
-                if line and len(line) < 200:
-                    snippets.append(line)
+            raw = line.strip()
+            stripped = raw.lstrip("- *").strip()
+            if re.search(r'\d+%', stripped) or re.search(r'^\d+[xX]\s', stripped):
+                if stripped and len(stripped) < 200:
+                    snippets.append(stripped)
 
         for line in text.split("\n"):
-            line = line.strip().lstrip("- *").strip()
-            if line and len(line) > 10 and len(line) < 200 and not line.startswith("#"):
-                if line not in snippets:
-                    snippets.append(line)
+            raw = line.strip()
+            if raw.startswith("- ") or raw.startswith("* ") or (len(raw) > 2 and raw[0].isdigit() and raw[1] == "."):
+                stripped = raw.lstrip("- *0123456789.").strip()
+                if stripped and len(stripped) > 10 and len(stripped) < 200:
+                    snippets.append(stripped)
 
         for line in text.split("\n"):
             if line.strip().startswith(">"):
@@ -74,8 +76,8 @@ def repurpose_content(
     if not snippets:
         logger.info("No content snippets found, using fallback")
         return [
-            SocialPost(content=f"Check out this {product_type.replace('_', ' ')} about {niche}", platform="facebook", sequence="repurpose", day=5),
-            SocialPost(content=f"Did you know? {niche.title()} insights inside", platform="instagram", sequence="repurpose", day=6),
-            SocialPost(content=f"Tip: Start with {niche} fundamentals", platform="threads", sequence="repurpose", day=7),
+            SocialPost(content=f"Check out this {product_type.replace('_', ' ')} about {niche}", platform="facebook", sequence="repurpose", day=5, status="draft"),
+            SocialPost(content=f"Did you know? {niche.title()} insights inside", platform="instagram", sequence="repurpose", day=6, status="draft"),
+            SocialPost(content=f"Tip: Start with {niche} fundamentals", platform="threads", sequence="repurpose", day=7, status="draft"),
         ]
     return _generate_repurposed_posts(snippets, niche, product_type)

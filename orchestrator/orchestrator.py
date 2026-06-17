@@ -278,6 +278,16 @@ class Orchestrator:
                     delivery_tags=["gumroad"],
                 ))
 
+            research_data_path = None
+            mr_state = self.state.components.get("market_research")
+            if mr_state and mr_state.status == "done" and mr_state.output_path:
+                research_data_path = mr_state.output_path
+            elif mr_state and mr_state.status == "done" and mr_state.output_paths:
+                for p in mr_state.output_paths.values():
+                    if p and os.path.isfile(p):
+                        research_data_path = p
+                        break
+
             artifact = ProductArtifact(
                 slug=self.job_spec.slug,
                 product_type=self.job_spec.product_type,
@@ -288,6 +298,7 @@ class Orchestrator:
                 thumbnail=thumbnail,
                 price_cents=2900,
                 tags=[],
+                research_data_path=research_data_path,
             )
 
             result = channel.publish(artifact)
@@ -462,6 +473,35 @@ class Orchestrator:
 
             done_count += 1
             logger.info("%s/%s %s...", done_count, total, component.id)
+
+            # Phase 5: Inject feedback before market research
+            if component.id == "market_research":
+                try:
+                    from orchestrator.feedback_loop import inject_feedback
+                    from orchestrator.analytics_models import load_sales_records, load_insights
+
+                    feedback_records = load_sales_records("outputs/_analytics/sales_records.json")
+                    feedback_insights = load_insights("outputs/_analytics/insights.json")
+                    if feedback_records and feedback_insights:
+                        inject_feedback(context, feedback_records, feedback_insights)
+                        logger.info("Past performance feedback injected into market agent context")
+                except Exception as e:
+                    logger.warning(f"Feedback injection failed: {e}")
+
+            # Phase 5: Apply scoring adjustments from past performance
+            if component.id == "offer_scoring":
+                try:
+                    from orchestrator.feedback_loop import compute_score_adjustment
+                    from orchestrator.analytics_models import load_sales_records
+
+                    fb_records = load_sales_records("outputs/_analytics/sales_records.json")
+                    if fb_records:
+                        adjustments = compute_score_adjustment(fb_records)
+                        if adjustments:
+                            logger.info(f"Applying scoring adjustments: {adjustments}")
+                            context["_scoring_adjustments"] = adjustments
+                except Exception as e:
+                    logger.warning(f"Scoring adjustment failed: {e}")
 
             # Inject delivery_map for agents that need routing info
             if component.agent in ("packaging_agent", "gumroad_agent"):

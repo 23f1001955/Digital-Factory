@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _generate_research(
-    niche: str, product_type: str, real_data: dict, job_spec: JobSpec
+    niche: str, product_type: str, real_data: dict, job_spec: JobSpec, context: dict
 ) -> dict:
     """Generate market research using LLM + real data from all sources."""
     from agents.llm_client import generate_text as llm_call
@@ -34,6 +34,11 @@ def _generate_research(
         notion_sync=job_spec.notion_sync,
         real_data=real_data,
     )
+
+    # Phase 5: Append past performance feedback
+    feedback_section = context.get("_feedback_prompt_section", "")
+    if feedback_section:
+        prompt += "\n" + feedback_section
 
     try:
         result = llm_call(prompt)
@@ -141,7 +146,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
             real_data["gumroad_data"] = gumroad_data
             sources_used.append(f"Gumroad ({gumroad_data['total_products_found']} products)")
 
-        research = _generate_research(niche, product_type, real_data, job_spec)
+        research = _generate_research(niche, product_type, real_data, job_spec, context)
 
         research["niche"] = niche
         research["product_type"] = product_type

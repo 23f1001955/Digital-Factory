@@ -130,11 +130,11 @@
 
     <div class="stats">
         <div class="stat">
-            <div class="num">19</div>
-            <div class="label">Agents</div>
+            <div class="num">30</div>
+            <div class="label">Agents + Modules</div>
         </div>
         <div class="stat">
-            <div class="num">3</div>
+            <div class="num">6</div>
             <div class="label">Channel Components</div>
         </div>
         <div class="stat">
@@ -142,11 +142,11 @@
             <div class="label">Product Schemas</div>
         </div>
         <div class="stat">
-            <div class="num">126+</div>
+            <div class="num">234</div>
             <div class="label">Tests</div>
         </div>
         <div class="stat">
-            <div class="num">140+</div>
+            <div class="num">150+</div>
             <div class="label">Commits</div>
         </div>
         <div class="stat">
@@ -204,12 +204,23 @@
                 R["packaging_agent (collects all deliverables from _delivery_map → {slug}.zip)"]
                 S["gumroad_agent (Gumroad market research only — publish moved to channel layer)"]
                 T["landing_agent (Design Intelligence brief → LLM HTML → Vercel deploy)"]
-                U["social_agent (post to Facebook / Instagram / Threads / Pinterest)"]
+                U["social_agent (Phase 4 strategy: calendar → sequences → repurpose → adapt → schedule → dispatch)
+                     social/ (models, calendar, sequences, repurposing, engagement, platform_strategy, automation, scheduler)"]
             end
 
             subgraph Channels["Channel Layer (post-pipeline)"]
-                X["gumroad_channel (GumroadChannel extends BaseChannel — product create/update, presigned upload, cover, thumbnail, rich content)"]
-                Y["channels/base.py (BaseChannel ABC: validate, publish, update, get_analytics)"]
+                X["gumroad_channel (GumroadChannel — product create/update, presigned upload, cover, thumbnail, rich content, listing opt, quality score, A/B variants)"]
+                Y["channels/base.py (BaseChannel ABC: validate, publish, update, get_analytics, AnalyticsData, ListingQualityScore)"]
+                Z1["gumroad_listing (tag/pricing/AIDA optimization)"]
+                Z2["gumroad_analytics (analytics pull + quality scoring)"]
+                Z3["gumroad_ab_testing (cover/thumbnail variant management)"]
+            end
+
+            subgraph Analytics["Analytics & Feedback (Phase 5)"]
+                AA["analytics_agent (post-pipeline: iterates channels, collects SalesRecords, computes Insights)"]
+                AM["analytics_models (SalesRecord + Insights Pydantic models, JSON persistence, dedup)"]
+                FL["feedback_loop (past performance → market prompts + scoring weight adjustments)"]
+                DB["cli/dashboard.py (table + ASCII bar chart + formatted insights)"]
             end
 
             subgraph DI["Design Intelligence"]
@@ -233,6 +244,7 @@
             E2 -->|"schema switch (scored_recommendations)"| B
             E --> E2
             E --> F
+            E --> S
             E --> G
             E --> H
             E --> I
@@ -265,8 +277,16 @@
             V --> T
             T --> U
             R -.->|"post-pipeline"| X
-            Y -.->|"extends"| X
+            Y -.->|"BaseChannel"| X
             U -.->|"post-pipeline"| X
+            Z1 -.->|"optimizes"| X
+            Z2 -.->|"analytics"| X
+            Z3 -.->|"variants"| X
+            X -.->|"post-pipeline"| AA
+            AA --> AM
+            AM --> FL
+            FL -.->|"feedback to next run"| B
+            AM --> DB
     </div>
 </div>
 
@@ -315,7 +335,7 @@
 </div>
 
     <div class="section">
-        <h2>19 Agents + 3 Channel Components</h2>
+        <h2>26 Agent Entities + 6 Channel Components</h2>
         <div class="cards">
             <div class="card"><h3>market_agent</h3><p>Deep market analysis with 10+ data sources (incl. Etsy, Gumroad). 151 lines.</p><span class="badge">Research</span></div>
             <div class="card"><h3>offer_scoring_agent</h3><p>Deterministic scoring: 6 weighted metrics across 15+ product types. 55 lines.</p><span class="badge">Scoring</span></div>
@@ -335,15 +355,30 @@
             <div class="card"><h3>notion_content_agent</h3><p>Notion block content writer. 127 lines.</p><span class="badge">Notion</span></div>
             <div class="card"><h3>gumroad_agent</h3><p>Gumroad market research only. 134 lines.</p><span class="badge">Publishing</span></div>
             <div class="card"><h3>landing_agent</h3><p>Design Intelligence + Vercel deploy. 204 lines.</p><span class="badge">Publishing</span></div>
-            <div class="card"><h3>social_agent</h3><p>Cross-platform social promotion. 345 lines.</p><span class="badge">Publishing</span></div>
-            <div class="card"><h3>BaseChannel</h3><p>ABC: validate, publish, update, get_analytics. 99 lines.</p><span class="badge">Channel</span></div>
-            <div class="card"><h3>GumroadChannel</h3><p>Full Gumroad publish: create/update, file upload, cover, thumb, rich content. 285 lines.</p><span class="badge">Channel</span></div>
-            <div class="card"><h3>CHANNEL_REGISTRY</h3><p>Channel name → class mapping. 8 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>social_agent</h3><p>Social promotion with strategy: calendar, sequences, repurposing, scheduling. 355 lines.</p><span class="badge">Publishing</span></div>
+            <div class="card"><h3>analytics_agent</h3><p>Post-pipeline analytics collector: iterates channels, deduplicates SalesRecords, computes Insights. 85 lines.</p><span class="badge">Analytics</span></div>
+            <div class="card"><h3>analytics_models</h3><p>SalesRecord + Insights Pydantic models with JSON persistence (load/save/dedup). 102 lines.</p><span class="badge">Analytics</span></div>
+            <div class="card"><h3>feedback_loop</h3><p>Past performance → market prompts + scoring weight adjustments. 157 lines.</p><span class="badge">Analytics</span></div>
+            <div class="card"><h3>dashboard</h3><p>CLI dashboard: sales table, ASCII bar chart, insights display. 120 lines.</p><span class="badge">Analytics</span></div>
+            <div class="card"><h3>social_models</h3><p>Data models: SocialPost, ContentCalendar, PostResult, EngagementMetrics, PlatformConfig. 68 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>social_calendar</h3><p>7-14 day content calendar generation across 4 platforms. 90 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>social_sequences</h3><p>Multi-post sequence templates (teaser, launch, followup, etc.). 45 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>social_repurposing</h3><p>Content repurposing engine: 1 pack → 10+ social posts. 83 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>social_engagement</h3><p>Post-performance tracking via Graph API with fallback. 79 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>social_platform_strategy</h3><p>Platform-specific rules: char limits, hashtag caps, posting times. 63 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>social_automation</h3><p>DM/comment webhooks + trigger phrase auto-reply. 86 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>social_scheduler</h3><p>JSON post queue, dequeue due, dispatch to API clients. 127 lines.</p><span class="badge">Social</span></div>
+            <div class="card"><h3>BaseChannel</h3><p>ABC: validate, publish, update, get_analytics + AnalyticsData, ListingQualityScore models. 76 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>GumroadChannel</h3><p>Full Gumroad publish with listing optimization, quality scoring, A/B variants. 436 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>gumroad_listing</h3><p>Tag/pricing/AIDA description optimization from market research. 147 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>gumroad_analytics</h3><p>Analytics pull + listing quality scoring (5 dimensions). 165 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>gumroad_ab_testing</h3><p>Cover/thumbnail variant management. 80 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>CHANNEL_REGISTRY</h3><p>Channel name → class mapping + model exports. 8 lines.</p><span class="badge">Channel</span></div>
         </div>
     </div>
 
     <div class="section">
-        <h2>Git Milestones (140+ commits)</h2>
+        <h2>Git Milestones (145+ commits)</h2>
         <table>
             <tr><th>#</th><th>Milestone</th></tr>
             <tr><td>1</td><td>Initial scaffolding — project structure, __init__.py, basic packaging</td></tr>
@@ -367,6 +402,9 @@
             <tr><td>19</td><td>Phase 0: Channel Layer — extracted Gumroad publishing into channels/; decoupled landing/social; removed gumroad_publish from all 15 schemas</td></tr>
             <tr><td>20</td><td><strong>Phase 1: Offer Scoring Engine</strong> — scoring framework with 6 weighted metrics, offer_scoring_agent, Etsy/Gumroad data sources, orchestrator schema switching</td></tr>
             <tr><td>21</td><td>Quality Validation — evaluation_agent, pattern + LLM checks, auto-retry, review_agent, alerts</td></tr>
+            <tr><td>22</td><td><strong>Phase 3: Gumroad Listing Optimization</strong> — analytics pull, quality scoring, AIDA desc, research-driven tags/pricing, cover/thumbnail A/B variants</td></tr>
+            <tr><td>23</td><td><strong>Phase 4: Social Strategy</strong> — multi-post sequences, 7-14 day content calendars, content repurposing (1 pack → 10+ posts), platform adaptation, engagement tracking, DM/comment automation, post scheduler; 60 new tests</td></tr>
+            <tr><td>24</td><td><strong>Phase 5: Analytics & Feedback Loop</strong> — analytics_models (SalesRecord, Insights, JSON persistence), analytics_agent (post-pipeline collector across all channels), feedback_loop (past performance → market prompts + scoring adjustments), CLI dashboard; 33 new tests; orchestrator wiring before market_agent and before offer_scoring_agent</td></tr>
         </table>
     </div>
 
