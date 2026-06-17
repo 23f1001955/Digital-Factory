@@ -6,7 +6,10 @@ import logging
 
 import httpx
 
-from channels.base import BaseChannel, ProductArtifact, PublishResult
+from channels.base import BaseChannel, ProductArtifact, PublishResult, AnalyticsData, ListingQualityScore
+from channels.gumroad_listing import generate_optimized_tags, suggest_price, generate_aida_description
+from channels.gumroad_analytics import pull_analytics, score_listing_quality
+from channels.gumroad_ab_testing import VariantSet, save_variant_state, upload_variants
 
 logger = logging.getLogger(__name__)
 
@@ -187,14 +190,78 @@ class GumroadChannel(BaseChannel):
         return user_data is not None and "user" in user_data
 
     def publish(self, artifact: ProductArtifact) -> PublishResult:
-        return _publish_to_gumroad(artifact)
+        research_data = None
+        if artifact.research_data_path:
+            try:
+                with open(artifact.research_data_path) as f:
+                    research_data = json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load research data: {e}")
+
+        artifact.tags = generate_optimized_tags(
+            artifact.niche, artifact.product_type, research_data
+        )
+        artifact.price_cents = suggest_price(
+            artifact.product_type, research_data, artifact.price_cents
+        )
+        artifact.description = generate_aida_description(
+            artifact.niche, artifact.product_type, research_data
+        )
+
+        result = _publish_to_gumroad(artifact)
+
+        if result.product_id and (artifact.cover_variants or artifact.thumbnail_variants):
+            try:
+                vs = VariantSet(
+                    covers=artifact.cover_variants,
+                    thumbnails=artifact.thumbnail_variants,
+                )
+                state_dir = os.path.join(
+                    os.path.dirname(
+                        os.path.dirname(artifact.research_data_path or "")
+                    ) if artifact.research_data_path else "outputs",
+                    artifact.slug, "gumroad"
+                )
+                state_path = os.path.join(state_dir, "variant_state.json")
+                upload_variants(result.product_id, vs, artifact.slug)
+                os.makedirs(state_dir, exist_ok=True)
+                save_variant_state(vs, state_path)
+            except Exception as e:
+                logger.warning(f"Variant upload failed: {e}")
+
+        quality = score_listing_quality(artifact, research_data)
+        if not quality.passed:
+            logger.warning(
+                f"Listing quality score: {quality.overall_score:.2f} — issues: {quality.issues}"
+            )
+        else:
+            logger.info(f"Listing quality score: {quality.overall_score:.2f} — PASS")
+
+        return result
 
     def update(self, product_id: str, artifact: ProductArtifact) -> PublishResult:
+        research_data = None
+        if artifact.research_data_path:
+            try:
+                with open(artifact.research_data_path) as f:
+                    research_data = json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load research data: {e}")
+
+        artifact.tags = generate_optimized_tags(
+            artifact.niche, artifact.product_type, research_data
+        )
+        artifact.price_cents = suggest_price(
+            artifact.product_type, research_data, artifact.price_cents
+        )
+        artifact.description = generate_aida_description(
+            artifact.niche, artifact.product_type, research_data
+        )
+
         return _publish_to_gumroad(artifact, existing_id=product_id)
 
-    def get_analytics(self, product_id: str) -> dict:
-        data = _gumroad_form_api("GET", f"products/{product_id}")
-        return data or {}
+    def get_analytics(self, product_id: str) -> AnalyticsData:
+        return pull_analytics(product_id)
 
 
 def _publish_to_gumroad(

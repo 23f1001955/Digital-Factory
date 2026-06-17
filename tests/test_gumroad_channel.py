@@ -103,3 +103,16 @@ def test_variant_set_storage(tmp_path, monkeypatch):
     assert loaded is not None
     assert loaded.covers == ["c1.png", "c2.png"]
     assert loaded.active_cover == 0
+
+
+def test_publish_with_research_data(monkeypatch):
+    monkeypatch.delenv("GUMROAD_ACCESS_TOKEN", raising=False)
+    from channels.base import ProductArtifact
+    artifact = ProductArtifact(
+        slug="test", product_type="research_pack", niche="ai productivity",
+        display_name="Test", files=[],
+        research_data_path="nonexistent.json",
+    )
+    ch = GumroadChannel()
+    result = ch.publish(artifact)
+    assert result.status == "failed"
