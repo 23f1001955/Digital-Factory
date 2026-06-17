@@ -510,10 +510,11 @@ def test_delivery_map_injected_into_context(tmp_path, monkeypatch):
 
 
 def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
-    """Test that orchestrator switches schema after market_agent recommends a type in discovery mode."""
+    """Test that orchestrator switches schema after offer_scoring scores recommendations."""
     from orchestrator.orchestrator import Orchestrator
     from orchestrator.state import load_job_state
     from orchestrator.models import AgentResult, ProductSchema
+    from orchestrator.scoring import ScoringFramework, ScoredOffer
     from agents.registry import AGENT_REGISTRY
     from unittest import mock
     import json
@@ -527,7 +528,10 @@ def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
 
     def _make_discovery_schema(tmp_path):
         path = tmp_path / "discovery.json"
-        data = {"product_type": "discovery", "display_name": "Discovery", "components": [{"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []}]}
+        data = {"product_type": "discovery", "display_name": "Discovery", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []},
+            {"id": "offer_scoring", "agent": "offer_scoring_agent", "output": "data/market_research.json", "depends_on": ["market_research"], "delivery": []},
+        ]}
         path.write_text(json.dumps(data), encoding="utf-8")
         return path
 
@@ -543,11 +547,9 @@ def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
     def mock_market_agent(component, job_spec, context):
         output_dir = os.path.join("outputs", job_spec.slug)
         os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        # No recommended_product_type — scoring will determine that
         research = {
             "niche": "test niche",
-            "recommended_product_type": "research_pack",
-            "recommendation_confidence": 0.9,
-            "recommendation_reasoning": "Test reason",
             "pipeline_plan": {"components": []},
         }
         research_path = os.path.join(output_dir, "data", "market_research.json")
@@ -555,9 +557,25 @@ def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
             json.dump(research, f)
         return AgentResult(status="done", output_path=research_path)
 
+    # Mock the scoring module so offer_scoring_agent produces predictable results
+    def mock_scoring_run(research_data, schemas_dir=None):
+        return ScoringFramework(
+            offers=[
+                ScoredOffer(
+                    product_type="research_pack",
+                    display_name="Research Pack",
+                    total_score=85.0,
+                    confidence=0.9,
+                    metrics=[],
+                    reasoning="Test score",
+                ),
+            ]
+        )
+
     mock_package = mock.Mock(return_value=AgentResult(status="done"))
     monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market_agent)
     monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock_package)
+    monkeypatch.setattr("agents.offer_scoring_agent.run_scoring", mock_scoring_run)
 
     job_spec_path = _make_job_spec(tmp_path)
     orc = Orchestrator(str(job_spec_path))
@@ -569,7 +587,7 @@ def test_discovery_mode_switches_schema(tmp_path, monkeypatch):
 
     orc.run()
 
-    # Schema should have been switched to research_pack
+    # Schema should have been switched to research_pack based on scoring
     assert orc.schema.product_type == "research_pack"
     # job_spec should be updated
     assert orc.job_spec.product_type == "research_pack"

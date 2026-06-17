@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-17
-**Current phase:** Phase 2 — Quality Validation Layer (completed) → Phase 3 recommended
+**Current phase:** Phase 0 — Architecture Redesign (completed) → Phase 1 recommended
 
 ---
 
@@ -13,12 +13,12 @@
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 0.1 | Introduce Channel Layer abstraction | `pending` | P0 | 2d | `orchestrator/models.py`, `orchestrator/orchestrator.py`, new `channels/` |
-| 0.2 | Refactor schemas: remove platform-specific components | `pending` | P0 | 1d | All `schemas/*.json` |
-| 0.3 | Create `channels/` package with base Channel class | `pending` | P0 | 1d | `channels/__init__.py`, `channels/base.py` |
-| 0.4 | Extract Gumroad into `channels/gumroad_channel.py` | `pending` | P0 | 1d | `agents/gumroad_agent.py` → `channels/` |
-| 0.5 | Decouple landing page from Gumroad dependency | `pending` | P1 | 1d | `agents/landing_agent.py`, `orchestrator/orchestrator.py` |
-| 0.6 | Decouple social promotion from landing page dependency | `pending` | P1 | 0.5d | `agents/social_agent.py`, `orchestrator/orchestrator.py` |
+| 0.1 | Introduce Channel Layer abstraction | `completed` | P0 | 2d | `orchestrator/models.py`, `orchestrator/orchestrator.py`, new `channels/` |
+| 0.2 | Refactor schemas: remove platform-specific components | `completed` | P0 | 1d | All `schemas/*.json` |
+| 0.3 | Create `channels/` package with base Channel class | `completed` | P0 | 1d | `channels/__init__.py`, `channels/base.py` |
+| 0.4 | Extract Gumroad into `channels/gumroad_channel.py` | `completed` | P0 | 1d | `agents/gumroad_agent.py` → `channels/` |
+| 0.5 | Decouple landing page from Gumroad dependency | `completed` | P1 | 1d | `agents/landing_agent.py`, `orchestrator/orchestrator.py` |
+| 0.6 | Decouple social promotion from landing page dependency | `completed` | P1 | 0.5d | `agents/social_agent.py`, `orchestrator/orchestrator.py` |
 
 **Why Phase 0 first:** Har future feature (scoring, Etsy channel, analytics) is architecture-dependent. Channel Layer ke bina system tightly coupled rahega.
 
@@ -245,7 +245,7 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 
 | Phase | Total | Pending | In Progress | Completed |
 |-------|-------|---------|-------------|-----------|
-| 0 — Architecture Redesign | 6 | 6 | 0 | 0 |
+| 0 — Architecture Redesign | 6 | 0 | 0 | 6 |
 | 1 — Offer Selection Engine | 5 | 5 | 0 | 0 |
 | 2 — Quality Validation | 6 | 0 | 0 | 6 |
 | 3 — Gumroad Listing Opt. | 6 | 6 | 0 | 0 |
@@ -254,4 +254,4 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | 6 — Dynamic Pipeline Safety | 5 | 5 | 0 | 0 |
 | 7 — Platform Expansion | 5 | 5 | 0 | 0 |
 | 8 — Production Hardening | 6 | 6 | 0 | 0 |
-| **Total** | **52** | **52** | **0** | **0** |
+| **Total** | **52** | **46** | **0** | **6** |
