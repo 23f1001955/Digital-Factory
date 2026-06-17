@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 try:
     from agents.llm_client import generate_text as call_llm
 except ImportError:
+    logger.warning("agents.llm_client not available — AIDA description will use fallback template")
     call_llm = None
 
 
@@ -124,7 +125,23 @@ def generate_aida_description(
     call_to_action: str = "Download Now",
 ) -> str:
     if call_llm:
+        research_context = ""
+        if research_data:
+            competitors = research_data.get("competitors", []) or []
+            prices = []
+            for c in competitors:
+                p = c.get("price_cents") or c.get("price", 0)
+                if isinstance(p, (int, float)) and p > 0:
+                    prices.append(p)
+            price_context = f"Competitor prices range from ${min(prices)/100:.2f} to ${max(prices)/100:.2f}" if prices else ""
+            keywords = research_data.get("trending_keywords", []) or []
+            kw_context = f"Trending keywords: {', '.join(str(k) for k in keywords[:5])}" if keywords else ""
+            parts = [p for p in [price_context, kw_context] if p]
+            if parts:
+                research_context = "Market context: " + "; ".join(parts) + "\n\n"
+
         prompt = (
+            f"{research_context}"
             f"Write a Gumroad product description for a {product_type.replace('_', ' ')} "
             f"about {niche}. Use AIDA format (Attention, Interest, Desire, Action). "
             f"Call to action: {call_to_action}"
