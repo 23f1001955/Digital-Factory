@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-17
-**Current phase:** Phase 4 — Social Agent: Broadcasting → Strategy (completed)
+**Current phase:** Phase 5 completed → Phase 6 recommended
 
 ---
 
@@ -109,13 +109,13 @@
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 5.1 | Create `analytics_agent` | `pending` | P1 | 1d | New `agents/analytics_agent.py` |
-| 5.2 | Build sales data schema | `pending` | P1 | 0.5d | New `orchestrator/analytics_models.py` |
-| 5.3 | Add Gumroad analytics pull | `pending` | P0 | 1d | `channels/gumroad_channel.py:get_analytics()` |
-| 5.4 | Create feedback loop: analytics → next product | `pending` | P2 | 2d | New `orchestrator/feedback_loop.py` |
-| 5.5 | Add run-to-run learning | `pending` | P2 | 2d | `orchestrator/feedback_loop.py` |
-| 5.6 | Add conversion tracking (landing → Gumroad → purchase) | `pending` | P2 | 1d | `agents/landing_agent.py`, `channels/gumroad_channel.py` |
-| 5.7 | Build simple dashboard | `pending` | P2 | 2d | New `cli/dashboard.py` |
+| 5.1 | Create `analytics_agent` | `completed` | P1 | 1d | `agents/analytics_agent.py` |
+| 5.2 | Build sales data schema | `completed` | P1 | 0.5d | `orchestrator/analytics_models.py` |
+| 5.3 | Add Gumroad analytics pull | `completed` | P0 | 1d | `channels/gumroad_channel.py:get_analytics()` |
+| 5.4 | Create feedback loop: analytics → next product | `completed` | P2 | 2d | `orchestrator/feedback_loop.py` |
+| 5.5 | Add run-to-run learning | `completed` | P2 | 2d | `orchestrator/feedback_loop.py` |
+| 5.6 | Add conversion tracking (landing → Gumroad → purchase) | `completed` | P2 | 1d | `agents/landing_agent.py`, `channels/gumroad_channel.py` |
+| 5.7 | Build simple dashboard | `completed` | P2 | 2d | `cli/dashboard.py` |
 
 **Analytics data model (proposed):**
 
@@ -250,8 +250,8 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | 2 — Quality Validation | 6 | 0 | 0 | 6 |
 | 3 — Gumroad Listing Opt. | 6 | 0 | 0 | 6 |
 | 4 — Social Strategy | 6 | 0 | 0 | 6 |
-| 5 — Analytics & Feedback | 7 | 7 | 0 | 0 |
+| 5 — Analytics & Feedback | 7 | 0 | 0 | 7 |
 | 6 — Dynamic Pipeline Safety | 5 | 5 | 0 | 0 |
 | 7 — Platform Expansion | 5 | 5 | 0 | 0 |
 | 8 — Production Hardening | 6 | 6 | 0 | 0 |
-| **Total** | **52** | **23** | **0** | **29** |
+| **Total** | **52** | **16** | **0** | **36** |
