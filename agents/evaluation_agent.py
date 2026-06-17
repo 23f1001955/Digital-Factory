@@ -119,6 +119,14 @@ def evaluate(
             issues=[QualityIssue(category="read_error", severity="error", message=f"Cannot read output: {agent_output_path}")],
         )
 
+    # Skip quality checks for JSON outputs (structured data, not content)
+    if agent_output_path.endswith(".json"):
+        return QualityReport(
+            component_id=component.id,
+            score=1.0,
+            threshold=0.6,
+        )
+
     format_type = getattr(component, "format", "full")
     score, pattern_issues = run_quality_checks(content, format_type)
 

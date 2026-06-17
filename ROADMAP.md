@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-17
-**Current phase:** Planning
+**Current phase:** Phase 2 — Quality Validation Layer (completed) → Phase 3 recommended
 
 ---
 
@@ -55,12 +55,12 @@
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 2.1 | Create `evaluation_agent` (QA/Validator) | `pending` | P0 | 1d | New `agents/evaluation_agent.py`, `agents/registry.py` |
-| 2.2 | Build content quality scoring criteria | `pending` | P0 | 1d | `agents/evaluation_agent.py` |
-| 2.3 | Add validation gate in orchestrator | `pending` | P0 | 0.5d | `orchestrator/orchestrator.py` run loop |
-| 2.4 | Add hallucination detection | `pending` | P1 | 1d | `agents/evaluation_agent.py` |
-| 2.5 | Create `review_agent` (Human-in-the-loop) | `pending` | P2 | 1d | New `agents/review_agent.py` |
-| 2.6 | Wire evaluation into notify/alert system | `pending` | P1 | 0.5d | `orchestrator/orchestrator.py`, `agents/evaluation_agent.py` |
+| 2.1 | Create `evaluation_agent` (QA/Validator) | `completed` | P0 | 1d | New `agents/evaluation_agent.py`, `agents/registry.py` |
+| 2.2 | Build content quality scoring criteria | `completed` | P0 | 1d | `agents/evaluation_agent.py` |
+| 2.3 | Add validation gate in orchestrator | `completed` | P0 | 0.5d | `orchestrator/orchestrator.py` run loop |
+| 2.4 | Add hallucination detection | `completed` | P1 | 1d | `agents/evaluation_agent.py` |
+| 2.5 | Create `review_agent` (Human-in-the-loop) | `completed` | P2 | 1d | New `agents/review_agent.py` |
+| 2.6 | Wire evaluation into notify/alert system | `completed` | P1 | 0.5d | `orchestrator/orchestrator.py`, `agents/evaluation_agent.py` |
 
 **Quality criteria checklist:**
 - [ ] Minimum word count per component (configurable per type)
@@ -247,7 +247,7 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 |-------|-------|---------|-------------|-----------|
 | 0 — Architecture Redesign | 6 | 6 | 0 | 0 |
 | 1 — Offer Selection Engine | 5 | 5 | 0 | 0 |
-| 2 — Quality Validation | 6 | 6 | 0 | 0 |
+| 2 — Quality Validation | 6 | 0 | 0 | 6 |
 | 3 — Gumroad Listing Opt. | 6 | 6 | 0 | 0 |
 | 4 — Social Strategy | 6 | 6 | 0 | 0 |
 | 5 — Analytics & Feedback | 7 | 7 | 0 | 0 |

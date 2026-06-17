@@ -151,3 +151,18 @@ class TestEvaluationAgent:
         report = evaluate(component, job_spec, {}, "/nonexistent/path.md")
         assert report.passed is False
         assert report.score == 0.0
+
+    def test_evaluate_json_skips_checks(self):
+        component = ComponentSpec(id="market_research", agent="market_agent", output="data/market_research.json")
+        job_spec = JobSpec(slug="test", product_type="research_pack", niche="python")
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+            f.write('{"niche": "test", "pipeline_plan": {"components": []}}')
+            tmp_path = f.name
+
+        try:
+            report = evaluate(component, job_spec, {}, tmp_path)
+            assert report.passed is True
+            assert report.score == 1.0
+        finally:
+            os.unlink(tmp_path)
