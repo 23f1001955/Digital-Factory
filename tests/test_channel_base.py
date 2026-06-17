@@ -1,5 +1,5 @@
 import pytest
-from channels.base import BaseChannel, PublishResult, ProductArtifact
+from channels.base import AnalyticsData, BaseChannel, PublishResult, ProductArtifact
 
 
 def test_publish_result_defaults():
@@ -78,4 +78,7 @@ def test_get_analytics_default():
             return PublishResult(status="published")
 
     ch = MinimalChannel()
-    assert ch.get_analytics("prod_1") == {}
+    result = ch.get_analytics("prod_1")
+    assert isinstance(result, AnalyticsData)
+    assert result.product_id == "prod_1"
+    assert result.product_slug == ""
