@@ -22,8 +22,9 @@ flowchart TB
         D["Job State<br/><i>JSON persistence per component<br/>enables resume on failure</i>"]
     end
 
-    subgraph Research["Research & Planning"]
-        E["market_agent<br/><i>Web • Reddit • News • Trends • GDelt<br/>Firecrawl deep scrape • competitor analysis<br/>→ market_research.json</i>"]
+    subgraph Research["Research & Scoring"]
+        E["market_agent<br/><i>Web • Reddit • News • Trends • GDelt • Etsy • Gumroad<br/>Firecrawl deep scrape • competitor analysis<br/>→ market_research.json</i>"]
+        E2["offer_scoring_agent<br/><i>6 weighted metrics • deterministic scoring<br/>Etsy/Gumroad marketplace data<br/>→ scored_recommendations[]</i>"]
         F["research_agent<br/><i>legacy research agent</i>"]
     end
 
@@ -59,9 +60,14 @@ flowchart TB
 
     subgraph Publishing["Packaging, Publishing & Promotion"]
         R["packaging_agent<br/><i>collects all deliverables from<br/>_delivery_map → {slug}.zip</i>"]
-        S["gumroad_agent<br/><i>research → sales copy → upload ZIP<br/>+ images → publish via API</i>"]
+        S["gumroad_agent<br/><i>Gumroad market research only<br/>(publish moved to channel layer)</i>"]
         T["landing_agent<br/><i>Design Intelligence brief →<br/>LLM HTML → Vercel deploy</i>"]
         U["social_agent<br/><i>post to Facebook / Instagram<br/>Threads / Pinterest</i>"]
+    end
+
+    subgraph Channels["Channel Layer (post-pipeline)"]
+        X["gumroad_channel<br/><i>GumroadChannel extends BaseChannel<br/>product create/update → presigned<br/>file upload → cover + thumbnail<br/>→ rich content → publish</i>"]
+        Y["channels/base.py<br/><i>BaseChannel ABC with<br/>validate/publish/update/get_analytics</i>"]
     end
 
     subgraph DesignIntelligence["Design Intelligence"]
@@ -75,8 +81,8 @@ flowchart TB
         W4["outputs/{slug}/<br/>assets/cover.png"]
         W5["outputs/{slug}/<br/>data/*.csv/*.xlsx"]
         W6["outputs/{slug}/<br/>{slug}.zip"]
-        W7["outputs/{slug}/<br/>gumroad/published.json"]
         W8["outputs/{slug}/<br/>landing/index.html"]
+        W9["PublishResult<br/><i>status • product_url • product_id</i>"]
     end
 
     A1 --> B
@@ -86,9 +92,11 @@ flowchart TB
     B --> D
 
     B --> E
-    E -->|"schema switch<br/>pipeline plan merge<br/>format recommendations"| B
+    E -->|"pipeline plan merge<br/>format recommendations"| B
+    E2 -->|"schema switch<br/>(scored_recommendations)"| B
+    E --> E2
     E --> F
-    E --> G
+    E2 --> G
     E --> H
     E --> I
 
@@ -121,10 +129,13 @@ flowchart TB
     L --> R
     Q --> R
 
-    R --> S
     G --> T
     V --> T
     T --> U
+
+    R -.->|"post-pipeline"| X
+    Y -.->|"BaseChannel"| X
+    U -.->|"post-pipeline"| X
 
     B --> W1
     G --> W2
@@ -132,8 +143,8 @@ flowchart TB
     J --> W4
     I --> W5
     R --> W6
-    S --> W7
     T --> W8
+    X --> W9
 ```
 
 ---
@@ -149,10 +160,28 @@ market_research ──→ images ──→ content ──→ render ──→ pa
 
 notion_schema ──→ notion_tree ──→ notion_content  (parallel branch)
 
-gumroad_research ──→ gumroad_publish  (after package)
+gumroad_research  (research only — publish via channel layer)
 landing_page  (after content)
 social_promotion  (after landing_page)
+
+[Pipeline Complete]
+       │
+       ▼
+Channel Layer ──→ gumroad_channel.publish(artifacts)
+                   → product_url injected into context
+                     (consumed by landing/social if not already set)
 ```
+
+### Discovery Mode Execution
+
+```
+market_research ──→ offer_scoring ──→ _switch_schema (picks best product type)
+                                         │
+                                         ▼
+                              rest of pipeline (dynamic, based on chosen schema)
+```
+
+In discovery mode, the orchestrator runs `offer_scoring` after `market_research`. The scoring engine evaluates 15+ product types against 6 weighted metrics and the orchestrator switches to the highest-scored schema (threshold ≥ 50/100) before continuing the pipeline.
 
 ---
 
@@ -179,11 +208,12 @@ social_promotion  (after landing_page)
 
 ---
 
-## Agents Implemented (18 total)
+## Agents Implemented (19 + 3 channel components)
 
 | Agent | File | Lines | Role |
 |-------|------|-------|------|
-| `market_agent` | `agents/market_agent.py` | 151 | Deep market analysis with 8 real-time data sources |
+| `market_agent` | `agents/market_agent.py` | 151 | Deep market analysis with 10+ real-time data sources (incl. Etsy, Gumroad) |
+| `offer_scoring_agent` | `agents/offer_scoring_agent.py` | 55 | Deterministic scoring: 6 weighted metrics, 15+ product types |
 | `research_agent` | `agents/research_agent.py` | 81 | Legacy content research (fallback) |
 | `content_agent` | `agents/content_agent.py` | 102 | LLM-driven Markdown content generation |
 | `catalog_agent` | `agents/catalog_agent.py` | 70 | Prompt/resource catalog generation |
@@ -198,18 +228,21 @@ social_promotion  (after landing_page)
 | `notion_schema_agent` | `agents/notion_schema_agent.py` | 71 | LLM-generated Notion database blueprints |
 | `notion_agent` | `agents/notion_agent.py` | 566 | Notion API: databases, relations, pages |
 | `notion_content_agent` | `agents/notion_content_agent.py` | 127 | Notion block content writer |
-| `gumroad_agent` | `agents/gumroad_agent.py` | 720 | Research + publish via Gumroad API |
+| `gumroad_agent` | `agents/gumroad_agent.py` | 134 | Gumroad market research (publish → channels/) |
 | `landing_agent` | `agents/landing_agent.py` | 204 | Design Intelligence + Vercel deploy |
 | `social_agent` | `agents/social_agent.py` | 345 | Cross-platform social media promotion |
+| `BaseChannel` | `channels/base.py` | 99 | ABC: validate, publish, update, get_analytics |
+| `GumroadChannel` | `channels/gumroad_channel.py` | 285 | Full Gumroad publish: create, upload, cover, thumb, rich content |
+| `CHANNEL_REGISTRY` | `channels/__init__.py` | 8 | Channel name → class mapping |
 
 ---
 
 ## Key Infrastructure
 
-### Orchestrator (`orchestrator/orchestrator.py` — ~490 lines)
+### Orchestrator (`orchestrator/orchestrator.py` — ~630 lines)
 - DAG topological sort from product schema components
 - Dynamic pipeline expansion: `market_agent` returns a `pipeline_plan` that adds new components
-- Discovery mode: auto-detects product type from niche research
+- Discovery mode: auto-detects product type via `offer_scoring_agent` (6 weighted metrics, Etsy/Gumroad marketplace data)
 - Format recommendations: market LLM recommends CSV/XLSX per component
 - Quality validation gate: auto-evaluates each agent's output, retries with fix prompt if score < 0.6
 - Wizardskip-gating for optional features (landing, social, gumroad, notion)
@@ -230,7 +263,8 @@ social_promotion  (after landing_page)
 - Consistent interface for all agents
 
 ### Research Tools (`agents/research_tools.py`)
-- 8 data sources: Brave Search, DuckDuckGo, Reddit, Google Trends, GDelt, Firecrawl, NewsAPI, PyTrends
+- 10 data sources: Brave Search, DuckDuckGo, Reddit, Google Trends, GDelt, Firecrawl, NewsAPI, PyTrends, Etsy, Gumroad
+- Etsy + Gumroad provide real marketplace competitor counts and pricing for scoring metrics
 
 ### State Management (`orchestrator/state.py`)
 - JSON file persistence per job
@@ -239,12 +273,14 @@ social_promotion  (after landing_page)
 
 ---
 
-## Testing (48+ tests)
+## Testing (126+ tests)
 
 ```
 tests/
 ├── test_quality.py               # 18 tests — quality checks, evaluation agent, scoring
-├── test_orchestrator.py          # 12 tests — execution, isolation, pipeline plan, notion-only, delivery map, channels
+├── test_orchestrator.py          # 12 tests — execution, isolation, pipeline plan, schema switching, scoring-based discovery, notion-only, channels
+├── test_scoring.py               # 14 tests — scoring models, 6 metric functions, integration, empty data
+├── test_offer_scoring_agent.py   # 3 tests — enrichment, missing file, mocked scoring
 ├── test_agents.py                # 16 tests — all agents with mocked LLM/API
 ├── test_channel_base.py          # 7 tests — base channel ABC, publish result, artifact
 ├── test_gumroad_channel.py       # 8 tests — gumroad channel, tags, rails params
@@ -259,9 +295,9 @@ Run with: `pytest tests/ -v`
 
 ---
 
-## Git History (136 commits)
+## Git History (140+ commits)
 
-All commits by Kundan Kumar on `main` branch. Development span: ~6 days with 20-30 commits/day.
+All commits by Kundan Kumar on `main` branch.
 
 Key milestones in order:
 1. Initial scaffolding — project structure, `__init__.py`, basic packaging
@@ -279,16 +315,16 @@ Key milestones in order:
 13. Notion-only mode — standalone Notion template products
 14. Design Intelligence — 6 design rules, 12 vibes, 12 patterns, brief generator
 15. Stitch removal — removed StitchMCP dependency, replaced with Design Intelligence
-16. Multi-format delivery — CSV+XLSX, format recommendations, output_paths dict
-17. Cleanup — removed stitch_agent, old plans/specs
-18. Channel Layer — BaseChannel ABC, GumroadChannel, channel registry
-19. Offer Scoring — scoring framework with weighted metrics, offer_scoring_agent
+16. **Phase 0: Channel Layer** — extracted Gumroad publishing from `gumroad_agent` into `channels/gumroad_channel.py` with `BaseChannel` ABC; decoupled landing/social from file coupling; removed `gumroad_publish` from all 15 schemas
+17. Multi-format delivery — CSV+XLSX, format recommendations, output_paths dict
+18. Cleanup — removed stitch_agent, old plans/specs
+19. **Phase 1: Offer Scoring Engine** — scoring framework with 6 weighted metrics, `offer_scoring_agent`, Etsy/Gumroad marketplace data sources, orchestrator scoring-based schema switching (126+ tests)
 20. Quality Validation — evaluation_agent, pattern + LLM checks, auto-retry, review_agent, alerts
 
 ---
 
-## 52 Roadmap Items (Phase 0-2 in progress)
+## 52 Roadmap Items
 
 9 phases across: Channel Layer, Offer Scoring, Quality Validation, Analytics, Platform Expansion, Advanced Delivery, AI Improvements, Enterprise Features, Monitoring.
 
-**Completed:** Phase 2 — Quality Validation Layer (6/6 items). P0 Items from Phase 0 and Phase 1 also in progress.
+**Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6).

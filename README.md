@@ -1,6 +1,6 @@
 # Digital Product Factory
 
-An automated AI pipeline that researches market niches, generates complete digital products (reports, templates, courses, databases, prompt packs, and more), packages them, publishes to Gumroad, deploys landing pages to Vercel, promotes on social media, and syncs to Notion — all from a single CLI command.
+An automated AI pipeline that researches market niches, generates complete digital products (reports, templates, courses, databases, prompt packs, and more), packages them, publishes to Gumroad via a pluggable Channel Layer, deploys landing pages to Vercel, promotes on social media, and syncs to Notion — all from a single CLI command.
 
 ## Architecture
 
@@ -10,7 +10,8 @@ User Input (CLI wizard / batch CSV)
          ▼
     Orchestrator ─── loads Product Schema → component DAG
          │
-         ├── market_agent      → Real-time web research + competitor analysis
+          ├── market_agent      → Real-time web research + competitor analysis
+          ├── offer_scoring_agent → Deterministic scoring across 15+ product types
          ├── image_agent       → Cover, thumbnail, & section images (Imagen/Gemini/SVG)
          ├── notion_schema_agent → Notion database blueprint (LLM-generated)
          ├── notion_agent      → Creates Notion workspace with databases & relations
@@ -18,18 +19,24 @@ User Input (CLI wizard / batch CSV)
          ├── render_agent      → Markdown → HTML → PDF (Playwright Chromium)
          ├── csv_export_agent  → JSON → CSV / XLSX
          ├── catalog_agent     → Prompt/resource catalogs as JSON
-          ├── diagram_agent     → Mermaid.js diagrams
-          ├── evaluation_agent → Quality validation (pattern checks + LLM hallucination detection)
-          ├── review_agent     → Human-in-the-loop review logs for flagged content
-          ├── gumroad_agent     → Research → Publish to Gumroad (files, images, rich content)
-          ├── landing_agent     → Design Intelligence + LLM → HTML → ZIP → Vercel deploy
-          ├── social_agent      → Copy + images → Facebook / Instagram / Threads / Pinterest
-          └── packaging_agent   → ZIP all deliverables
+         ├── diagram_agent     → Mermaid.js diagrams
+         ├── evaluation_agent → Quality validation (pattern checks + LLM hallucination detection)
+         ├── review_agent     → Human-in-the-loop review logs for flagged content
+         ├── packaging_agent   → ZIP all deliverables
+         ├── landing_agent     → Design Intelligence + LLM → HTML → ZIP → Vercel deploy
+         └── social_agent      → Copy + images → Facebook / Instagram / Threads / Pinterest
+                                  │
+                                  ▼
+    Channel Layer ──── runs after pipeline, consumes artifacts
+         │
+         └── gumroad_channel  → Publish product + files to Gumroad API
 ```
 
 ## Key Features
 
-- **Discovery Mode** — Enter just a niche; the system researches and recommends the best product type
+- **Channel Layer** — Pluggable publishing abstraction: `BaseChannel` ABC, `GumroadChannel`, `CHANNEL_REGISTRY`. Channels run after the pipeline, consuming artifacts instead of being embedded in schemas. Easy to add new channels (Etsy, Shopify).
+- **Discovery Mode** — Enter just a niche; the system researches and recommends the best product type via data-driven scoring (6 weighted metrics, 15+ product types)
+- **Offer Scoring Engine** — Deterministic scoring framework (`orchestrator/scoring.py`) evaluates niche data against weighted metrics using real marketplace signals from Etsy and Gumroad — no LLM opinion, pure data
 - **16 Product Schemas** — Research Pack, Blog Kit, Visual Pack, SaaS Docs, Course Launch Kit, Operating System, Workflow Kit, Curated Database, SOP Pack, Prompt Pack, Resource Pack, Swipe File, Checklist, Excel Template, Boilerplate, and discovery
 - **Design Intelligence** — Landing pages generated via LLM + curated design skill rules (6 rule files, 12 design vibes, 12 layout patterns) — no external design service dependency
 - **Multi-Format Delivery** — Agents produce CSV + XLSX, recommended formats based on niche analysis
@@ -152,6 +159,7 @@ digital-factory/
 ├── orchestrator/
 │   ├── models.py                # Pydantic models (ComponentSpec, JobSpec, QualityReport, etc.)
 │   ├── orchestrator.py          # Core pipeline engine + quality validation gate
+│   ├── scoring.py               # Offer scoring engine (6 weighted metrics, deterministic)
 │   ├── quality.py               # Quality scoring criteria (word count, AI-isms, headings, etc.)
 │   ├── notify.py                # Alert dispatch (log + optional webhook)
 │   └── state.py                 # Job state persistence
@@ -159,7 +167,8 @@ digital-factory/
 ├── agents/
 │   ├── registry.py              # Agent function registry
 │   ├── llm_client.py            # Unified LLM caller (OpenAI SDK)
-│   ├── market_agent.py          # Market research (web, Reddit, news, trends)
+│   ├── market_agent.py          # Market research (web, Reddit, news, trends, Etsy, Gumroad)
+│   ├── offer_scoring_agent.py   # Deterministic product type scoring
 │   ├── research_tools.py        # Research data source library
 │   ├── research_agent.py        # Legacy research
 │   ├── content_agent.py         # Markdown content generation
@@ -175,9 +184,14 @@ digital-factory/
 │   ├── diagram_agent.py         # Mermaid diagram generator
 │   ├── evaluation_agent.py      # Quality validation + hallucination detection
 │   ├── review_agent.py          # Human-in-the-loop review logs
-│   ├── gumroad_agent.py         # Gumroad research + publish
+│   ├── gumroad_agent.py         # Gumroad market research (publish → channels/)
 │   ├── landing_agent.py         # Landing page HTML + deploy
 │   └── social_agent.py          # Social media promotion
+│
+├── channels/
+│   ├── __init__.py              # CHANNEL_REGISTRY export
+│   ├── base.py                  # BaseChannel ABC, ProductArtifact, PublishResult
+│   └── gumroad_channel.py       # GumroadChannel (publish via presigned uploads)
 │
 ├── design_intelligence/
 │   ├── models.py                # LandingPattern, DesignBrief
@@ -197,7 +211,7 @@ digital-factory/
 ├── prompts/                     # 33 Jinja2 prompt templates
 ├── templates/                   # HTML/CSS render templates
 ├── renderers/                   # PDF rendering engines
-├── tests/                       # 30+ pytest tests
+├── tests/                       # 126+ pytest tests
 └── docs/superpowers/            # Design specs & implementation plans
 ```
 
@@ -207,7 +221,7 @@ digital-factory/
 pytest tests/ -v
 ```
 
-Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only), all agents (with API mocks), schema validation (all 16 schemas), multi-format delivery, pipeline plan merging.
+Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only, channel publishing), all agents (with API mocks), channel base ABC + GumroadChannel, schema validation (all 16 schemas), scoring engine (14 tests across 6 weighted metrics), multi-format delivery, pipeline plan merging.
 
 ## Output Structure
 
@@ -229,8 +243,7 @@ outputs/{slug}/
 ├── content/*.pdf                # Rendered PDF documents
 ├── data/*.csv / *.xlsx          # CSV/Excel exports
 ├── gumroad/
-│   ├── research.json            # Gumroad competitor analysis
-│   └── published.json           # Gumroad publish results
+│   └── research.json            # Gumroad competitor analysis (publish results stored by channel)
 ├── landing/
 │   ├── index.html               # Landing page HTML
 │   └── images/                  # Landing page images

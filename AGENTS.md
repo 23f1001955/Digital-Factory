@@ -1,13 +1,18 @@
 # Digital Factory - Agents Documentation
 This document provides a comprehensive overview of all the autonomous agents operating within the Digital Factory ecosystem. The system is orchestrated by a DAG-based engine, where each agent acts as a specialized node responsible for a specific stage of the product lifecycle.
 ---
-## 1. Research & Planning Agents
-These agents run at the very beginning of the pipeline. They research the niche, generate the core strategy, and dynamically expand the orchestrator's execution graph.
+## 1. Research & Scoring Agents
+These agents run at the very beginning of the pipeline. They research the niche, generate the core strategy, score product opportunities, and dynamically expand the orchestrator's execution graph.
 * **`market_agent.py`**
-  * **Role**: The brain of the operation. Conducts deep market analysis for the given niche.
+  * **Role**: The brain of the operation. Conducts deep market analysis for the given niche using 10+ data sources (Google Trends, Etsy, Gumroad, Reddit, Brave, NewsAPI, GDelt, Firecrawl).
   * **Outputs**: `market_research.json` (Includes a `pipeline_plan` that the orchestrator uses to dynamically add new PDF generation or content tasks to the DAG).
 * **`research_agent.py`**
   * **Role**: Conducts deeper, specialized research utilizing external search tools (web scraping, API calls) as needed.
+* **`offer_scoring_agent.py`** (Scoring Engine)
+  * **Role**: Deterministically scores all available product types against the niche research data using 6 weighted metrics. Replaces LLM opinion with data-driven recommendations.
+  * **How it works**: Reads `market_research.json`, runs `orchestrator/scoring.py`, enriches the file with `scored_recommendations[]` sorted by total score.
+  * **Metrics**: Search demand (25%), Competition (25%), Market viability (20%), Content fit (15%), Trend momentum (10%), Community signals (5%).
+  * **Outputs**: Enriched `market_research.json` with `scored_recommendations[]`, `recommended_product_type`, and `recommendation_confidence`.
 ---
 ## 2. Content Generation Agents
 Responsible for writing the actual text and structured data for the digital products.
@@ -63,14 +68,26 @@ Creates and deploys live web interfaces for the generated products.
   * **Role**: Takes the product copy and Design Intelligence brief, generates a landing page HTML, and deploys it to Vercel.
   * **Outputs**: `landing/deployed.json`.
 ---
-## 8. (was 7) Packaging, Publishing & Promotion Agents
+## 8. Packaging, Publishing & Promotion Agents
 The final stages of the pipeline: bundling the product, selling it, and marketing it.
 * **`packaging_agent.py`**
   * **Role**: Reads the orchestrator's `_delivery_map` to collect all PDFs, images, and data files designated for the final bundle and compresses them.
   * **Outputs**: `{slug}.zip`.
 * **`gumroad_agent.py`**
-  * **Role**: Handles both `gumroad_research` (writing the sales copy) and `gumroad_publish` (uploading the ZIP, cover images, and creating the live product via the Gumroad API).
-  * **Outputs**: `gumroad/published.json` containing live URLs.
+  * **Role**: Handles `gumroad_research` — competitor analysis, pricing data, and product type recommendations from Gumroad market data.
+  * **Outputs**: `gumroad/research.json`.
+  * **Note**: Publishing logic moved to `channels/gumroad_channel.py` as part of the Channel Layer.
 * **`social_agent.py`**
-  * **Role**: Generates social media posts (e.g., Twitter threads) promoting the newly deployed landing page and Gumroad product, then pushes them via social APIs.
+  * **Role**: Generates social media posts (e.g., Twitter threads) promoting the newly deployed landing page and Gumroad product, then pushes them via social APIs. Reads URLs from orchestrator-injected context (no direct file coupling).
   * **Outputs**: `landing/social_results.json`.
+---
+## 9. Channel Layer
+The channel layer is a post-pipeline abstraction for publishing generated products to external platforms. Channels run **after** the main pipeline DAG completes, consuming artifacts instead of being embedded in the product schemas.
+* **`channels/base.py`**
+  * **Role**: Defines the `BaseChannel` abstract base class with `validate()`, `publish()`, `update()`, and `get_analytics()` interface. Also provides `ProductArtifact`, `PublishResult`, and `ArtifactFile` data models.
+  * **Design**: Each channel extends `BaseChannel` and implements the publish flow for its platform. The orchestrator calls channel publish after pipeline completion.
+* **`channels/gumroad_channel.py`**
+  * **Role**: Implements full Gumroad publishing: product creation/update, file upload via presigned URLs, cover/thumbnail images, and rich content (thank-you page). Extracted from the legacy `gumroad_agent.py`.
+  * **Outputs**: `PublishResult` with status, product URL, and product ID.
+* **`channels/__init__.py`**
+  * **Role**: Exports `CHANNEL_REGISTRY` — a dict mapping channel names to channel classes. New channels register here.

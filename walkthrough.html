@@ -130,19 +130,23 @@
 
     <div class="stats">
         <div class="stat">
-            <div class="num">18</div>
+            <div class="num">19</div>
             <div class="label">Agents</div>
+        </div>
+        <div class="stat">
+            <div class="num">3</div>
+            <div class="label">Channel Components</div>
         </div>
         <div class="stat">
             <div class="num">16</div>
             <div class="label">Product Schemas</div>
         </div>
         <div class="stat">
-            <div class="num">48+</div>
+            <div class="num">126+</div>
             <div class="label">Tests</div>
         </div>
         <div class="stat">
-            <div class="num">136</div>
+            <div class="num">140+</div>
             <div class="label">Commits</div>
         </div>
         <div class="stat">
@@ -167,8 +171,9 @@
                 D["Job State (JSON persistence per component, enables resume on failure)"]
             end
 
-            subgraph Research["Research & Planning"]
-                E["market_agent (Web, Reddit, News, Trends, GDelt, Firecrawl deep scrape, competitor analysis)"]
+            subgraph Research["Research & Scoring"]
+                E["market_agent (Web, Reddit, News, Trends, GDelt, Etsy, Gumroad, Firecrawl, competitor analysis)"]
+                E2["offer_scoring_agent (6 weighted metrics, deterministic scoring, 15+ product types)"]
                 F["research_agent (legacy research)"]
             end
 
@@ -197,9 +202,14 @@
 
             subgraph Publishing["Packaging, Publishing & Promotion"]
                 R["packaging_agent (collects all deliverables from _delivery_map → {slug}.zip)"]
-                S["gumroad_agent (research → sales copy → upload ZIP + images → publish via API)"]
+                S["gumroad_agent (Gumroad market research only — publish moved to channel layer)"]
                 T["landing_agent (Design Intelligence brief → LLM HTML → Vercel deploy)"]
                 U["social_agent (post to Facebook / Instagram / Threads / Pinterest)"]
+            end
+
+            subgraph Channels["Channel Layer (post-pipeline)"]
+                X["gumroad_channel (GumroadChannel extends BaseChannel — product create/update, presigned upload, cover, thumbnail, rich content)"]
+                Y["channels/base.py (BaseChannel ABC: validate, publish, update, get_analytics)"]
             end
 
             subgraph DI["Design Intelligence"]
@@ -219,7 +229,9 @@
             B --> C
             B --> D
             B --> E
-            E -->|"schema switch, pipeline plan merge, format recommendations"| B
+            E -->|"pipeline plan merge, format recommendations"| B
+            E2 -->|"schema switch (scored_recommendations)"| B
+            E --> E2
             E --> F
             E --> G
             E --> H
@@ -249,34 +261,35 @@
             I --> R
             L --> R
             Q --> R
-            R --> S
             G --> T
             V --> T
             T --> U
+            R -.->|"post-pipeline"| X
+            Y -.->|"extends"| X
+            U -.->|"post-pipeline"| X
     </div>
 </div>
 
-<div class="section">
-    <h2>Execution Order (Typical Research Pack)</h2>
-    <div class="mermaid">
-        flowchart LR
-            MR["market_research"] --> IM["images"]
-            MR --> CO["content"]
-            CO --> RE["render"]
-            RE --> PA["package"]
-            IM --> CSV["csv_export"]
-            CO --> CSV
-            IM --> DIAG["diagram"]
-            CO --> DIAG
-            MR --> NS["notion_schema"]
-            NS --> NT["notion_tree"]
-            NT --> NC["notion_content"]
-            PA --> GR["gumroad_research"]
-            GR --> GP["gumroad_publish"]
-            CO --> LP["landing_page"]
-            LP --> SP["social_promotion"]
+    <div class="section">
+        <h2>Execution Order (Typical Research Pack)</h2>
+        <div class="mermaid">
+            flowchart LR
+                MR["market_research"] --> IM["images"]
+                MR --> CO["content"]
+                CO --> RE["render"]
+                RE --> PA["package"]
+                IM --> CSV["csv_export"]
+                CO --> CSV
+                IM --> DIAG["diagram"]
+                CO --> DIAG
+                MR --> NS["notion_schema"]
+                NS --> NT["notion_tree"]
+                NT --> NC["notion_content"]
+                CO --> LP["landing_page"]
+                LP --> SP["social_promotion"]
+                PA -.->|"post-pipeline"| CL["Channel Layer: gumroad_channel.publish(artifacts)\n→ product_url injected into context"]
+        </div>
     </div>
-</div>
 
 <div class="section">
     <h2>Product Schemas</h2>
@@ -302,9 +315,10 @@
 </div>
 
     <div class="section">
-        <h2>18 Agents Implemented</h2>
+        <h2>19 Agents + 3 Channel Components</h2>
         <div class="cards">
-            <div class="card"><h3>market_agent</h3><p>Deep market analysis with 8 real-time data sources. 151 lines.</p><span class="badge">Research</span></div>
+            <div class="card"><h3>market_agent</h3><p>Deep market analysis with 10+ data sources (incl. Etsy, Gumroad). 151 lines.</p><span class="badge">Research</span></div>
+            <div class="card"><h3>offer_scoring_agent</h3><p>Deterministic scoring: 6 weighted metrics across 15+ product types. 55 lines.</p><span class="badge">Scoring</span></div>
             <div class="card"><h3>research_agent</h3><p>Legacy content research (fallback). 81 lines.</p><span class="badge">Research</span></div>
             <div class="card"><h3>content_agent</h3><p>LLM-driven Markdown content generation. 102 lines.</p><span class="badge">Content</span></div>
             <div class="card"><h3>catalog_agent</h3><p>Prompt/resource catalog generation. 70 lines.</p><span class="badge">Content</span></div>
@@ -319,14 +333,17 @@
             <div class="card"><h3>notion_schema_agent</h3><p>LLM-generated Notion database blueprints. 71 lines.</p><span class="badge">Notion</span></div>
             <div class="card"><h3>notion_agent</h3><p>Notion API: databases, relations, pages. 566 lines.</p><span class="badge">Notion</span></div>
             <div class="card"><h3>notion_content_agent</h3><p>Notion block content writer. 127 lines.</p><span class="badge">Notion</span></div>
-            <div class="card"><h3>gumroad_agent</h3><p>Research + publish via Gumroad API. 720 lines.</p><span class="badge">Publishing</span></div>
+            <div class="card"><h3>gumroad_agent</h3><p>Gumroad market research only. 134 lines.</p><span class="badge">Publishing</span></div>
             <div class="card"><h3>landing_agent</h3><p>Design Intelligence + Vercel deploy. 204 lines.</p><span class="badge">Publishing</span></div>
             <div class="card"><h3>social_agent</h3><p>Cross-platform social promotion. 345 lines.</p><span class="badge">Publishing</span></div>
+            <div class="card"><h3>BaseChannel</h3><p>ABC: validate, publish, update, get_analytics. 99 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>GumroadChannel</h3><p>Full Gumroad publish: create/update, file upload, cover, thumb, rich content. 285 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>CHANNEL_REGISTRY</h3><p>Channel name → class mapping. 8 lines.</p><span class="badge">Channel</span></div>
         </div>
     </div>
 
     <div class="section">
-        <h2>Git Milestones (136 commits)</h2>
+        <h2>Git Milestones (140+ commits)</h2>
         <table>
             <tr><th>#</th><th>Milestone</th></tr>
             <tr><td>1</td><td>Initial scaffolding — project structure, __init__.py, basic packaging</td></tr>
@@ -334,21 +351,22 @@
             <tr><td>3</td><td>Notion integration v2 — databases, properties, relations, sample entries</td></tr>
             <tr><td>4</td><td>Landing pages — Vercel landing page deployment</td></tr>
             <tr><td>5</td><td>Social promotion — Facebook, Instagram, Threads, Pinterest</td></tr>
-            <tr><td>6</td><td>Market agent — pre-content competitive intelligence with 8 data sources</td></tr>
+            <tr><td>6</td><td>Market agent — pre-content competitive intelligence with 10+ data sources</td></tr>
             <tr><td>7</td><td>Image generation — unified image_agent with 3-tier fallback chain</td></tr>
             <tr><td>8</td><td>Gumroad publishing — full presign-upload-complete flow</td></tr>
             <tr><td>9</td><td>Delivery routing — _delivery_map, packaging/gumroad use delivery tags</td></tr>
             <tr><td>10</td><td>Pipeline plans — LLM dynamically injects new DAG components</td></tr>
             <tr><td>11</td><td>Schema expansion — 8 more product schemas (Phase 2)</td></tr>
-            <tr><td>12</td><td>Discovery mode — auto-detect product type from market research</td></tr>
+            <tr><td>12</td><td>Discovery mode — auto-detect product type via offer_scoring_agent</td></tr>
             <tr><td>13</td><td>Notion-only mode — standalone Notion template products</td></tr>
             <tr><td>14</td><td>Design Intelligence — 6 rules, 12 vibes, 12 patterns, brief generator</td></tr>
             <tr><td>15</td><td>Stitch removal — replaced StitchMCP with Design Intelligence</td></tr>
             <tr><td>16</td><td>Multi-format delivery — CSV+XLSX, format recommendations, output_paths</td></tr>
             <tr><td>17</td><td>Cleanup — removed stitch_agent, old plans/specs</td></tr>
             <tr><td>18</td><td>Channel Layer — BaseChannel ABC, GumroadChannel, channel registry</td></tr>
-            <tr><td>19</td><td>Offer Scoring — scoring framework with weighted metrics, offer_scoring_agent</td></tr>
-            <tr><td>20</td><td>Quality Validation — evaluation_agent, pattern + LLM checks, auto-retry, review_agent, alerts</td></tr>
+            <tr><td>19</td><td>Phase 0: Channel Layer — extracted Gumroad publishing into channels/; decoupled landing/social; removed gumroad_publish from all 15 schemas</td></tr>
+            <tr><td>20</td><td><strong>Phase 1: Offer Scoring Engine</strong> — scoring framework with 6 weighted metrics, offer_scoring_agent, Etsy/Gumroad data sources, orchestrator schema switching</td></tr>
+            <tr><td>21</td><td>Quality Validation — evaluation_agent, pattern + LLM checks, auto-retry, review_agent, alerts</td></tr>
         </table>
     </div>
 
