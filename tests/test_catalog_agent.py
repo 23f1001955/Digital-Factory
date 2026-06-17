@@ -1,4 +1,4 @@
-import json, os
+import json
 from agents.catalog_agent import run
 from orchestrator.models import ComponentSpec, JobSpec
 

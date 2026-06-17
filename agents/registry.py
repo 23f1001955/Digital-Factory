@@ -15,7 +15,6 @@ from . import (
     social_agent,
     market_agent,
     image_agent,
-    stitch_agent,
 )
 
 AGENT_REGISTRY = {
@@ -35,5 +34,4 @@ AGENT_REGISTRY = {
     "social_agent": social_agent.run,
     "market_agent": market_agent.run,
     "image_agent": image_agent.run,
-    "stitch_agent": stitch_agent.run,
 }

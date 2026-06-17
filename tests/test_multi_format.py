@@ -2,7 +2,6 @@ import json
 import os
 import shutil
 
-import pytest
 from agents.csv_export_agent import run
 from agents import market_agent
 from orchestrator.models import ComponentSpec, JobSpec
@@ -139,7 +138,9 @@ def test_orchestrator_merges_format_recs(tmp_path, monkeypatch):
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
     from unittest import mock
-    import json, os, shutil
+    import json
+    import os
+    import shutil
 
     slug = "test-merge-fmts"
 
@@ -208,7 +209,9 @@ def test_invalid_format_filtered(tmp_path, monkeypatch):
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
     from unittest import mock
-    import json, os, shutil
+    import json
+    import os
+    import shutil
 
     slug = "test-filter-fmts"
 
@@ -276,7 +279,9 @@ def test_no_recs_legacy_mode(tmp_path, monkeypatch):
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
     from unittest import mock
-    import json, os, shutil
+    import json
+    import os
+    import shutil
 
     slug = "test-legacy-fmts"
 
@@ -342,8 +347,9 @@ def test_delivery_map_per_format(tmp_path, monkeypatch):
     from orchestrator.state import load_job_state
     from orchestrator.models import AgentResult, ProductSchema
     from agents.registry import AGENT_REGISTRY
-    from unittest import mock
-    import json, os, shutil
+    import json
+    import os
+    import shutil
 
     slug = "test-delivery-fmts"
 

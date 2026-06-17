@@ -240,7 +240,6 @@ def test_landing_agent_fallback(tmp_path, monkeypatch):
     from agents import landing_agent
 
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("STITCH_API_KEY", raising=False)
     monkeypatch.delenv("VERCEL_TOKEN", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 

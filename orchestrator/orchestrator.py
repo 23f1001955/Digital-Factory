@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import traceback
 from typing import List
 
 from .models import JobSpec, ProductSchema, ComponentSpec, AgentResult, PipelinePlan
@@ -384,13 +385,15 @@ class Orchestrator:
             try:
                 result = agent_func(component, self.job_spec, context)
             except Exception as e:
+                tb = traceback.format_exc()
                 logger.error(
-                    "Agent %s (%s) raised unhandled exception: %s",
+                    "Agent %s (%s) raised unhandled exception:\n%s",
                     component.agent,
                     component.id,
-                    e,
+                    tb,
                 )
                 result = AgentResult(status="failed", error=f"Unhandled exception: {e}")
+
 
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)

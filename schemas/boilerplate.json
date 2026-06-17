@@ -3,15 +3,91 @@
   "display_name": "Boilerplate",
   "notion_sync": false,
   "components": [
-    {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []},
-    {"id": "images", "agent": "image_agent", "output": "data/images_generated.json", "depends_on": ["market_research"], "delivery": []},
-    {"id": "boilerplate_content", "agent": "content_agent", "output": "boilerplate/{slug}/README.md", "depends_on": ["market_research"], "delivery": []},
-    {"id": "boilerplate_package", "agent": "packaging_agent", "output": "boilerplate/{slug}.zip", "depends_on": ["boilerplate_content"], "delivery": ["zip", "gumroad"]},
-    {"id": "gumroad_research", "agent": "gumroad_agent", "output": "gumroad/research.json", "depends_on": ["market_research"], "delivery": []},
-    {"id": "gumroad_publish", "agent": "gumroad_agent", "output": "gumroad/published.json", "depends_on": ["gumroad_research", "market_research", "package"], "delivery": []},
-    {"id": "stitch_download", "agent": "stitch_agent", "output": "stitch/manifest.json", "depends_on": ["market_research"], "delivery": []},
-    {"id": "landing_page", "agent": "landing_agent", "output": "landing/deployed.json", "depends_on": ["gumroad_publish", "stitch_download"], "delivery": []},
-    {"id": "social_promotion", "agent": "social_agent", "output": "landing/social_results.json", "depends_on": ["landing_page"], "delivery": []},
-    {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["boilerplate_package"], "delivery": ["zip"]}
+    {
+      "id": "market_research",
+      "agent": "market_agent",
+      "output": "data/market_research.json",
+      "depends_on": [],
+      "delivery": []
+    },
+    {
+      "id": "images",
+      "agent": "image_agent",
+      "output": "data/images_generated.json",
+      "depends_on": [
+        "market_research"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "boilerplate_content",
+      "agent": "content_agent",
+      "output": "boilerplate/{slug}/README.md",
+      "depends_on": [
+        "market_research"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "boilerplate_package",
+      "agent": "packaging_agent",
+      "output": "boilerplate/{slug}.zip",
+      "depends_on": [
+        "boilerplate_content"
+      ],
+      "delivery": [
+        "zip",
+        "gumroad"
+      ]
+    },
+    {
+      "id": "gumroad_research",
+      "agent": "gumroad_agent",
+      "output": "gumroad/research.json",
+      "depends_on": [
+        "market_research"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "gumroad_publish",
+      "agent": "gumroad_agent",
+      "output": "gumroad/published.json",
+      "depends_on": [
+        "gumroad_research",
+        "market_research",
+        "package"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "landing_page",
+      "agent": "landing_agent",
+      "output": "landing/deployed.json",
+      "depends_on": [
+        "gumroad_publish"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "social_promotion",
+      "agent": "social_agent",
+      "output": "landing/social_results.json",
+      "depends_on": [
+        "landing_page"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "package",
+      "agent": "packaging_agent",
+      "output": "{slug}.zip",
+      "depends_on": [
+        "boilerplate_package"
+      ],
+      "delivery": [
+        "zip"
+      ]
+    }
   ]
 }

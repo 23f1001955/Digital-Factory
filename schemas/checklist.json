@@ -3,21 +3,114 @@
   "display_name": "Checklist",
   "notion_sync": true,
   "components": [
-    {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []},
-    {"id": "images", "agent": "image_agent", "output": "data/images_generated.json", "depends_on": ["market_research"], "delivery": []},
-    {"id": "checklist_content", "agent": "content_agent", "output": "checklist/{slug}_checklist.md", "depends_on": ["market_research"], "delivery": []},
-    {"id": "checklist_render", "agent": "render_agent", "output": "checklist/{slug}_checklist.pdf", "depends_on": ["checklist_content"], "delivery": ["zip", "gumroad"]},
-    {"id": "notion_schema", "agent": "notion_schema_agent", "output": "data/notion_schema.json", "depends_on": ["market_research"], "delivery": []},
-    {"id": "notion_tree", "agent": "notion_agent", "output": "notion_sync.json", "depends_on": ["notion_schema"], "delivery": []},
-    {"id": "gumroad_research", "agent": "gumroad_agent", "output": "gumroad/research.json", "depends_on": ["market_research"], "delivery": []},
-    {"id": "gumroad_publish", "agent": "gumroad_agent", "output": "gumroad/published.json", "depends_on": ["gumroad_research", "market_research", "package", "notion_tree"], "delivery": []},
-    {"id": "stitch_download", "agent": "stitch_agent", "output": "stitch/manifest.json", "depends_on": ["market_research"], "delivery": []},
-    {"id": "landing_page", "agent": "landing_agent", "output": "landing/deployed.json", "depends_on": ["gumroad_publish", "stitch_download"], "delivery": []},
-    {"id": "social_promotion", "agent": "social_agent", "output": "landing/social_results.json", "depends_on": ["landing_page"], "delivery": []},
-    {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["checklist_render"], "delivery": ["zip"]}
+    {
+      "id": "market_research",
+      "agent": "market_agent",
+      "output": "data/market_research.json",
+      "depends_on": [],
+      "delivery": []
+    },
+    {
+      "id": "images",
+      "agent": "image_agent",
+      "output": "data/images_generated.json",
+      "depends_on": [
+        "market_research"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "checklist_content",
+      "agent": "content_agent",
+      "output": "checklist/{slug}_checklist.md",
+      "depends_on": [
+        "market_research"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "checklist_render",
+      "agent": "render_agent",
+      "output": "checklist/{slug}_checklist.pdf",
+      "depends_on": [
+        "checklist_content"
+      ],
+      "delivery": [
+        "zip",
+        "gumroad"
+      ]
+    },
+    {
+      "id": "notion_schema",
+      "agent": "notion_schema_agent",
+      "output": "data/notion_schema.json",
+      "depends_on": [
+        "market_research"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "notion_tree",
+      "agent": "notion_agent",
+      "output": "notion_sync.json",
+      "depends_on": [
+        "notion_schema"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "gumroad_research",
+      "agent": "gumroad_agent",
+      "output": "gumroad/research.json",
+      "depends_on": [
+        "market_research"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "gumroad_publish",
+      "agent": "gumroad_agent",
+      "output": "gumroad/published.json",
+      "depends_on": [
+        "gumroad_research",
+        "market_research",
+        "package",
+        "notion_tree"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "landing_page",
+      "agent": "landing_agent",
+      "output": "landing/deployed.json",
+      "depends_on": [
+        "gumroad_publish"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "social_promotion",
+      "agent": "social_agent",
+      "output": "landing/social_results.json",
+      "depends_on": [
+        "landing_page"
+      ],
+      "delivery": []
+    },
+    {
+      "id": "package",
+      "agent": "packaging_agent",
+      "output": "{slug}.zip",
+      "depends_on": [
+        "checklist_render"
+      ],
+      "delivery": [
+        "zip"
+      ]
+    }
   ],
   "notion_structure": {
     "type": "functional_workspace",
-    "description": "Task manager — Daily/Weekly/Monthly checklists, Progress tracker, Resource links"
+    "description": "Task manager \u00e2\u20ac\u201d Daily/Weekly/Monthly checklists, Progress tracker, Resource links"
   }
 }
