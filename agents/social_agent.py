@@ -7,6 +7,14 @@ import httpx
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult
 from agents.image_agent import generate_images, ImageRequirement
+from datetime import datetime
+from agents.social.models import PostResult
+from agents.social.calendar import generate_calendar
+from agents.social.repurposing import repurpose_content
+from agents.social.platform_strategy import adapt_post_for_platform
+from agents.social.scheduler import queue_posts, dequeue_due, dispatch
+from agents.social.engagement import track_post
+from agents.social.automation import register_comment_webhook, register_dm_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +228,51 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                     publish_data = json.load(f)
                 gumroad_url = publish_data.get("product_url", "")
 
+        # --- Phase 4: Content Repurposing + Calendar ---
+        content_base = os.path.join("outputs", slug, "content")
+        content_paths: list[str] = []
+        if os.path.isdir(content_base):
+            content_paths = [
+                os.path.join(content_base, f)
+                for f in os.listdir(content_base)
+                if f.endswith((".md", ".json", ".csv"))
+            ]
+
+        research_path = context.get("market_research", "")
+        research_data: dict | None = None
+        if research_path and os.path.exists(research_path):
+            try:
+                with open(research_path, encoding="utf-8") as f:
+                    research_data = json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load research data: {e}")
+
+        # Repurpose content into posts
+        repurposed_posts = repurpose_content(content_paths, job_spec.niche, job_spec.product_type)
+
+        # Generate content calendar
+        cal = generate_calendar(
+            job_spec.niche,
+            job_spec.product_type,
+            launch_date=datetime.now(),
+            research_data=research_data,
+        )
+
+        # Merge repurposed posts into calendar (replace days 5-13)
+        if repurposed_posts:
+            cal.posts = [p for p in cal.posts if p.day < 5 or p.day > 13]
+            cal.posts.extend(repurposed_posts)
+
+        # Queue posts
+        queue_posts(cal, slug)
+
+        # Dequeue due posts and dispatch
+        sched_results: list[PostResult] = []
+        for post in dequeue_due(slug):
+            adapted = adapt_post_for_platform(post, post.platform)
+            pr = dispatch(adapted)
+            sched_results.append(pr)
+
         copies = _generate_social_copy(job_spec, gumroad_url)
 
         facebook_token = os.getenv("FACEBOOK_PAGE_TOKEN")
@@ -276,7 +329,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 output_dir=img_output_dir,
             )
 
-        results = {}
+        legacy_results: dict[str, str] = {}
 
         if facebook_token and copies.get("facebook"):
             fb_img = social_images.get("fb_post", landing_page_url or "")
@@ -288,7 +341,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 + " ".join(f"#{h}" for h in copies["facebook"]["hashtags"]),
                 fb_img,
             )
-            results["facebook"] = "posted" if fb_result else "failed"
+            legacy_results["facebook"] = "posted" if fb_result else "failed"
 
         if facebook_token and ig_user_id and copies.get("instagram"):
             ig_img = social_images.get("ig_carousel_1", landing_page_url or "")
@@ -300,7 +353,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 + " ".join(f"#{h}" for h in copies["instagram"]["hashtags"]),
                 ig_img,
             )
-            results["instagram"] = "posted" if ig_result else "failed"
+            legacy_results["instagram"] = "posted" if ig_result else "failed"
 
         if facebook_token and threads_user_id and copies.get("threads"):
             threads_img = social_images.get("threads_post", landing_page_url or "")
@@ -312,7 +365,7 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 + " ".join(f"#{h}" for h in copies["threads"]["hashtags"]),
                 threads_img,
             )
-            results["threads"] = "posted" if threads_result else "failed"
+            legacy_results["threads"] = "posted" if threads_result else "failed"
 
         if pinterest_token and pinterest_board_id and copies.get("pinterest"):
             pin_img = social_images.get("pinterest_pin", landing_page_url or "")
@@ -326,20 +379,40 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
                 pin_img,
                 gumroad_url,
             )
-            results["pinterest"] = "posted" if pin_result else "failed"
+            legacy_results["pinterest"] = "posted" if pin_result else "failed"
+
+        # --- Phase 4: Register automation hooks ---
+        automation_results: dict[str, dict] = {}
+        if facebook_token:
+            webhook_url = os.getenv("SOCIAL_WEBHOOK_URL", "")
+            if webhook_url:
+                ar = register_comment_webhook("facebook", f"{webhook_url}/facebook/comment")
+                automation_results["facebook_comment"] = ar
+                ar_dm = register_dm_webhook("facebook", f"{webhook_url}/facebook/dm")
+                automation_results["facebook_dm"] = ar_dm
+            if ig_user_id and webhook_url:
+                ar = register_comment_webhook("instagram", f"{webhook_url}/instagram/comment")
+                automation_results["instagram_comment"] = ar
 
         result = {
             "status": "done",
-            "platforms": results,
+            "platforms": legacy_results,
             "copies": copies,
+            "scheduled_posts": len(cal.posts),
+            "dispatched": len(sched_results),
+            "dispatch_results": [
+                {"post_id": r.post_id, "platform": r.platform, "status": r.status}
+                for r in sched_results
+            ],
+            "automation": automation_results,
         }
         output_path = os.path.join("outputs", slug, component.output)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2)
 
-        posted = sum(1 for v in results.values() if v == "posted")
-        logger.info(f"Social promotion: {posted}/{len(results)} platforms posted")
+        posted = sum(1 for v in legacy_results.values() if v == "posted")
+        logger.info(f"Social promotion: {posted}/{len(legacy_results)} platforms posted, {len(sched_results)} scheduled posts dispatched")
         return AgentResult(status="done", output_path=output_path, error=None)
 
     except Exception as e:

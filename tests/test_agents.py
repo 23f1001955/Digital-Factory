@@ -312,6 +312,14 @@ def test_social_agent(monkeypatch):
     result = social_agent.run(comp, job_spec, context)
     assert result.status == "done"
 
+    with open(result.output_path) as f:
+        data = json.load(f)
+
+    # Check new Phase 4 fields
+    assert "scheduled_posts" in data
+    assert "dispatch_results" in data
+    assert isinstance(data["scheduled_posts"], int)
+
     output_dir = os.path.join("outputs", "test-social")
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
