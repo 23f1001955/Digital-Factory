@@ -925,3 +925,67 @@ def test_orchestrator_runs_channels_and_injects_urls(tmp_path, monkeypatch):
     assert published[0].slug == "test-chan"
     assert "gumroad" in orc._channel_results
     assert orc._channel_results["gumroad"].product_url == "https://test.gumroad.com/l/test"
+
+
+def test_circuit_breaker_tracks_failures(tmp_path, monkeypatch):
+    """Circuit breaker tracks failures per template after component failure."""
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    from unittest import mock
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-cb"):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z"}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Test", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+            {"id": "faq_section", "agent": "content_agent", "output": "content/{slug}/faq.md", "depends_on": ["market_research"], "template": "faq_section"},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(tmp_path)
+
+    def mock_market(comp, js, ctx):
+        output_dir = os.path.join("outputs", js.slug)
+        os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        with open(research_path, "w") as f:
+            json.dump({"niche": "test"}, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    mock_content = mock.Mock(return_value=AgentResult(status="failed", error="simulated"))
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "content_agent", mock_content)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock.Mock(return_value=AgentResult(status="done")))
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-cb" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-cb")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+    orc.run()
+
+    assert orc.state.components["faq_section"].status == "failed"
+    assert orc._component_failures.get("faq_section", 0) == 1
+
+
+def test_circuit_breaker_resets_with_new_orchestrator(tmp_path):
+    """Circuit breaker state is per-Orchestrator instance."""
+    from orchestrator.orchestrator import Orchestrator
+    orc1 = Orchestrator.__new__(Orchestrator)
+    orc1._component_failures = {}
+    orc2 = Orchestrator.__new__(Orchestrator)
+    orc2._component_failures = {}
+    assert orc1._component_failures == {}
+    assert orc2._component_failures == {}

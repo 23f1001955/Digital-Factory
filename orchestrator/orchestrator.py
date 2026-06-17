@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import traceback
-from typing import List
+from typing import Dict, List
 
 from .models import JobSpec, ProductSchema, ComponentSpec, AgentResult, PipelinePlan
 from .state import load_job_state, save_job_state
@@ -41,6 +41,7 @@ class Orchestrator:
         self.renderer = None
         self._channel_results: dict = {}
         self._landing_page_url: str = ""
+        self._component_failures: Dict[str, int] = {}
 
     def _get_execution_order(self) -> List[ComponentSpec]:
         """Topological sort of components."""
@@ -116,6 +117,10 @@ class Orchestrator:
                 continue
             if comp.agent not in allowed_agents:
                 logger.warning("[pipeline_plan] Rejected component '%s': unknown agent '%s'. Template: %s. See orchestrator/component_templates.py for allowed templates.", comp.id, comp.agent, comp.template)
+                continue
+            cb_key = comp.template or comp.id
+            if self._component_failures.get(cb_key, 0) >= 3:
+                logger.warning("[pipeline_plan] Rejected component '%s': circuit breaker — template '%s' blocked after 3 failures.", comp.id, cb_key)
                 continue
             if not comp.template:
                 logger.warning("[pipeline_plan] Rejected component '%s': missing template field. Agent: %s. See orchestrator/component_templates.py for allowed templates.", comp.id, comp.agent)
@@ -538,6 +543,12 @@ class Orchestrator:
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
 
+            if result.status == "failed":
+                template = component.template or component.id
+                self._component_failures[template] = self._component_failures.get(template, 0) + 1
+                logger.warning("[circuit_breaker] Component '%s' failed (%d/%d failures for template '%s')",
+                               component.id, self._component_failures[template], 3, template)
+
             # Phase 2: Quality validation gate
             if result.status == "done" and component.agent in EVALUATION_TARGETS:
                 output_path = result.output_path
@@ -580,6 +591,10 @@ class Orchestrator:
                             )
                             self.state.components[component.id] = result
                             save_job_state(self.state, self.state_path)
+                            template = component.template or component.id
+                            self._component_failures[template] = self._component_failures.get(template, 0) + 1
+                            logger.warning("[circuit_breaker] Component '%s' failed (%d/%d failures for template '%s')",
+                                           component.id, self._component_failures[template], 3, template)
 
                     dispatch_alert(report, self.job_spec, component.id)
                     if report.needs_human_review:
