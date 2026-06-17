@@ -651,3 +651,65 @@ def test_legacy_product_type_still_works(tmp_path, monkeypatch):
     assert orc.job_spec.product_type == "research_pack"
     assert orc.schema.product_type == "research_pack"
     mock_package.assert_called_once()
+
+
+def test_orchestrator_runs_channels_and_injects_urls(tmp_path, monkeypatch):
+    """Test that orchestrator runs channels after pipeline and injects URLs."""
+    from channels import CHANNEL_REGISTRY
+    from channels.base import PublishResult
+
+    published = []
+
+    class FakeGumroadChannel:
+        name = "gumroad"
+        def validate(self): return True
+        def publish(self, artifact):
+            published.append(artifact)
+            return PublishResult(status="published", product_url="https://test.gumroad.com/l/test", product_id="prod_1")
+        def update(self, pid, artifact): return self.publish(artifact)
+        def get_analytics(self, pid): return {}
+
+    monkeypatch.setitem(CHANNEL_REGISTRY, "gumroad", FakeGumroadChannel)
+
+    def _make_job_spec(tmp_path, slug="test-chan", **extra):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z", "gumroad_enabled": True, **extra}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Test", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(tmp_path)
+
+    def mock_market(comp, js, ctx):
+        p = os.path.join("outputs", js.slug, "data", "market_research.json")
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w") as f:
+            json.dump({"niche": "test"}, f)
+        return AgentResult(status="done", output_path=p)
+
+    mock_pkg = mock.Mock(return_value=AgentResult(status="done"))
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock_pkg)
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-chan" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-chan")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+
+    orc.run()
+
+    assert len(published) >= 1
+    assert published[0].slug == "test-chan"
+    assert "gumroad" in orc._channel_results
+    assert orc._channel_results["gumroad"].product_url == "https://test.gumroad.com/l/test"

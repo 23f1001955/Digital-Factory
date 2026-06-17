@@ -39,6 +39,8 @@ class Orchestrator:
         self.state = load_job_state(self.state_path, self.job_spec.slug)
 
         self.renderer = None
+        self._channel_results: dict = {}
+        self._landing_page_url: str = ""
 
     def _get_execution_order(self) -> List[ComponentSpec]:
         """Topological sort of components."""
@@ -217,6 +219,89 @@ class Orchestrator:
             delivery_map[comp.id] = entry
         return delivery_map
 
+    def _run_channels(self) -> dict:
+        channel_results = {}
+        if not self.job_spec.gumroad_enabled:
+            return channel_results
+
+        try:
+            from channels import CHANNEL_REGISTRY
+            from channels.base import ProductArtifact, ArtifactFile
+
+            if "gumroad" not in CHANNEL_REGISTRY:
+                logger.warning("Gumroad channel not registered")
+                return channel_results
+
+            channel = CHANNEL_REGISTRY["gumroad"]()
+            if not channel.validate():
+                logger.warning("Gumroad channel validation failed — skipping")
+                return channel_results
+
+            delivery_map = self._build_delivery_map()
+
+            files = []
+            for comp_id, entry in delivery_map.items():
+                if "gumroad" in entry.get("delivery", []):
+                    outputs = entry.get("outputs", {})
+                    for name, path in outputs.items():
+                        if path and os.path.isfile(path):
+                            files.append(ArtifactFile(
+                                path=path,
+                                name=os.path.basename(path),
+                                delivery_tags=["gumroad"],
+                            ))
+
+            # Always add ZIP from package
+            zip_path = None
+            for comp_id, entry in delivery_map.items():
+                if comp_id == "package":
+                    outputs = entry.get("outputs", {})
+                    for name, path in outputs.items():
+                        if path and os.path.isfile(path):
+                            zip_path = path
+                            break
+
+            assets_dir = os.path.join("outputs", self.job_spec.slug, "assets")
+            cover_image = None
+            thumbnail = None
+            if os.path.isdir(assets_dir):
+                for fn in os.listdir(assets_dir):
+                    fp = os.path.join(assets_dir, fn)
+                    if os.path.isfile(fp):
+                        if fn.lower().startswith("cover"):
+                            cover_image = fp
+                        elif fn.lower().startswith("thumbnail"):
+                            thumbnail = fp
+
+            if zip_path and not any(f.path == zip_path for f in files):
+                files.append(ArtifactFile(
+                    path=zip_path,
+                    name=os.path.basename(zip_path),
+                    delivery_tags=["gumroad"],
+                ))
+
+            artifact = ProductArtifact(
+                slug=self.job_spec.slug,
+                product_type=self.job_spec.product_type,
+                niche=self.job_spec.niche,
+                display_name=self.job_spec.display_name or self.job_spec.niche,
+                files=files,
+                cover_image=cover_image,
+                thumbnail=thumbnail,
+                price_cents=2900,
+                tags=[],
+            )
+
+            result = channel.publish(artifact)
+            channel_results["gumroad"] = result
+
+            logger.info(f"Gumroad channel publish: {result.status} — {result.product_url}")
+
+        except Exception as e:
+            logger.error(f"Channel publish failed: {e}", exc_info=True)
+
+        return channel_results
+
     def run(self):
         logger.info("Starting pipeline for slug: %s", self.job_spec.slug)
         ordered_components = self._get_execution_order()
@@ -387,6 +472,16 @@ class Orchestrator:
             if component.agent in ("packaging_agent", "gumroad_agent"):
                 context["_delivery_map"] = self._build_delivery_map()
 
+            # Inject channel results as standard context keys
+            if self._channel_results:
+                for ch_name, ch_result in self._channel_results.items():
+                    if ch_result.status == "published" and ch_result.product_url:
+                        context["product_url"] = ch_result.product_url
+
+            # Inject landing_page_url for social agent
+            if self._landing_page_url:
+                context["landing_page_url"] = self._landing_page_url
+
             try:
                 result = agent_func(component, self.job_spec, context)
             except Exception as e:
@@ -482,6 +577,19 @@ class Orchestrator:
                 total = len(ordered_components)
                 logger.info("Pipeline re-planned: %s total components", total)
 
+            # Store landing_page URL for downstream context injection
+            if component.id == "landing_page" and result.status == "done":
+                try:
+                    if result.output_path and os.path.exists(result.output_path):
+                        with open(result.output_path, encoding="utf-8") as f:
+                            landing_data = json.load(f)
+                        landing_url = landing_data.get("deployed_url", "")
+                        if landing_url:
+                            self._landing_page_url = landing_url
+                            logger.info(f"Landing page URL captured: {landing_url}")
+                except Exception as e:
+                    logger.warning(f"Failed to capture landing page URL: {e}")
+
             if result.status == "done":
                 logger.info("%s/%s %s", done_count, total, component.id)
             elif result.status == "failed":
@@ -490,6 +598,11 @@ class Orchestrator:
                 )
             else:
                 logger.warning("%s/%s %s", done_count, total, component.id)
+
+        # Run channels after pipeline completes
+        channel_results = self._run_channels()
+        if channel_results:
+            self._channel_results = channel_results
 
         logger.info("Pipeline complete")
         logger.info("Orchestrator run complete. Generating summary report...")
