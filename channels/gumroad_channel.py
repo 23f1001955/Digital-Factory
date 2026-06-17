@@ -224,18 +224,20 @@ class GumroadChannel(BaseChannel):
                 )
                 state_path = os.path.join(state_dir, "variant_state.json")
                 upload_variants(result.product_id, vs, artifact.slug)
-                os.makedirs(state_dir, exist_ok=True)
                 save_variant_state(vs, state_path)
             except Exception as e:
                 logger.warning(f"Variant upload failed: {e}")
 
-        quality = score_listing_quality(artifact, research_data)
-        if not quality.passed:
-            logger.warning(
-                f"Listing quality score: {quality.overall_score:.2f} — issues: {quality.issues}"
-            )
-        else:
-            logger.info(f"Listing quality score: {quality.overall_score:.2f} — PASS")
+        quality = None
+        if result.status == "published":
+            quality = score_listing_quality(artifact, research_data)
+        if quality is not None:
+            if not quality.passed:
+                logger.warning(
+                    f"Listing quality score: {quality.overall_score:.2f} — issues: {quality.issues}"
+                )
+            else:
+                logger.info(f"Listing quality score: {quality.overall_score:.2f} — PASS")
 
         return result
 
