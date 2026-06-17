@@ -211,7 +211,7 @@ METRIC_DATA_KEYS = {
 }
 
 
-def run(research_data: dict, schemas_dir: Optional[str] = "schemas") -> ScoringFramework:
+def run(research_data: dict, schemas_dir: Optional[str] = None) -> ScoringFramework:
     product_types = dict(PRODUCT_TYPE_MAP)
 
     if schemas_dir and os.path.isdir(schemas_dir):
