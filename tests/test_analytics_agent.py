@@ -11,30 +11,31 @@ def test_analytics_agent_run_no_channels(monkeypatch):
     from agents.analytics_agent import run
     comp = ComponentSpec(id="analytics", agent="analytics_agent", output="analytics")
     job_spec = JobSpec(slug="test-slug", product_type="research_pack", niche="test")
-    result = run(comp, job_spec, {})
+    result = run(comp, job_spec, {"channel_results": {}})
     assert result.status == "done"
     assert result.output_path is not None
 
 
 def test_analytics_agent_run_with_gumroad(monkeypatch):
     monkeypatch.delenv("GUMROAD_ACCESS_TOKEN", raising=False)
+    from channels.base import AnalyticsData
 
     class FakeChannel:
         name = "gumroad"
         def get_analytics(self, product_id: str):
-            return SalesRecord(
-                product_slug="test-product", channel="gumroad",
+            return AnalyticsData(
+                product_slug="test-product", product_id=product_id,
                 date=datetime.now(), views=100, sales=5,
                 revenue=49.99, conversion_rate=5.0,
             )
 
     monkeypatch.setattr("agents.analytics_agent.CHANNEL_REGISTRY", {"gumroad": lambda: FakeChannel()})
-    monkeypatch.setattr("agents.analytics_agent._get_product_ids", lambda: ["prod_123"])
 
     from agents.analytics_agent import run
     comp = ComponentSpec(id="analytics", agent="analytics_agent", output="analytics")
     job_spec = JobSpec(slug="test-slug", product_type="research_pack", niche="test")
-    result = run(comp, job_spec, {})
+    context = {"channel_results": {"gumroad": type("obj", (), {"product_id": "prod_123", "status": "published"})()}}
+    result = run(comp, job_spec, context)
     assert result.status == "done"
     assert result.output_path is not None
 
@@ -47,7 +48,7 @@ def test_analytics_agent_aggregates_data(monkeypatch, tmp_path):
     from agents.analytics_agent import run
     comp = ComponentSpec(id="analytics", agent="analytics_agent", output="analytics")
     job_spec = JobSpec(slug="test-slug", product_type="research_pack", niche="test")
-    result = run(comp, job_spec, {})
+    result = run(comp, job_spec, {"channel_results": {}})
 
     assert os.path.exists(records_path)
     with open(records_path) as f:
@@ -60,7 +61,7 @@ def test_analytics_agent_skips_if_disabled(monkeypatch):
     from agents.analytics_agent import run
     comp = ComponentSpec(id="analytics", agent="analytics_agent", output="analytics")
     job_spec = JobSpec(slug="test-slug", product_type="research_pack", niche="test", gumroad_enabled=False)
-    result = run(comp, job_spec, {})
+    result = run(comp, job_spec, {"channel_results": {}})
     assert result.status == "done"
 
 
@@ -76,7 +77,7 @@ def test_analytics_agent_preserves_existing_records(monkeypatch, tmp_path):
     from agents.analytics_agent import run
     comp = ComponentSpec(id="analytics", agent="analytics_agent", output="analytics")
     job_spec = JobSpec(slug="new-slug", product_type="research_pack", niche="test")
-    run(comp, job_spec, {})
+    run(comp, job_spec, {"channel_results": {}})
 
     with open(existing) as f:
         data = json.load(f)

@@ -623,7 +623,8 @@ class Orchestrator:
                 analytics_comp = ComponentSpec(
                     id="analytics", agent="analytics_agent", output="analytics"
                 )
-                run_analytics(analytics_comp, self.job_spec, {})
+                analytics_context = {"channel_results": self._channel_results}
+                run_analytics(analytics_comp, self.job_spec, analytics_context)
             except Exception as e:
                 logger.warning(f"Analytics agent failed: {e}")
 

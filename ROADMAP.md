@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-17
-**Current phase:** Phase 3 completed → Phase 4 recommended
+**Current phase:** Phase 4 — Social Agent: Broadcasting → Strategy (completed)
 
 ---
 
@@ -94,12 +94,12 @@
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 4.1 | Add content calendar generation (7–14 day) | `pending` | P1 | 1d | `agents/social_agent.py`, new prompt |
-| 4.2 | Add multi-post sequences | `pending` | P1 | 1d | `agents/social_agent.py` |
-| 4.3 | Add content repurposing (1 pack → 10 posts) | `pending` | P1 | 1d | `agents/social_agent.py` |
-| 4.4 | Add engagement tracking | `pending` | P2 | 1d | `agents/social_agent.py` |
-| 4.5 | Add platform-specific content strategy | `pending` | P2 | 1d | `agents/social_agent.py:_generate_social_copy` |
-| 4.6 | Add DM/comment automation hooks | `pending` | P2 | 2d | New `agents/social_engagement_agent.py` |
+| 4.1 | Add content calendar generation (7–14 day) | `completed` | P1 | 1d | `agents/social/calendar.py` |
+| 4.2 | Add multi-post sequences | `completed` | P1 | 1d | `agents/social/sequences.py` |
+| 4.3 | Add content repurposing (1 pack → 10 posts) | `completed` | P1 | 1d | `agents/social/repurposing.py` |
+| 4.4 | Add engagement tracking | `completed` | P2 | 1d | `agents/social/engagement.py` |
+| 4.5 | Add platform-specific content strategy | `completed` | P2 | 1d | `agents/social/platform_strategy.py` |
+| 4.6 | Add DM/comment automation hooks | `completed` | P2 | 2d | `agents/social/automation.py` |
 
 ---
 
@@ -249,9 +249,9 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | 1 — Offer Selection Engine | 5 | 0 | 0 | 5 |
 | 2 — Quality Validation | 6 | 0 | 0 | 6 |
 | 3 — Gumroad Listing Opt. | 6 | 0 | 0 | 6 |
-| 4 — Social Strategy | 6 | 6 | 0 | 0 |
+| 4 — Social Strategy | 6 | 0 | 0 | 6 |
 | 5 — Analytics & Feedback | 7 | 7 | 0 | 0 |
 | 6 — Dynamic Pipeline Safety | 5 | 5 | 0 | 0 |
 | 7 — Platform Expansion | 5 | 5 | 0 | 0 |
 | 8 — Production Hardening | 6 | 6 | 0 | 0 |
-| **Total** | **52** | **29** | **0** | **23** |
+| **Total** | **52** | **23** | **0** | **29** |
