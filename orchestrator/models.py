@@ -68,3 +68,27 @@ class PipelinePlan(BaseModel):
 class JobState(BaseModel):
     slug: str
     components: Dict[str, AgentResult] = Field(default_factory=dict)
+
+
+class ChannelConfig(BaseModel):
+    name: str
+    enabled: bool = True
+    config: dict = Field(default_factory=dict)
+
+
+class QualityIssue(BaseModel):
+    category: str = "general"
+    severity: str = "warning"  # "error" | "warning" | "info"
+    message: str = ""
+    location: Optional[str] = None
+
+
+class QualityReport(BaseModel):
+    component_id: str
+    score: float = 1.0
+    threshold: float = 0.6
+    passed: bool = True
+    issues: List[QualityIssue] = Field(default_factory=list)
+    hallucination_flags: List[str] = Field(default_factory=list)
+    needs_human_review: bool = False
+    fix_prompt: Optional[str] = None
