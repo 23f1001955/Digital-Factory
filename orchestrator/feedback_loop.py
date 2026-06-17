@@ -89,3 +89,69 @@ def inject_feedback(context: dict, records: list[SalesRecord], insights: Insight
         logger.info(f"Feedback injected: ${pp['total_revenue']:.2f} total revenue from {len(records)} records")
     else:
         logger.info("No past performance data to inject")
+
+
+PRODUCT_TYPE_ALIASES = {
+    "research-pack": "research_pack",
+    "blog-kit": "blog_kit",
+    "prompt-pack": "prompt_pack",
+    "visual-pack": "visual_pack",
+    "saas-docs": "saas_docs",
+    "course-launch": "course_launch",
+    "operating-system": "operating_system",
+    "workflow-kit": "workflow_kit",
+    "sop-pack": "sop_pack",
+    "swipe-file": "swipe_file",
+    "excel-template": "excel_template",
+    "resource-pack": "resource_pack",
+    "checklist": "checklist",
+    "boilerplate": "boilerplate",
+    "database": "database",
+}
+
+
+def _slug_to_product_type(slug: str) -> str:
+    for pattern, ptype in PRODUCT_TYPE_ALIASES.items():
+        if pattern in slug:
+            return ptype
+    return ""
+
+
+def compute_score_adjustment(records: list[SalesRecord]) -> dict[str, float]:
+    if not records:
+        return {}
+
+    product_type_revenue: dict[str, float] = {}
+    for r in records:
+        ptype = _slug_to_product_type(r.product_slug)
+        if not ptype:
+            continue
+        if ptype not in product_type_revenue:
+            product_type_revenue[ptype] = 0.0
+        product_type_revenue[ptype] += r.revenue
+
+    if not product_type_revenue:
+        return {}
+
+    max_revenue = max(product_type_revenue.values())
+    adjustments: dict[str, float] = {}
+    for ptype, revenue in product_type_revenue.items():
+        ratio = revenue / max_revenue if max_revenue > 0 else 0
+        if ratio >= 0.8:
+            adjustments[ptype] = 5.0
+        elif ratio >= 0.5:
+            adjustments[ptype] = 2.0
+        elif ratio >= 0.2:
+            adjustments[ptype] = 0.0
+        else:
+            adjustments[ptype] = -2.0
+
+    return adjustments
+
+
+def apply_score_adjustments(scores: dict[str, float], adjustments: dict[str, float]) -> dict[str, float]:
+    result = dict(scores)
+    for ptype, adj in adjustments.items():
+        if ptype in result:
+            result[ptype] = max(0.0, result[ptype] + adj)
+    return result
