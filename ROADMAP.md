@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-17
-**Current phase:** Phase 0 — Architecture Redesign (completed) → Phase 1 recommended
+**Current phase:** Phase 0–2 completed → Phase 3 recommended
 
 ---
 
@@ -30,11 +30,11 @@
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 1.1 | Create `offer_scoring_agent` | `pending` | P0 | 1d | New `agents/offer_scoring_agent.py`, `agents/registry.py` |
-| 1.2 | Build scoring framework with weighted metrics | `pending` | P0 | 1d | New `orchestrator/scoring.py` |
-| 1.3 | Improve `discovery.json` schema to use scoring | `pending` | P0 | 0.5d | `schemas/discovery.json` |
-| 1.4 | Add real demand data sources to scoring | `pending` | P1 | 2d | `agents/offer_scoring_agent.py`, `agents/research_tools.py` |
-| 1.5 | Update `_switch_schema` to use scoring output | `pending` | P0 | 0.5d | `orchestrator/orchestrator.py:402-423` |
+| 1.1 | Create `offer_scoring_agent` | `completed` | P0 | 1d | `agents/offer_scoring_agent.py`, `agents/registry.py` |
+| 1.2 | Build scoring framework with weighted metrics | `completed` | P0 | 1d | `orchestrator/scoring.py` |
+| 1.3 | Improve `discovery.json` schema to use scoring | `completed` | P0 | 0.5d | `schemas/discovery.json` |
+| 1.4 | Add real demand data sources to scoring | `completed` | P1 | 2d | `agents/offer_scoring_agent.py`, `agents/research_tools.py` |
+| 1.5 | Update `_switch_schema` to use scoring output | `completed` | P0 | 0.5d | `orchestrator/orchestrator.py` |
 
 **Scoring data sources to integrate:**
 
@@ -63,13 +63,13 @@
 | 2.6 | Wire evaluation into notify/alert system | `completed` | P1 | 0.5d | `orchestrator/orchestrator.py`, `agents/evaluation_agent.py` |
 
 **Quality criteria checklist:**
-- [ ] Minimum word count per component (configurable per type)
-- [ ] H1/H2 headings present and non-generic
-- [ ] No empty sections
-- [ ] Claims cross-referenced against research data
-- [ ] Fact-checkable statements flagged for human review
-- [ ] No templated/AI-ism patterns ("In today's digital landscape...")
-- [ ] Format compliance (Markdown structure valid)
+- [x] Minimum word count per component (configurable per type)
+- [x] H1/H2 headings present and non-generic
+- [x] No empty sections
+- [x] Claims cross-referenced against research data
+- [x] Fact-checkable statements flagged for human review
+- [x] No templated/AI-ism patterns ("In today's digital landscape...")
+- [x] Format compliance (Markdown structure valid)
 
 ---
 
@@ -246,7 +246,7 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | Phase | Total | Pending | In Progress | Completed |
 |-------|-------|---------|-------------|-----------|
 | 0 — Architecture Redesign | 6 | 0 | 0 | 6 |
-| 1 — Offer Selection Engine | 5 | 5 | 0 | 0 |
+| 1 — Offer Selection Engine | 5 | 0 | 0 | 5 |
 | 2 — Quality Validation | 6 | 0 | 0 | 6 |
 | 3 — Gumroad Listing Opt. | 6 | 6 | 0 | 0 |
 | 4 — Social Strategy | 6 | 6 | 0 | 0 |
@@ -254,4 +254,4 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | 6 — Dynamic Pipeline Safety | 5 | 5 | 0 | 0 |
 | 7 — Platform Expansion | 5 | 5 | 0 | 0 |
 | 8 — Production Hardening | 6 | 6 | 0 | 0 |
-| **Total** | **52** | **46** | **0** | **6** |
+| **Total** | **52** | **41** | **0** | **11** |
