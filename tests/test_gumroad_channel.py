@@ -91,3 +91,15 @@ def test_update_no_token(monkeypatch):
     result = ch.update("prod_123", artifact)
     assert result.status == "failed"
     assert "token" in (result.error or "").lower()
+
+
+def test_variant_set_storage(tmp_path, monkeypatch):
+    monkeypatch.setenv("GUMROAD_ACCESS_TOKEN", "test_token")
+    from channels.gumroad_ab_testing import VariantSet, save_variant_state, load_variant_state
+    vs = VariantSet(covers=["c1.png", "c2.png"], thumbnails=["t1.png", "t2.png"])
+    state_file = str(tmp_path / "variant_state.json")
+    save_variant_state(vs, state_file)
+    loaded = load_variant_state(state_file)
+    assert loaded is not None
+    assert loaded.covers == ["c1.png", "c2.png"]
+    assert loaded.active_cover == 0
