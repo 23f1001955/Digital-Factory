@@ -66,25 +66,41 @@ def _calc_competition(research: dict) -> ScoringMetric:
     weight = 0.25
     landscape = research.get("competitor_landscape", {})
     competitors = landscape.get("direct_competitors", [])
+    llm_count = len(competitors)
 
-    if len(competitors) == 0:
+    # Use real marketplace data if available
+    etsy = research.get("etsy_data", {})
+    gumroad = research.get("gumroad_data", {})
+
+    etsy_count = etsy.get("total_listings_found", 0) or 0
+    gumroad_count = gumroad.get("total_products_found", 0) or 0
+    marketplace_count = etsy_count + gumroad_count
+
+    # Prefer marketplace data when available (it's real, not LLM-generated)
+    if marketplace_count > 0:
+        count = marketplace_count
+        source = f"marketplace (Etsy={etsy_count}, Gumroad={gumroad_count})"
+    else:
+        count = llm_count
+        source = "LLM competitor analysis"
+
+    if count == 0:
         return ScoringMetric(
             name="competition",
             weight=weight,
             score=0.9,
-            reasoning="No direct competitors found — blue ocean",
-            data={"competitor_count": 0},
+            reasoning="No competitors found — blue ocean",
+            data={"competitor_count": 0, "source": source},
         )
 
-    count = len(competitors)
     score = max(0.1, 1.0 - math.log(count + 1) * 0.2)
 
     return ScoringMetric(
         name="competition",
         weight=weight,
         score=round(score, 4),
-        reasoning=f"{count} direct competitors found, competition score {score:.2f}",
-        data={"competitor_count": count},
+        reasoning=f"{count} competitors from {source}, competition score {score:.2f}",
+        data={"competitor_count": count, "etsy_listings": etsy_count, "gumroad_listings": gumroad_count},
     )
 
 
@@ -93,22 +109,51 @@ def _calc_market_viability(research: dict) -> ScoringMetric:
     landscape = research.get("competitor_landscape", {})
 
     signals = 0
+    data = {}
+    price_signals = []
+
     if landscape.get("quality_gaps"):
         signals += 1
     if landscape.get("recommended_price"):
         signals += 1
+        price_signals.append(f"LLM rec ${landscape['recommended_price']}")
     if landscape.get("pricing_tiers"):
         signals += 1
 
-    base = 0.4 + (signals * 0.2)
+    # Marketplace price data from Etsy/Gumroad
+    etsy = research.get("etsy_data", {})
+    gumroad = research.get("gumroad_data", {})
+
+    etsy_avg = etsy.get("avg_price", 0)
+    if etsy_avg:
+        signals += 1
+        price_signals.append(f"Etsy avg ${etsy_avg}")
+    gumroad_avg = gumroad.get("avg_price", 0)
+    if gumroad_avg:
+        signals += 1
+        price_signals.append(f"Gumroad avg ${gumroad_avg}")
+
+    total_reviews = (etsy.get("total_reviews", 0) or 0) + (gumroad.get("total_listings_found", 0) or 0)
+
+    base = 0.4 + (signals * 0.15)
     score = min(1.0, base)
+
+    # Boost if there's marketplace engagement (reviews = demand signal)
+    if total_reviews > 50:
+        score = min(1.0, score + 0.1)
+
+    data = {
+        "signals": signals,
+        "price_signals": price_signals,
+        "total_reviews": total_reviews,
+    }
 
     return ScoringMetric(
         name="market_viability",
         weight=weight,
         score=round(score, 4),
-        reasoning=f"{signals} market viability signals found, score {score:.2f}",
-        data={"signals": signals, "recommended_price": landscape.get("recommended_price")},
+        reasoning=f"{signals} market viability signals, avg prices: {' | '.join(price_signals) or 'none'}",
+        data=data,
     )
 
 
@@ -208,6 +253,11 @@ METRIC_DATA_KEYS = {
     _calc_content_fit: "content_recommendations",
     _calc_trend_momentum: "google_trends",
     _calc_community_signals: "reddit_discussions",
+}
+
+MARKETPLACE_DATA_KEYS = {
+    _calc_competition: ["etsy_data", "gumroad_data"],
+    _calc_market_viability: ["etsy_data", "gumroad_data"],
 }
 
 

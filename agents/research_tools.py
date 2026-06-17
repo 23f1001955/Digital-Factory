@@ -321,6 +321,128 @@ def newsapi_headlines(query: str, page_size: int = 10) -> list[dict]:
         return []
 
 
+def etsy_search(query: str, max_results: int = 20) -> list[dict]:
+    """Search Etsy for products in a niche. Returns pricing, review count, listing count.
+    Public — no API key needed. HTML scraping based."""
+    try:
+        import httpx
+        import re
+
+        resp = httpx.get(
+            "https://www.etsy.com/search",
+            params={"q": query, "ref": "search_box"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html",
+            },
+            timeout=15.0,
+        )
+        resp.raise_for_status()
+        text = resp.text
+
+        results = []
+        # Extract listing cards — look for price + title patterns
+        price_pattern = re.compile(r'"price"\s*:\s*"(\d+\.\d+)"')
+        title_pattern = re.compile(r'"title"\s*:\s*"([^"]+)"')
+        review_pattern = re.compile(r'"reviewCount"\s*:\s*(\d+)')
+        url_pattern = re.compile(r'"url"\s*:\s*"([^"]+)"')
+
+        prices = [float(p) for p in price_pattern.findall(text) if float(p) > 0]
+        titles = title_pattern.findall(text)
+        reviews = [int(r) for r in review_pattern.findall(text)]
+        urls = url_pattern.findall(text)
+
+        # Estimate total listing count from search result text
+        count_match = re.search(r'(\d[\d,]*)\s*results?', text)
+        estimated_total = 0
+        if count_match:
+            estimated_total = int(count_match.group(1).replace(",", ""))
+
+        # Build structured results
+        for i in range(min(len(titles), len(prices), max_results)):
+            results.append({
+                "title": titles[i] if i < len(titles) else "",
+                "price": prices[i] if i < len(prices) else 0,
+                "review_count": reviews[i] if i < len(reviews) else 0,
+                "url": urls[i] if i < len(urls) else "",
+                "platform": "etsy",
+            })
+
+        logger.info(
+            f"Etsy search for '{query}': ~{estimated_total} total listings, "
+            f"{len(results)} parsed, avg price=${sum(prices)/len(prices):.2f if prices else 0}"
+        )
+        return {
+            "total_listings_estimate": estimated_total,
+            "parsed_listings": results[:max_results],
+            "avg_price": round(sum(prices) / len(prices), 2) if prices else 0,
+            "total_listings_found": len(results),
+            "price_range": {"min": min(prices), "max": max(prices)} if prices else {},
+            "total_reviews": sum(reviews),
+            "source": "etsy",
+        }
+    except Exception as e:
+        logger.warning(f"Etsy search failed (non-critical): {e}")
+        return {}
+
+
+def gumroad_search(query: str, max_results: int = 20) -> list[dict]:
+    """Search Gumroad for digital products in a niche. Public — no API key needed."""
+    try:
+        import httpx
+        import re
+
+        resp = httpx.get(
+            "https://gumroad.com/discover/search",
+            params={"q": query},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html",
+            },
+            timeout=15.0,
+        )
+        resp.raise_for_status()
+        text = resp.text
+
+        results = []
+        price_pattern = re.compile(r'"price"\s*:\s*(\d+\.?\d*)')
+        title_pattern = re.compile(r'"name"\s*:\s*"([^"]+)"')
+        rating_pattern = re.compile(r'"average_rating"\s*:\s*(\d+\.?\d*)')
+        url_pattern = re.compile(r'"permalink"\s*:\s*"([^"]+)"')
+        sales_pattern = re.compile(r'"sales_count"\s*:\s*(\d+)')
+
+        titles = title_pattern.findall(text)
+        prices = [float(p) for p in price_pattern.findall(text) if float(p) > 0]
+        ratings = [float(r) for r in rating_pattern.findall(text)]
+        permalinks = url_pattern.findall(text)
+        sales_counts = [int(s) for s in sales_pattern.findall(text)]
+
+        for i in range(min(max(len(titles), len(prices)), max_results)):
+            results.append({
+                "title": titles[i] if i < len(titles) else "",
+                "price": prices[i] if i < len(prices) else 0,
+                "rating": ratings[i] if i < len(ratings) else 0,
+                "sales_count": sales_counts[i] if i < len(sales_counts) else 0,
+                "url": f"https://gumroad.com/l/{permalinks[i]}" if i < len(permalinks) else "",
+                "platform": "gumroad",
+            })
+
+        logger.info(
+            f"Gumroad search for '{query}': {len(results)} products parsed, "
+            f"avg price=${sum(prices)/len(prices):.2f if prices else 0}"
+        )
+        return {
+            "parsed_listings": results[:max_results],
+            "avg_price": round(sum(prices) / len(prices), 2) if prices else 0,
+            "total_products_found": len(results),
+            "price_range": {"min": min(prices), "max": max(prices)} if prices else {},
+            "platform": "gumroad",
+        }
+    except Exception as e:
+        logger.warning(f"Gumroad search failed (non-critical): {e}")
+        return {}
+
+
 def pytrends_data(keywords: list[str]) -> dict:
     """Google Trends — keyword popularity, related queries, seasonality. Free."""
     if not keywords:

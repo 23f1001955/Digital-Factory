@@ -11,6 +11,8 @@ from agents.research_tools import (
     newsapi_headlines,
     pytrends_data,
     firecrawl_scrape,
+    etsy_search,
+    gumroad_search,
 )
 
 logger = logging.getLogger(__name__)
@@ -128,6 +130,16 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         if trends_data:
             real_data["google_trends"] = trends_data
             sources_used.append("Google Trends")
+
+        etsy_data = etsy_search(niche, max_results=15)
+        if etsy_data and etsy_data.get("parsed_listings"):
+            real_data["etsy_data"] = etsy_data
+            sources_used.append(f"Etsy ({etsy_data['total_listings_found']} products)")
+
+        gumroad_data = gumroad_search(niche, max_results=15)
+        if gumroad_data and gumroad_data.get("parsed_listings"):
+            real_data["gumroad_data"] = gumroad_data
+            sources_used.append(f"Gumroad ({gumroad_data['total_products_found']} products)")
 
         research = _generate_research(niche, product_type, real_data, job_spec)
 
