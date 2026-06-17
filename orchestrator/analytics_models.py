@@ -64,6 +64,8 @@ def save_sales_records(records: list[SalesRecord], path: str) -> None:
     deduped: dict[tuple, SalesRecord] = {}
     for r in records:
         key = (r.product_slug, r.channel, r.date.isoformat())
+        if key in deduped:
+            logger.warning(f"Duplicate record overwritten: {r.product_slug}/{r.channel}/{r.date}")
         deduped[key] = r
     data = [r.model_dump(mode="json") for r in deduped.values()]
     with open(path, "w", encoding="utf-8") as f:

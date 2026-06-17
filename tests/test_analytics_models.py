@@ -40,7 +40,9 @@ def test_sales_record_dedup(tmp_path):
     save_sales_records([r1, r2, r3], str(path))
     loaded = load_sales_records(str(path))
     assert len(loaded) == 2
-    assert loaded[0].sales == 5
+    # Find record by slug instead of relying on insertion order
+    record_a = next(r for r in loaded if r.product_slug == "a")
+    assert record_a.sales == 5
 
 
 def test_insights_defaults():
