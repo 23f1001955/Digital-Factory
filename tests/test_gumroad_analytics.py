@@ -13,7 +13,8 @@ def test_pull_analytics_no_token(monkeypatch):
     assert result.views == 0
     assert result.sales == 0
 
-def test_pull_analytics_returns_model():
+def test_pull_analytics_returns_model(monkeypatch):
+    monkeypatch.delenv("GUMROAD_ACCESS_TOKEN", raising=False)
     result = pull_analytics("prod_123")
     assert hasattr(result, "product_id")
     assert hasattr(result, "date")

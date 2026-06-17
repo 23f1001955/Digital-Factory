@@ -34,6 +34,7 @@ def pull_analytics(product_id: str) -> AnalyticsData:
     product_data = _gumroad_get(f"products/{product_id}")
     sales_data = _gumroad_get("sales")
 
+    product_slug = ""
     views = 0
     sales = 0
     revenue = 0.0
@@ -43,6 +44,7 @@ def pull_analytics(product_id: str) -> AnalyticsData:
     if product_data and "product" in product_data:
         p = product_data["product"]
         views = int(p.get("views", 0) or 0)
+        product_slug = p.get("custom_permalink", "") or ""
         sales = int(p.get("sales_count", 0) or 0)
         revenue = float(p.get("total_revenue", 0.0) or 0.0)
         conversion_rate = float(p.get("conversion_rate", 0.0) or 0.0)
@@ -61,7 +63,7 @@ def pull_analytics(product_id: str) -> AnalyticsData:
                     refunds += 1
 
     return AnalyticsData(
-        product_slug="",
+        product_slug=product_slug,
         product_id=product_id,
         date=datetime.now(),
         views=views,
@@ -105,6 +107,8 @@ def _check_cover(cover_image: str | None) -> tuple[float, list[str]]:
     if not cover_image:
         issues.append("No cover image")
         return 0.0, issues
+    if cover_image.startswith(("http://", "https://")):
+        return 1.0, issues
     if os.path.isfile(cover_image):
         return 1.0, issues
     issues.append(f"Cover image not found: {cover_image}")
@@ -119,7 +123,7 @@ def _check_price(price_cents: int, research_data: dict | None) -> tuple[float, l
     if not research_data:
         return 0.7, issues
     prices = []
-    for comp in (research_data.get("competitors", []) or []):
+    for comp in (research_data.get("competitors") or []):
         p = comp.get("price_cents") or comp.get("price", 0)
         if isinstance(p, (int, float)) and p > 0:
             prices.append(int(p))
@@ -137,12 +141,12 @@ def _check_research_alignment(artifact: ProductArtifact, research_data: dict | N
     if not research_data:
         return 0.5, []
     desc_lower = (artifact.description or "").lower()
-    competitors = research_data.get("competitors", []) or []
+    competitors = research_data.get("competitors") or []
     for comp in competitors:
         name = comp.get("name", "")
         if name and name.lower() in desc_lower:
             return 1.0, []
-    trending = research_data.get("trending_keywords", []) or []
+    trending = research_data.get("trending_keywords") or []
     for kw in trending:
         if isinstance(kw, str) and kw.lower() in desc_lower:
             return 0.8, []

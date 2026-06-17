@@ -1,4 +1,4 @@
-from agents.social.models import SocialPost, PlatformConfig
+from agents.social.models import SocialPost
 from agents.social.platform_strategy import (
     adapt_post_for_platform, get_best_posting_times, get_platform_limits, PLATFORM_RULES
 )
@@ -33,6 +33,8 @@ def test_get_platform_limits_unknown():
     limits = get_platform_limits("unknown")
     assert limits["max_hashtags"] == 30
     assert limits["image_required"] is False
+    assert limits["character_limit"] == 5000
+    assert limits["best_times"] == []
 
 
 def test_adapt_post_truncates_content():
