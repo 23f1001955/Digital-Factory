@@ -112,7 +112,7 @@ class Orchestrator:
                 logger.warning("[pipeline_plan] Rejected component '%s': reserved ID. See orchestrator/component_templates.py for allowed templates.", comp.id)
                 continue
             if comp.id in accepted_ids:
-                logger.warning("[pipeline_plan] Rejected component '%s': duplicate ID.", comp.id)
+                logger.warning("[pipeline_plan] Rejected component '%s': duplicate ID. See orchestrator/component_templates.py for allowed templates.", comp.id)
                 continue
             if comp.agent not in allowed_agents:
                 logger.warning("[pipeline_plan] Rejected component '%s': unknown agent '%s'. Template: %s. See orchestrator/component_templates.py for allowed templates.", comp.id, comp.agent, comp.template)
@@ -132,7 +132,7 @@ class Orchestrator:
             spec = resolve_template(comp.template, overrides)
 
             if not all(dep in accepted_ids for dep in spec.depends_on):
-                logger.warning("[pipeline_plan] Rejected component '%s': invalid dependencies %s. Template: %s.", comp.id, spec.depends_on, comp.template)
+                logger.warning("[pipeline_plan] Rejected component '%s': invalid dependencies %s. Template: %s. See orchestrator/component_templates.py for allowed templates.", comp.id, spec.depends_on, comp.template)
                 continue
 
             self.schema.components.append(spec)
