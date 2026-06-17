@@ -111,12 +111,13 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         output_dir = os.path.join("outputs", slug, "landing")
         os.makedirs(output_dir, exist_ok=True)
 
-        gumroad_url = ""
-        gumroad_publish_path = context.get("gumroad_publish")
-        if gumroad_publish_path and os.path.exists(gumroad_publish_path):
-            with open(gumroad_publish_path, encoding="utf-8") as f:
-                publish_data = json.load(f)
-            gumroad_url = publish_data.get("product_url", "")
+        gumroad_url = context.get("product_url", "")
+        if not gumroad_url:
+            gumroad_publish_path = context.get("gumroad_publish")
+            if gumroad_publish_path and os.path.exists(gumroad_publish_path):
+                with open(gumroad_publish_path, encoding="utf-8") as f:
+                    publish_data = json.load(f)
+                gumroad_url = publish_data.get("product_url", "")
 
         research_data = None
         research_path = context.get("market_research")

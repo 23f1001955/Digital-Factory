@@ -204,19 +204,21 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
         output_dir = os.path.join("outputs", slug, "landing")
         os.makedirs(output_dir, exist_ok=True)
 
-        landing_page_path = context.get("landing_page")
-        landing_page_url = ""
-        gumroad_url = ""
-        if landing_page_path and os.path.exists(landing_page_path):
-            with open(landing_page_path, "r", encoding="utf-8") as f:
-                landing_data = json.load(f)
-            landing_page_url = landing_data.get("deployed_url", "")
+        landing_page_url = context.get("landing_page_url", "")
+        if not landing_page_url:
+            landing_page_path = context.get("landing_page")
+            if landing_page_path and os.path.exists(landing_page_path):
+                with open(landing_page_path, "r", encoding="utf-8") as f:
+                    landing_data = json.load(f)
+                landing_page_url = landing_data.get("deployed_url", "")
 
-        gumroad_publish_path = context.get("gumroad_publish")
-        if gumroad_publish_path and os.path.exists(gumroad_publish_path):
-            with open(gumroad_publish_path, "r", encoding="utf-8") as f:
-                publish_data = json.load(f)
-            gumroad_url = publish_data.get("product_url", "")
+        gumroad_url = context.get("product_url", "")
+        if not gumroad_url:
+            gumroad_publish_path = context.get("gumroad_publish")
+            if gumroad_publish_path and os.path.exists(gumroad_publish_path):
+                with open(gumroad_publish_path, "r", encoding="utf-8") as f:
+                    publish_data = json.load(f)
+                gumroad_url = publish_data.get("product_url", "")
 
         copies = _generate_social_copy(job_spec, gumroad_url)
 
