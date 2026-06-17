@@ -45,10 +45,28 @@ def test_score_listing_quality_good():
     artifact = ProductArtifact(
         slug="test", product_type="research_pack", niche="test",
         display_name="Test", files=[],
-        description="Attention: problem. Interest: solution. Desire: proof. Action: buy. " * 10,
+        description="Attention: This is a critical problem for many professionals who struggle daily. " * 60,  # 300+ words
         tags=["ai", "productivity", "automation", "workflow", "template"],
         cover_image="cover.png",
         price_cents=1999,
     )
     score = score_listing_quality(artifact, SAMPLE_RESEARCH)
     assert score.overall_score >= 0.4
+
+def test_score_listing_quality_description_length():
+    short = ProductArtifact(
+        slug="test", product_type="research_pack", niche="test",
+        display_name="Test", files=[], description="Short desc",
+        tags=["a", "b", "c"], cover_image="x.png", price_cents=999,
+    )
+    score_short = score_listing_quality(short)
+    assert score_short.description_score < 0.3
+
+    long = ProductArtifact(
+        slug="test", product_type="research_pack", niche="test",
+        display_name="Test", files=[],
+        description="Attention problem " * 100,
+        tags=["a", "b", "c"], cover_image="x.png", price_cents=999,
+    )
+    score_long = score_listing_quality(long)
+    assert score_long.description_score >= 0.5

@@ -133,20 +133,20 @@ def _check_price(price_cents: int, research_data: dict | None) -> tuple[float, l
     return 0.4, issues
 
 
-def _check_research_alignment(artifact: ProductArtifact, research_data: dict | None) -> float:
+def _check_research_alignment(artifact: ProductArtifact, research_data: dict | None) -> tuple[float, list[str]]:
     if not research_data:
-        return 0.5
+        return 0.5, []
     desc_lower = (artifact.description or "").lower()
     competitors = research_data.get("competitors", []) or []
     for comp in competitors:
         name = comp.get("name", "")
         if name and name.lower() in desc_lower:
-            return 1.0
+            return 1.0, []
     trending = research_data.get("trending_keywords", []) or []
     for kw in trending:
         if isinstance(kw, str) and kw.lower() in desc_lower:
-            return 0.8
-    return 0.3
+            return 0.8, []
+    return 0.3, []
 
 
 def score_listing_quality(
@@ -162,7 +162,8 @@ def score_listing_quality(
     all_issues.extend(cover_issues)
     price_score, price_issues = _check_price(artifact.price_cents, research_data)
     all_issues.extend(price_issues)
-    research_alignment = _check_research_alignment(artifact, research_data)
+    research_alignment, alignment_issues = _check_research_alignment(artifact, research_data)
+    all_issues.extend(alignment_issues)
 
     overall = (
         desc_score * 0.30
