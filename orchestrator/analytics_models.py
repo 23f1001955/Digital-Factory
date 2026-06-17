@@ -1,5 +1,6 @@
 """Analytics data models for sales tracking and insights."""
 
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -43,10 +44,16 @@ class Insights(BaseModel):
 
         sorted_products = sorted(records, key=lambda r: r.revenue, reverse=True)
 
+        monthly: dict[str, float] = defaultdict(float)
+        for r in records:
+            monthly[r.date.strftime("%Y-%m")] += r.revenue
+        monthly_revenue_trend = [{"month": k, "revenue": round(v, 2)} for k, v in sorted(monthly.items())]
+
         return cls(
             top_products=sorted_products[:5],
             avg_conversion_rate=round(avg_conv, 2),
             best_channel=best_channel,
+            monthly_revenue_trend=monthly_revenue_trend,
             total_revenue=round(total_revenue, 2),
             last_updated=datetime.now(),
         )

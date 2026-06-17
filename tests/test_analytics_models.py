@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from orchestrator.analytics_models import SalesRecord, Insights, load_sales_records, save_sales_records, load_insights
+from orchestrator.analytics_models import SalesRecord, Insights, load_sales_records, save_sales_records, save_insights, load_insights
 
 
 def test_sales_record_defaults():
@@ -64,3 +64,18 @@ def test_insights_from_records():
 def test_load_sales_records_nonexistent(tmp_path):
     loaded = load_sales_records(str(tmp_path / "nonexistent.json"))
     assert loaded == []
+
+
+def test_insights_serialization_roundtrip(tmp_path):
+    i = Insights(total_revenue=500.0, avg_conversion_rate=2.5)
+    path = tmp_path / "insights.json"
+    save_insights(i, str(path))
+    loaded = load_insights(str(path))
+    assert loaded is not None
+    assert loaded.total_revenue == 500.0
+    assert loaded.avg_conversion_rate == 2.5
+
+
+def test_load_insights_nonexistent(tmp_path):
+    loaded = load_insights(str(tmp_path / "nonexistent.json"))
+    assert loaded is None
