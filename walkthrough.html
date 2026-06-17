@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Factory — Pipeline Walkthrough</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+            fontSize: 14
+        });
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #58a6ff;
+        }
+        .subtitle {
+            color: #8b949e;
+            margin-bottom: 32px;
+        }
+        .mermaid {
+            background: #161b22;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            overflow-x: auto;
+        }
+        .section {
+            margin-top: 48px;
+        }
+        .section h2 {
+            color: #f0f6fc;
+            font-size: 22px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .card h3 {
+            color: #58a6ff;
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+        .card p {
+            color: #8b949e;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .card .badge {
+            display: inline-block;
+            background: #1f6feb33;
+            color: #58a6ff;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #21262d;
+            font-size: 13px;
+        }
+        th {
+            color: #8b949e;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        td { color: #e6edf3; }
+        tr:hover td { background: #161b22; }
+        .stats {
+            display: flex;
+            gap: 24px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 28px;
+            text-align: center;
+        }
+        .stat .num {
+            font-size: 32px;
+            font-weight: 700;
+            color: #58a6ff;
+        }
+        .stat .label {
+            font-size: 12px;
+            color: #8b949e;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Digital Factory — Pipeline Walkthrough</h1>
+<p class="subtitle">Automated AI pipeline: niche research → product generation → publishing → promotion</p>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="num">18</div>
+            <div class="label">Agents</div>
+        </div>
+        <div class="stat">
+            <div class="num">16</div>
+            <div class="label">Product Schemas</div>
+        </div>
+        <div class="stat">
+            <div class="num">48+</div>
+            <div class="label">Tests</div>
+        </div>
+        <div class="stat">
+            <div class="num">136</div>
+            <div class="label">Commits</div>
+        </div>
+        <div class="stat">
+            <div class="num">52</div>
+            <div class="label">Roadmap Items</div>
+        </div>
+    </div>
+
+<div class="section">
+    <h2>Pipeline Architecture</h2>
+    <div class="mermaid">
+        flowchart TB
+            subgraph Input["Input Layer"]
+                A1["CLI Wizard (interactive Typer prompts)"]
+                A2["Batch CSV (multi-product via --batch)"]
+                A3["Resume Mode (--resume from last state)"]
+            end
+
+            subgraph Core["Orchestrator Engine"]
+                B["Orchestrator (DAG topological sort, error isolation, resumable state, dynamic pipeline expansion)"]
+                C["Product Schema (16 JSON schemas define component DAG per product type)"]
+                D["Job State (JSON persistence per component, enables resume on failure)"]
+            end
+
+            subgraph Research["Research & Planning"]
+                E["market_agent (Web, Reddit, News, Trends, GDelt, Firecrawl deep scrape, competitor analysis)"]
+                F["research_agent (legacy research)"]
+            end
+
+            subgraph Content["Content Generation"]
+                G["content_agent (LLM + Jinja2 prompt templates, extensive Markdown)"]
+                H["catalog_agent (prompt/resource collections, structured JSON catalogs)"]
+                I["csv_export_agent (tabular data to CSV / XLSX)"]
+            end
+
+            subgraph Visuals["Media & Visuals"]
+                J["image_agent (Imagen → Gemini → SVG fallback, cover.png, thumbnail.png)"]
+                K["visual_agent (secondary image generation)"]
+                L["diagram_agent (Mermaid.js code generation)"]
+            end
+
+            subgraph Rendering["Rendering & Formatting"]
+                M["render_agent (Markdown → Jinja2 HTML/CSS → Playwright PDF)"]
+                N["renderers/ (PlaywrightRenderer active, AntigravityRenderer stub)"]
+            end
+
+            subgraph Notion["Notion Integration"]
+                O["notion_schema_agent (LLM designs database architecture)"]
+                P["notion_agent (Notion API: creates databases, properties, relations, pages)"]
+                Q["notion_content_agent (pushes markdown as Notion blocks, used in notion_only mode)"]
+            end
+
+            subgraph Publishing["Packaging, Publishing & Promotion"]
+                R["packaging_agent (collects all deliverables from _delivery_map → {slug}.zip)"]
+                S["gumroad_agent (research → sales copy → upload ZIP + images → publish via API)"]
+                T["landing_agent (Design Intelligence brief → LLM HTML → Vercel deploy)"]
+                U["social_agent (post to Facebook / Instagram / Threads / Pinterest)"]
+            end
+
+            subgraph DI["Design Intelligence"]
+                V["design_intelligence/ (6 design skill rules, 12 vibes, 12 layout patterns, brief generator)"]
+            end
+
+            subgraph Quality["Quality Validation"]
+                QA["evaluation_agent (pattern checks + LLM hallucination cross-ref)"]
+                QB["review_agent (human-in-the-loop review logs)"]
+                QC["orchestrator/quality.py (scoring criteria, 25 AI-ism patterns)"]
+                QD["orchestrator/notify.py (alert dispatch + webhook)"]
+            end
+
+            A1 --> B
+            A2 --> B
+            A3 --> B
+            B --> C
+            B --> D
+            B --> E
+            E -->|"schema switch, pipeline plan merge, format recommendations"| B
+            E --> F
+            E --> G
+            E --> H
+            E --> I
+            G --> J
+            G --> L
+            G --> M
+            M --> N
+            H --> M
+            G -.->|"quality gate"| QA
+            H -.->|"quality gate"| QA
+            I -.->|"quality gate"| QA
+            J -.->|"quality gate"| QA
+            L -.->|"quality gate"| QA
+            M -.->|"quality gate"| QA
+            E -.->|"quality gate"| QA
+            QA -->|"score < 0.6 → fix prompt → retry (max 2)"| G
+            QA -->|"needs_human_review"| QB
+            QA --> QC
+            QA --> QD
+            E --> O
+            O --> P
+            P --> Q
+            J --> R
+            G --> R
+            M --> R
+            I --> R
+            L --> R
+            Q --> R
+            R --> S
+            G --> T
+            V --> T
+            T --> U
+    </div>
+</div>
+
+<div class="section">
+    <h2>Execution Order (Typical Research Pack)</h2>
+    <div class="mermaid">
+        flowchart LR
+            MR["market_research"] --> IM["images"]
+            MR --> CO["content"]
+            CO --> RE["render"]
+            RE --> PA["package"]
+            IM --> CSV["csv_export"]
+            CO --> CSV
+            IM --> DIAG["diagram"]
+            CO --> DIAG
+            MR --> NS["notion_schema"]
+            NS --> NT["notion_tree"]
+            NT --> NC["notion_content"]
+            PA --> GR["gumroad_research"]
+            GR --> GP["gumroad_publish"]
+            CO --> LP["landing_page"]
+            LP --> SP["social_promotion"]
+    </div>
+</div>
+
+<div class="section">
+    <h2>Product Schemas</h2>
+    <table>
+        <tr><th>Schema</th><th>Key Path</th><th>Notion Sync</th></tr>
+        <tr><td>discovery</td><td>market → switch</td><td>❌</td></tr>
+        <tr><td>research_pack</td><td>market → content → render → package</td><td>optional</td></tr>
+        <tr><td>blog_kit</td><td>market → content → render → package</td><td>optional</td></tr>
+        <tr><td>visual_pack</td><td>market → image → render → package</td><td>optional</td></tr>
+        <tr><td>saas_docs</td><td>market → content → render → package</td><td>optional</td></tr>
+        <tr><td>course_launch</td><td>market → content → render → notion → package</td><td>✅</td></tr>
+        <tr><td>operating_system</td><td>market → content → render → notion → package</td><td>✅</td></tr>
+        <tr><td>workflow_kit</td><td>market → image → content → render → notion → package</td><td>✅</td></tr>
+        <tr><td>database</td><td>market → csv_export → package</td><td>optional</td></tr>
+        <tr><td>sop_pack</td><td>market → content → render → package</td><td>optional</td></tr>
+        <tr><td>prompt_pack</td><td>market → catalog → package</td><td>optional</td></tr>
+        <tr><td>resource_pack</td><td>market → catalog → package</td><td>optional</td></tr>
+        <tr><td>swipe_file</td><td>market → content → render → package</td><td>optional</td></tr>
+        <tr><td>checklist</td><td>market → content → render + notion</td><td>✅</td></tr>
+        <tr><td>excel_template</td><td>market → csv_export → package</td><td>optional</td></tr>
+        <tr><td>boilerplate</td><td>market → content → package</td><td>optional</td></tr>
+    </table>
+</div>
+
+    <div class="section">
+        <h2>18 Agents Implemented</h2>
+        <div class="cards">
+            <div class="card"><h3>market_agent</h3><p>Deep market analysis with 8 real-time data sources. 151 lines.</p><span class="badge">Research</span></div>
+            <div class="card"><h3>research_agent</h3><p>Legacy content research (fallback). 81 lines.</p><span class="badge">Research</span></div>
+            <div class="card"><h3>content_agent</h3><p>LLM-driven Markdown content generation. 102 lines.</p><span class="badge">Content</span></div>
+            <div class="card"><h3>catalog_agent</h3><p>Prompt/resource catalog generation. 70 lines.</p><span class="badge">Content</span></div>
+            <div class="card"><h3>csv_export_agent</h3><p>CSV + XLSX multi-format export. 71 lines.</p><span class="badge">Content</span></div>
+            <div class="card"><h3>image_agent</h3><p>3-tier image generation with SVG fallback. 299 lines.</p><span class="badge">Visuals</span></div>
+            <div class="card"><h3>visual_agent</h3><p>Secondary pre-prompted image generation. 52 lines.</p><span class="badge">Visuals</span></div>
+            <div class="card"><h3>diagram_agent</h3><p>Mermaid diagram code generation. 34 lines.</p><span class="badge">Visuals</span></div>
+            <div class="card"><h3>render_agent</h3><p>Markdown → HTML → PDF via Playwright. 172 lines.</p><span class="badge">Rendering</span></div>
+            <div class="card"><h3>packaging_agent</h3><p>ZIP bundling via _delivery_map. 110 lines.</p><span class="badge">Publishing</span></div>
+            <div class="card"><h3>evaluation_agent</h3><p>Quality validation: pattern checks + LLM hallucination detection. 177 lines.</p><span class="badge">Quality</span></div>
+            <div class="card"><h3>review_agent</h3><p>Human-in-the-loop review logs. 73 lines.</p><span class="badge">Quality</span></div>
+            <div class="card"><h3>notion_schema_agent</h3><p>LLM-generated Notion database blueprints. 71 lines.</p><span class="badge">Notion</span></div>
+            <div class="card"><h3>notion_agent</h3><p>Notion API: databases, relations, pages. 566 lines.</p><span class="badge">Notion</span></div>
+            <div class="card"><h3>notion_content_agent</h3><p>Notion block content writer. 127 lines.</p><span class="badge">Notion</span></div>
+            <div class="card"><h3>gumroad_agent</h3><p>Research + publish via Gumroad API. 720 lines.</p><span class="badge">Publishing</span></div>
+            <div class="card"><h3>landing_agent</h3><p>Design Intelligence + Vercel deploy. 204 lines.</p><span class="badge">Publishing</span></div>
+            <div class="card"><h3>social_agent</h3><p>Cross-platform social promotion. 345 lines.</p><span class="badge">Publishing</span></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Git Milestones (136 commits)</h2>
+        <table>
+            <tr><th>#</th><th>Milestone</th></tr>
+            <tr><td>1</td><td>Initial scaffolding — project structure, __init__.py, basic packaging</td></tr>
+            <tr><td>2</td><td>PDF rendering — Playwright-based HTML→PDF with design system</td></tr>
+            <tr><td>3</td><td>Notion integration v2 — databases, properties, relations, sample entries</td></tr>
+            <tr><td>4</td><td>Landing pages — Vercel landing page deployment</td></tr>
+            <tr><td>5</td><td>Social promotion — Facebook, Instagram, Threads, Pinterest</td></tr>
+            <tr><td>6</td><td>Market agent — pre-content competitive intelligence with 8 data sources</td></tr>
+            <tr><td>7</td><td>Image generation — unified image_agent with 3-tier fallback chain</td></tr>
+            <tr><td>8</td><td>Gumroad publishing — full presign-upload-complete flow</td></tr>
+            <tr><td>9</td><td>Delivery routing — _delivery_map, packaging/gumroad use delivery tags</td></tr>
+            <tr><td>10</td><td>Pipeline plans — LLM dynamically injects new DAG components</td></tr>
+            <tr><td>11</td><td>Schema expansion — 8 more product schemas (Phase 2)</td></tr>
+            <tr><td>12</td><td>Discovery mode — auto-detect product type from market research</td></tr>
+            <tr><td>13</td><td>Notion-only mode — standalone Notion template products</td></tr>
+            <tr><td>14</td><td>Design Intelligence — 6 rules, 12 vibes, 12 patterns, brief generator</td></tr>
+            <tr><td>15</td><td>Stitch removal — replaced StitchMCP with Design Intelligence</td></tr>
+            <tr><td>16</td><td>Multi-format delivery — CSV+XLSX, format recommendations, output_paths</td></tr>
+            <tr><td>17</td><td>Cleanup — removed stitch_agent, old plans/specs</td></tr>
+            <tr><td>18</td><td>Channel Layer — BaseChannel ABC, GumroadChannel, channel registry</td></tr>
+            <tr><td>19</td><td>Offer Scoring — scoring framework with weighted metrics, offer_scoring_agent</td></tr>
+            <tr><td>20</td><td>Quality Validation — evaluation_agent, pattern + LLM checks, auto-retry, review_agent, alerts</td></tr>
+        </table>
+    </div>
+
+</body>
+</html>

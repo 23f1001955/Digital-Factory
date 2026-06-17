@@ -18,11 +18,13 @@ User Input (CLI wizard / batch CSV)
          ├── render_agent      → Markdown → HTML → PDF (Playwright Chromium)
          ├── csv_export_agent  → JSON → CSV / XLSX
          ├── catalog_agent     → Prompt/resource catalogs as JSON
-         ├── diagram_agent     → Mermaid.js diagrams
-         ├── gumroad_agent     → Research → Publish to Gumroad (files, images, rich content)
-         ├── landing_agent     → Design Intelligence + LLM → HTML → ZIP → Vercel deploy
-         ├── social_agent      → Copy + images → Facebook / Instagram / Threads / Pinterest
-         └── packaging_agent   → ZIP all deliverables
+          ├── diagram_agent     → Mermaid.js diagrams
+          ├── evaluation_agent → Quality validation (pattern checks + LLM hallucination detection)
+          ├── review_agent     → Human-in-the-loop review logs for flagged content
+          ├── gumroad_agent     → Research → Publish to Gumroad (files, images, rich content)
+          ├── landing_agent     → Design Intelligence + LLM → HTML → ZIP → Vercel deploy
+          ├── social_agent      → Copy + images → Facebook / Instagram / Threads / Pinterest
+          └── packaging_agent   → ZIP all deliverables
 ```
 
 ## Key Features
@@ -31,6 +33,7 @@ User Input (CLI wizard / batch CSV)
 - **16 Product Schemas** — Research Pack, Blog Kit, Visual Pack, SaaS Docs, Course Launch Kit, Operating System, Workflow Kit, Curated Database, SOP Pack, Prompt Pack, Resource Pack, Swipe File, Checklist, Excel Template, Boilerplate, and discovery
 - **Design Intelligence** — Landing pages generated via LLM + curated design skill rules (6 rule files, 12 design vibes, 12 layout patterns) — no external design service dependency
 - **Multi-Format Delivery** — Agents produce CSV + XLSX, recommended formats based on niche analysis
+- **Quality Validation** — Pattern-based checks (AI-isms, word count, empty sections) + LLM hallucination cross-referencing with auto-retry on failure
 - **Dynamic Pipeline** — Market research LLM generates custom pipeline components per niche
 - **Notion-Only Mode** — Generate standalone Notion template products
 - **Resumable** — Failed pipelines resume from last successful component
@@ -147,8 +150,10 @@ digital-factory/
 │   └── wizard.py                # Interactive CLI wizard
 │
 ├── orchestrator/
-│   ├── models.py                # Pydantic models (ComponentSpec, JobSpec, etc.)
-│   ├── orchestrator.py          # Core pipeline engine
+│   ├── models.py                # Pydantic models (ComponentSpec, JobSpec, QualityReport, etc.)
+│   ├── orchestrator.py          # Core pipeline engine + quality validation gate
+│   ├── quality.py               # Quality scoring criteria (word count, AI-isms, headings, etc.)
+│   ├── notify.py                # Alert dispatch (log + optional webhook)
 │   └── state.py                 # Job state persistence
 │
 ├── agents/
@@ -168,6 +173,8 @@ digital-factory/
 │   ├── notion_content_agent.py  # Notion content writer
 │   ├── notion_schema_agent.py   # Notion blueprint generator
 │   ├── diagram_agent.py         # Mermaid diagram generator
+│   ├── evaluation_agent.py      # Quality validation + hallucination detection
+│   ├── review_agent.py          # Human-in-the-loop review logs
 │   ├── gumroad_agent.py         # Gumroad research + publish
 │   ├── landing_agent.py         # Landing page HTML + deploy
 │   └── social_agent.py          # Social media promotion
@@ -211,6 +218,7 @@ outputs/{slug}/
 ├── job_spec.json                # Original run configuration
 ├── job_state.json               # Pipeline state (resumable)
 ├── run_summary.md               # Component status report
+├── quality-report.json          # Quality evaluation results per component
 ├── data/
 │   ├── market_research.json     # Competitors, pricing, design recs, pipeline plan
 │   └── images_generated.json    # Image URLs
@@ -226,6 +234,8 @@ outputs/{slug}/
 ├── landing/
 │   ├── index.html               # Landing page HTML
 │   └── images/                  # Landing page images
+├── review/
+│   └── *._review.md             # Human-in-the-loop review logs
 ├── presentation/
 │   └── Notion_Template_Link.md  # Notion template link
 └── social_results.json          # Social media post results

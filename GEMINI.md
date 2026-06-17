@@ -32,10 +32,12 @@ The system uses a variety of specialized agents to execute the DAG components:
 - **`notion_schema_agent.py`**: Designs Notion database architecture (properties, relations).
 - **`notion_agent.py`**: Constructs the empty databases and relational structure via Notion API.
 - **`notion_content_agent.py`**: Pushes Markdown content directly into Notion blocks (swaps in for standard content agents during Notion-only mode).
-### 6. Frontend & Web
-- **`stitch_agent.py`**: Generates UI designs and design systems for web apps using the StitchMCP server.
+### 6. Quality Validation
+- **`evaluation_agent.py`**: Evaluates output quality using pattern-based checks (AI-isms, word count, headings) and LLM-based hallucination cross-referencing.
+- **`review_agent.py`**: Creates human-in-the-loop review logs when content is flagged for hallucination or missing citations.
+### 7. Frontend & Web
 - **`landing_agent.py`**: Deploys a live landing page (Next.js/Vercel) using product copy and generated designs.
-### 7. Packaging, Publishing & Promotion
+### 8. Packaging, Publishing & Promotion
 - **`packaging_agent.py`**: Compresses all designated deliverables into a `{slug}.zip` based on the orchestrator's `_delivery_map`.
 - **`gumroad_agent.py`**: Writes sales copy, uploads the ZIP + images, and publishes a live Gumroad product via API.
 - **`social_agent.py`**: Promotes the live product on social media platforms (Twitter, Instagram, Facebook, Pinterest).
@@ -45,4 +47,5 @@ When assisting with this codebase:
 - Maintain the separation of concerns between agents. Do not mix responsibilities.
 - Ensure that delivery routing (`_delivery_map`) correctly links `packaging_agent` outputs to `gumroad_agent` uploads.
 - Any new agent created must be registered in `agents/registry.py` and adhere to the `AgentResult` return type.
-- PDF designs are controlled by `templates/shared/base.css` and Jinja2 templates, not by external Markdown design files unless explicitly routed through StitchMCP.
+- PDF designs are controlled by `templates/shared/base.css` and Jinja2 templates.
+- Quality validation runs as an orchestrator hook after each content-producing agent. New agents added to `EVALUATION_TARGETS` in `agents/evaluation_agent.py` will be automatically validated.

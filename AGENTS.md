@@ -48,16 +48,22 @@ A specialized suite of agents for syncing digital products directly into a user'
 * **`notion_content_agent.py`**
   * **Role**: Swaps in for `content_agent` / `render_agent` when `notion_only` mode is active. Pushes the raw markdown content as Notion blocks directly into the previously created pages.
 ---
-## 6. Frontend & Web Agents
+## 6. Quality Validation Agents
+Runs automatically after each content-producing agent to prevent garbage from reaching customers.
+* **`evaluation_agent.py`**
+  * **Role**: Evaluates output quality using pattern-based checks (word count, headings, AI-isms, empty sections) and LLM-based hallucination cross-referencing against research data. Generates fix prompts for auto-retry.
+  * **Outputs**: `quality-report.json`.
+* **`review_agent.py`**
+  * **Role**: Creates human-in-the-loop review logs when content has hallucination flags or missing citations. Generates structured markdown with issue details and verdict checklist.
+  * **Outputs**: `outputs/{slug}/review/*_review.md`.
+---
+## 7. Frontend & Web Agents
 Creates and deploys live web interfaces for the generated products.
-* **`stitch_agent.py`**
-  * **Role**: Uses the StitchMCP server to generate custom UI designs and design systems for web apps or dashboards based on the product.
-  * **Outputs**: `stitch/manifest.json`.
 * **`landing_agent.py`**
-  * **Role**: Takes the Gumroad checkout links, Stitch UI designs, and product copy, and deploys a live landing page (e.g., via Vercel/Next.js).
+  * **Role**: Takes the product copy and Design Intelligence brief, generates a landing page HTML, and deploys it to Vercel.
   * **Outputs**: `landing/deployed.json`.
 ---
-## 7. Packaging, Publishing & Promotion Agents
+## 8. (was 7) Packaging, Publishing & Promotion Agents
 The final stages of the pipeline: bundling the product, selling it, and marketing it.
 * **`packaging_agent.py`**
   * **Role**: Reads the orchestrator's `_delivery_map` to collect all PDFs, images, and data files designated for the final bundle and compresses them.
