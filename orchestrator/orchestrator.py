@@ -96,7 +96,6 @@ class Orchestrator:
             "notion_schema",
             "notion_tree",
             "gumroad_research",
-            "gumroad_publish",
             "landing_page",
             "social_promotion",
         }
@@ -146,7 +145,6 @@ class Orchestrator:
                     and comp.id
                     not in (
                         "gumroad_research",
-                        "gumroad_publish",
                         "landing_page",
                         "social_promotion",
                     )
@@ -397,11 +395,8 @@ class Orchestrator:
                 logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
                 continue
 
-            # Skip gumroad if not enabled
-            if (
-                component.id in ("gumroad_research", "gumroad_publish")
-                and not self.job_spec.gumroad_enabled
-            ):
+            # Skip gumroad research if not enabled
+            if component.id == "gumroad_research" and not self.job_spec.gumroad_enabled:
                 self.state.components[component.id] = AgentResult(
                     status="skipped", error="gumroad not enabled"
                 )
@@ -546,36 +541,53 @@ class Orchestrator:
                         write_review_log(component, self.job_spec, report)
                         logger.info("Review log created for %s — flagged for human review", component.id)
 
-            # After market_agent completes, check for schema switch + merge pipeline_plan
+            # After market_agent completes: merge pipeline plan and format recs only
             if component.id == "market_research" and result.status == "done":
-                # Check if we're in discovery mode and need to switch schema
                 if self.job_spec.product_type == "discovery":
-                    try:
-                        with open(result.output_path) as f:
-                            research = json.load(f)
-                        recommended = research.get("recommended_product_type")
-                        confidence = research.get("recommendation_confidence", 0)
-                        if recommended and confidence >= 0.5:
-                            self._switch_schema(recommended)
-                        elif recommended:
-                            logger.warning(
-                                "Low confidence (%.2f) for '%s' \u2014 falling back to research_pack",
-                                confidence, recommended,
-                            )
-                            self._switch_schema("research_pack")
-                        else:
-                            logger.warning("No product type recommendation \u2014 falling back to research_pack")
-                            self._switch_schema("research_pack")
-                    except Exception as e:
-                        logger.error("Failed to read market_research.json for schema switch: %s", e)
-                        self._switch_schema("research_pack")
-
+                    pass  # Don't switch schema yet — wait for offer_scoring
                 self._merge_pipeline_plan(result.output_path)
                 self._merge_format_recommendations(result.output_path)
                 ordered_components = self._get_execution_order()
                 idx = 0
                 total = len(ordered_components)
                 logger.info("Pipeline re-planned: %s total components", total)
+
+            # After offer_scoring completes: switch schema based on scoring
+            if component.id == "offer_scoring" and result.status == "done":
+                if self.job_spec.product_type == "discovery":
+                    try:
+                        with open(result.output_path) as f:
+                            research = json.load(f)
+                        scored = research.get("scored_recommendations", [])
+                        if scored:
+                            best = max(scored, key=lambda x: x.get("total_score", 0))
+                            if best.get("total_score", 0) >= 50:
+                                self._switch_schema(best["product_type"])
+                            else:
+                                logger.warning(
+                                    "Best score %.1f below threshold — fallback",
+                                    best.get("total_score", 0),
+                                )
+                                self._switch_schema("research_pack")
+                        else:
+                            recommended = research.get("recommended_product_type")
+                            confidence = research.get("recommendation_confidence", 0)
+                            if recommended and confidence >= 0.5:
+                                self._switch_schema(recommended)
+                            elif recommended:
+                                self._switch_schema("research_pack")
+                            else:
+                                self._switch_schema("research_pack")
+                    except Exception as e:
+                        logger.error("Failed to read scoring output: %s", e)
+                        self._switch_schema("research_pack")
+
+                    self._merge_pipeline_plan(result.output_path)
+                    self._merge_format_recommendations(result.output_path)
+                    ordered_components = self._get_execution_order()
+                    idx = 0
+                    total = len(ordered_components)
+                    logger.info("Pipeline re-planned after scoring: %s total components", total)
 
             # Store landing_page URL for downstream context injection
             if component.id == "landing_page" and result.status == "done":
