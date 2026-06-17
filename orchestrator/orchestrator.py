@@ -8,6 +8,9 @@ from .models import JobSpec, ProductSchema, ComponentSpec, AgentResult, Pipeline
 from .state import load_job_state, save_job_state
 from agents.registry import AGENT_REGISTRY
 from renderers.base import get_renderer
+from agents.evaluation_agent import evaluate, EVALUATION_TARGETS
+from orchestrator.notify import dispatch_alert
+from agents.review_agent import write_review_log
 
 FILE_AGENT_SUBSTITUTIONS = {
     "content_agent": "notion_content_agent",
@@ -17,6 +20,8 @@ FILE_AGENT_SUBSTITUTIONS = {
 }
 
 logger = logging.getLogger(__name__)
+
+MAX_QUALITY_RETRIES = 2
 
 
 class Orchestrator:
@@ -397,6 +402,54 @@ class Orchestrator:
 
             self.state.components[component.id] = result
             save_job_state(self.state, self.state_path)
+
+            # Phase 2: Quality validation gate
+            if result.status == "done" and component.agent in EVALUATION_TARGETS:
+                output_path = result.output_path
+                if output_path and os.path.exists(output_path):
+                    for retry_num in range(MAX_QUALITY_RETRIES + 1):
+                        report = evaluate(component, self.job_spec, context, output_path)
+                        if report.passed:
+                            logger.info(
+                                "Quality check PASSED for %s (score=%.2f)",
+                                component.id, report.score,
+                            )
+                            break
+
+                        if retry_num < MAX_QUALITY_RETRIES:
+                            logger.warning(
+                                "Quality check FAILED for %s (score=%.2f, attempt %d/%d) — retrying",
+                                component.id, report.score, retry_num + 1, MAX_QUALITY_RETRIES,
+                            )
+                            context["_quality_feedback"] = report.fix_prompt
+                            try:
+                                result = agent_func(component, self.job_spec, context)
+                                if result.status == "done":
+                                    output_path = result.output_path
+                                    self.state.components[component.id] = result
+                                    save_job_state(self.state, self.state_path)
+                                else:
+                                    logger.error("Retry agent failed for %s", component.id)
+                                    break
+                            except Exception as e:
+                                logger.error("Retry exception for %s: %s", component.id, e)
+                                break
+                        else:
+                            logger.error(
+                                "Quality check FAILED for %s after %d retries — marking as failed",
+                                component.id, MAX_QUALITY_RETRIES,
+                            )
+                            result = AgentResult(
+                                status="failed",
+                                error=f"Quality check failed after {MAX_QUALITY_RETRIES} retries (score={report.score})",
+                            )
+                            self.state.components[component.id] = result
+                            save_job_state(self.state, self.state_path)
+
+                    dispatch_alert(report, self.job_spec, component.id)
+                    if report.needs_human_review:
+                        write_review_log(component, self.job_spec, report)
+                        logger.info("Review log created for %s — flagged for human review", component.id)
 
             # After market_agent completes, check for schema switch + merge pipeline_plan
             if component.id == "market_research" and result.status == "done":
