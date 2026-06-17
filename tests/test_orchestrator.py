@@ -1051,3 +1051,66 @@ def test_circuit_breaker_resets_with_new_orchestrator(tmp_path):
     orc2._component_failures = {}
     assert orc1._component_failures == {}
     assert orc2._component_failures == {}
+
+
+def test_pipeline_plan_error_message_format(tmp_path, monkeypatch, caplog):
+    """Error messages for rejected components include template reference."""
+    import logging
+    caplog.set_level(logging.WARNING)
+    from orchestrator.orchestrator import Orchestrator
+    from orchestrator.state import load_job_state
+    from orchestrator.models import AgentResult, ProductSchema
+    from agents.registry import AGENT_REGISTRY
+    import json, os
+
+    def _make_job_spec(tmp_path, slug="test-err-msg"):
+        path = tmp_path / "job_spec.json"
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z"}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Test", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": []},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(tmp_path)
+
+    def mock_market(comp, js, ctx):
+        output_dir = os.path.join("outputs", js.slug)
+        os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
+        research = {
+            "niche": "test",
+            "pipeline_plan": {
+                "components": [
+                    {"id": "bad_template", "agent": "content_agent", "output": "x.md", "depends_on": ["market_research"], "template": "bogus_template"},
+                    {"id": "no_template", "agent": "content_agent", "output": "y.md", "depends_on": ["market_research"]},
+                ]
+            },
+        }
+        research_path = os.path.join(output_dir, "data", "market_research.json")
+        with open(research_path, "w") as f:
+            json.dump(research, f)
+        return AgentResult(status="done", output_path=research_path)
+
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", type("Mock", (), {"__call__": lambda self, comp, js, ctx: AgentResult(status="done")})())
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-err-msg" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-err-msg")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+    orc.run()
+
+    warning_text = "\n".join([rec.message for rec in caplog.records if rec.levelno == logging.WARNING])
+    assert "[pipeline_plan]" in warning_text
+    assert "component_templates.py" in warning_text
+    assert "bad_template" in warning_text
+    assert "no_template" in warning_text
