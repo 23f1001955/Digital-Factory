@@ -616,6 +616,17 @@ class Orchestrator:
         if channel_results:
             self._channel_results = channel_results
 
+        # Phase 5: Run analytics after channels
+        if self._channel_results:
+            try:
+                from agents.analytics_agent import run as run_analytics
+                analytics_comp = ComponentSpec(
+                    id="analytics", agent="analytics_agent", output="analytics"
+                )
+                run_analytics(analytics_comp, self.job_spec, {})
+            except Exception as e:
+                logger.warning(f"Analytics agent failed: {e}")
+
         logger.info("Pipeline complete")
         logger.info("Orchestrator run complete. Generating summary report...")
         self._generate_run_summary()
