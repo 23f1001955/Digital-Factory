@@ -2,7 +2,8 @@
   "product_type": "discovery",
   "display_name": "Discovery",
   "components": [
-    {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []}
+    {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []},
+    {"id": "offer_scoring", "agent": "offer_scoring_agent", "output": "data/market_research.json", "depends_on": ["market_research"], "delivery": []}
   ],
   "notion_sync": false
 }
