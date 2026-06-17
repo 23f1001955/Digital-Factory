@@ -68,6 +68,14 @@ def test_concrete_channel_must_implement_abstract_methods():
         FakeChannel()
 
 
+def test_listing_quality_score_defaults():
+    from channels.base import ListingQualityScore
+    score = ListingQualityScore()
+    assert score.overall_score == 0.0
+    assert score.passed is True
+    assert score.issues == []
+
+
 def test_get_analytics_default():
     class MinimalChannel(BaseChannel):
         def validate(self):

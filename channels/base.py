@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ArtifactFile(BaseModel):
@@ -22,8 +22,8 @@ class ProductArtifact(BaseModel):
     price_cents: int = 0
     tags: List[str] = []
     research_data_path: Optional[str] = None
-    cover_variants: list[str] = []
-    thumbnail_variants: list[str] = []
+    cover_variants: List[str] = []
+    thumbnail_variants: List[str] = []
 
 
 class PublishResult(BaseModel):
@@ -37,7 +37,7 @@ class PublishResult(BaseModel):
 class AnalyticsData(BaseModel):
     product_slug: str
     product_id: str
-    date: datetime = datetime.now()
+    date: datetime = Field(default_factory=datetime.now)
     views: int = 0
     sales: int = 0
     revenue: float = 0.0
@@ -53,7 +53,7 @@ class ListingQualityScore(BaseModel):
     cover_score: float = 0.0
     price_score: float = 0.0
     research_alignment: float = 0.0
-    issues: list[str] = []
+    issues: List[str] = []
     passed: bool = True
 
 
