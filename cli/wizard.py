@@ -99,22 +99,45 @@ def run_wizard() -> str | None:
                 )
                 set_key(env_path, "NOTION_PARENT_PAGE_ID", notion_parent_page_id)
 
-    gumroad_enabled = False
+    from channels import CHANNEL_REGISTRY
 
-    gumroad_token = os.getenv("GUMROAD_ACCESS_TOKEN")
-    if not gumroad_token:
-        configure_gumroad = typer.prompt(
-            "Would you like to configure Gumroad publishing for this product? (y/n)",
-            default="n",
-        )
-        if configure_gumroad.lower() == "y":
-            gumroad_token = typer.prompt("Enter your Gumroad access token")
-            set_key(env_path, "GUMROAD_ACCESS_TOKEN", gumroad_token)
-            gumroad_enabled = True
+    channel_configs = []
+
+    print("\nAvailable Channels:")
+    channel_names = list(CHANNEL_REGISTRY.keys())
+    for i, ch_name in enumerate(channel_names, 1):
+        print(f"  {i}. {ch_name.title()}")
+
+    selected = typer.prompt(
+        "Which channels to publish to? (comma-separated numbers, or 'all')",
+        default="1",
+    )
+
+    if selected.strip().lower() == "all":
+        selected_indices = list(range(len(channel_names)))
     else:
-        gumroad_enabled = True
+        selected_indices = []
+        for part in selected.split(","):
+            part = part.strip()
+            if part.isdigit():
+                idx = int(part) - 1
+                if 0 <= idx < len(channel_names):
+                    selected_indices.append(idx)
 
-    if gumroad_enabled:
+    for i, ch_name in enumerate(channel_names):
+        if i in selected_indices:
+            channel_configs.append({
+                "name": ch_name,
+                "enabled": True,
+                "config": {},
+            })
+            if ch_name == "gumroad":
+                gumroad_token = os.getenv("GUMROAD_ACCESS_TOKEN")
+                if not gumroad_token:
+                    gumroad_token = typer.prompt("Enter your Gumroad access token")
+                    set_key(env_path, "GUMROAD_ACCESS_TOKEN", gumroad_token)
+
+    if any(c["name"] == "gumroad" for c in channel_configs):
         validate_market = typer.prompt(
             "Would you like to validate your product type against Gumroad market data? (y/n)",
             default="n",
@@ -183,7 +206,7 @@ def run_wizard() -> str | None:
         "notion_sync": notion_sync,
         "notion_only": notion_only,
         "notion_parent_page_id": notion_parent_page_id,
-        "gumroad_enabled": gumroad_enabled,
+        "channels": channel_configs,
         "landing_page_enabled": landing_page_enabled,
         "social_promotion_enabled": social_promotion_enabled,
         "call_to_action": cta_text,
