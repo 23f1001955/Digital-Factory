@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-18
-**Current phase:** Phase 7 — Platform Expansion (in progress)
+**Current phase:** Phase 8 — Production System Hardening (completed)
 
 ---
 
@@ -165,11 +165,11 @@ class SalesRecord(BaseModel):
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 7.1 | Create Etsy channel | `pending` | P2 | 3d | New `channels/etsy_channel.py` |
-| 7.2 | Create Shopify channel | `pending` | P3 | 3d | New `channels/shopify_channel.py` |
-| 7.3 | Create Own Store channel (Stripe) | `pending` | P2 | 1d | New `channels/store_channel.py` |
-| 7.4 | Add channel configuration UI | `pending` | P2 | 1d | `cli/wizard.py`, `orchestrator/models.py` |
-| 7.5 | Standardize channel output format | `pending` | P1 | 0.5d | `channels/base.py` |
+| 7.1 | Create Etsy channel | `completed` | P2 | 3d | New `channels/etsy_channel.py` |
+| 7.2 | Create Shopify channel | `completed` | P3 | 3d | New `channels/shopify_channel.py` |
+| 7.3 | Create Own Store channel (Stripe) | `completed` | P2 | 1d | New `channels/store_channel.py` |
+| 7.4 | Add channel configuration UI | `completed` | P2 | 1d | `cli/wizard.py`, `orchestrator/models.py` |
+| 7.5 | Standardize channel output format | `completed` | P1 | 0.5d | `channels/base.py` |
 
 **Shopify exclusions (future):** Full theme integration, inventory management, multi-variant support.
 
@@ -195,12 +195,12 @@ class BaseChannel(ABC):
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 8.1 | Add landing page vs direct Gumroad A/B test | `pending` | P2 | 2d | New `tests/conversion_test.py` |
-| 8.2 | Add distribution bottleneck analysis | `pending` | P2 | 1d | `agents/analytics_agent.py` |
-| 8.3 | Add product categorization by value | `pending` | P2 | 1d | `agents/offer_scoring_agent.py` |
-| 8.4 | Add rate-limit aware scheduling | `pending` | P2 | 1d | `orchestrator/orchestrator.py` |
-| 8.5 | Add batch run concurrency control | `pending` | P2 | 1d | `main.py:process_batch` |
-| 8.6 | Improve CLI wizard | `pending` | P3 | 2d | `cli/wizard.py` |
+| 8.1 | Add landing page vs direct Gumroad A/B test | `completed` | P2 | 2d | `orchestrator/conversion_tracker.py` |
+| 8.2 | Add distribution bottleneck analysis | `completed` | P2 | 1d | `orchestrator/bottleneck.py` |
+| 8.3 | Add product categorization by value | `completed` | P2 | 1d | `agents/offer_scoring_agent.py` |
+| 8.4 | Add rate-limit aware scheduling | `completed` | P2 | 1d | `orchestrator/rate_limiter.py` |
+| 8.5 | Add batch run concurrency control | `completed` | P2 | 1d | `orchestrator/concurrency.py` |
+| 8.6 | Improve CLI wizard | `completed` | P3 | 2d | `cli/wizard.py` |
 
 ---
 
@@ -254,6 +254,6 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | 4 — Social Strategy | 6 | 0 | 0 | 6 |
 | 5 — Analytics & Feedback | 7 | 0 | 0 | 7 |
 | 6 — Dynamic Pipeline Safety | 5 | 0 | 0 | 5 |
-| 7 — Platform Expansion | 5 | 5 | 0 | 0 |
-| 8 — Production Hardening | 6 | 6 | 0 | 0 |
-| **Total** | **52** | **11** | **0** | **41** |
+| 7 — Platform Expansion | 5 | 0 | 0 | 5 |
+| 8 — Production Hardening | 6 | 0 | 0 | 6 |
+| **Total** | **52** | **0** | **0** | **52** |

@@ -31,17 +31,20 @@ User Input (CLI wizard / batch CSV)
                                   → Facebook / Instagram / Threads / Pinterest
                                   │
                                   ▼
-     Channel Layer ──── runs after pipeline, consumes artifacts
-          │
-          ├── gumroad_listing  → Tag/pricing/AIDA optimization from market research
-          ├── gumroad_analytics → Analytics pull + listing quality scoring
-          ├── gumroad_ab_testing → Cover/thumbnail variant management
-          └── gumroad_channel  → Publish product + files to Gumroad API
+      Channel Layer ──── runs after pipeline, consumes artifacts
+           │
+           ├── gumroad_listing     → Tag/pricing/AIDA optimization from market research
+           ├── gumroad_analytics   → Analytics pull + listing quality scoring
+           ├── gumroad_ab_testing  → Cover/thumbnail variant management
+           ├── gumroad_channel     → Publish product + files to Gumroad API
+           ├── etsy_channel        → OAuth2 listing create/update + file upload (Phase 7)
+           ├── store_channel       → Stripe Product + Price creation (Phase 7)
+           └── shopify_channel     → REST API product create + image upload (Phase 7)
 ```
 
 ## Key Features
 
-- **Channel Layer** — Pluggable publishing abstraction: `BaseChannel` ABC, `GumroadChannel`, `CHANNEL_REGISTRY`. Channels run after the pipeline, consuming artifacts instead of being embedded in schemas. Easy to add new channels (Etsy, Shopify).
+- **Channel Layer** — Pluggable publishing abstraction: `BaseChannel` ABC, `GumroadChannel`, `EtsyChannel`, `StoreChannel` (Stripe), `ShopifyChannel`, and `CHANNEL_REGISTRY`. Channels run after the pipeline, consuming artifacts instead of being embedded in schemas.
 - **Listing Optimization** — Auto-optimizes Gumroad tags (from competitor research), pricing (median from marketplace data), and descriptions (AIDA framework via LLM) before publishing.
 - **Listing Quality Score** — Post-publish quality check across 5 weighted dimensions (description, tags, cover, price, research alignment) with pass/fail gate.
 - **Analytics Pull** — `get_analytics()` on `GumroadChannel` returns structured `AnalyticsData` (views, sales, revenue, refunds, conversion rate).
@@ -60,6 +63,8 @@ User Input (CLI wizard / batch CSV)
 - **CLI Dashboard** — `python -m cli.dashboard` displays sales summary with ASCII bar charts and formatted insights
 - **Dynamic Pipeline Safety (Phase 6)** — LLM-suggested pipeline components restricted to 6 validated templates (`orchestrator/component_templates.py`); circuit breaker blocks failing templates after 3 failures with structured error messages
 - **Dry-Run Mode** — `python main.py --dry-run` previews the pipeline DAG as a tree without executing any agents
+- **Platform Expansion (Phase 7)** — Multi-channel support: `_run_channels()` iterates `CHANNEL_REGISTRY` generically; Etsy (OAuth2, listing CRUD), Stripe Store (Product + Price), Shopify (REST API, draft products); channel selection UI in wizard and CSV batch mode
+- **Production Hardening (Phase 8)** — Rate-limit aware scheduling with per-API sliding window (`orchestrator/rate_limiter.py`); batch run concurrency control with file-based lock (`orchestrator/concurrency.py`); pipeline bottleneck profiling with p50/p95/p99 percentiles (`orchestrator/bottleneck.py`); landing-vs-direct conversion tracking (`orchestrator/conversion_tracker.py`); value-tier product categorization (free/low/mid/high ticket) with tier-aware pricing; improved CLI wizard with input validation, theme descriptions, and .env pre-check
 - **Notion-Only Mode** — Generate standalone Notion template products
 - **Resumable** — Failed pipelines resume from last successful component
 - **Batch Mode** — Process multiple products from a CSV file
@@ -103,7 +108,7 @@ Prompts for: niche, display name, product type, theme, Notion sync, Gumroad publ
 ```bash
 python main.py --batch products.csv
 ```
-CSV columns: `product_type, niche, theme, slug, notion_sync, gumroad_enabled, landing_page_enabled, social_promotion_enabled, call_to_action`
+CSV columns: `product_type, niche, theme, slug, notion_sync, channels, landing_page_enabled, social_promotion_enabled, call_to_action`
 
 ### Resume Mode
 ```bash
@@ -125,6 +130,12 @@ Continues a previously interrupted pipeline from its last successful component.
 | `NOTION_API_KEY` | Notion sync | Notion API access |
 | `NOTION_PARENT_PAGE_ID` | Notion sync | Parent page for workspace |
 | `GUMROAD_ACCESS_TOKEN` | Gumroad publish | Gumroad API |
+| `ETSY_API_KEY` | Etsy channel | Etsy API v3 |
+| `ETSY_API_SECRET` | Etsy channel | Etsy OAuth2 |
+| `ETSY_ACCESS_TOKEN` | Etsy channel | Etsy OAuth2 token |
+| `STRIPE_SECRET_KEY` | Store channel | Stripe API |
+| `SHOPIFY_STORE_URL` | Shopify channel | Shopify store domain |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify channel | Shopify REST API |
 | `GEMINI_API_KEY` | Image gen / Landing | Image generation |
 | `IMAGEN_API_KEY` | Image gen | Alternative image gen |
 | `IMAGEN_API_URL` | Image gen | Cloudflare Worker URL |
@@ -228,7 +239,10 @@ digital-factory/
 │   ├── gumroad_channel.py       # GumroadChannel (publish via presigned uploads)
 │   ├── gumroad_listing.py       # Tag/pricing/AIDA optimization (consumes market_research.json)
 │   ├── gumroad_analytics.py     # Analytics pull + listing quality scoring
-│   └── gumroad_ab_testing.py    # Cover/thumbnail A/B variant management
+│   ├── gumroad_ab_testing.py    # Cover/thumbnail A/B variant management
+│   ├── etsy_channel.py          # EtsyChannel — OAuth2 listing create/update (Phase 7)
+│   ├── store_channel.py         # StoreChannel — Stripe Product+Price (Phase 7)
+│   └── shopify_channel.py       # ShopifyChannel — REST API draft products (Phase 7)
 │
 ├── design_intelligence/
 │   ├── models.py                # LandingPattern, DesignBrief
@@ -248,7 +262,7 @@ digital-factory/
 ├── prompts/                     # 33 Jinja2 prompt templates
 ├── templates/                   # HTML/CSS render templates
 ├── renderers/                   # PDF rendering engines
-├── tests/                       # 254 pytest tests (70 added in Phase 4-5, 20 added in Phase 6)
+├── tests/                       # 298 pytest tests (28 added in Phase 8)
 └── docs/superpowers/            # Design specs & implementation plans
 ```
 
@@ -258,7 +272,7 @@ digital-factory/
 pytest tests/ -v
 ```
 
-Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only, channel publishing, template validation, circuit breaker), all agents (with API mocks), channel base ABC + GumroadChannel, schema validation (all 16 schemas), scoring engine (14 tests across 6 weighted metrics), multi-format delivery, pipeline plan merging (with template registry restrictions), listing optimization (tags, pricing, AIDA), analytics pull + quality scoring, A/B variant management, social strategy (60 tests across calendar, sequences, repurposing, engagement, platform strategy, automation, scheduler modules), analytics models (9 tests), analytics agent (5 tests), dashboard (5 tests), feedback loop (14 tests), component templates (10 tests), dry-run mode (3 tests).
+Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only, channel publishing, template validation, circuit breaker), all agents (with API mocks), channel base ABC + GumroadChannel, schema validation (all 16 schemas), scoring engine (14 tests across 6 weighted metrics), multi-format delivery, pipeline plan merging (with template registry restrictions), listing optimization (tags, pricing, AIDA), analytics pull + quality scoring, A/B variant management, social strategy (60 tests across calendar, sequences, repurposing, engagement, platform strategy, automation, scheduler modules), analytics models (9 tests), analytics agent (5 tests), dashboard (5 tests), feedback loop (14 tests), component templates (10 tests), dry-run mode (3 tests), rate limiter (5 tests), concurrency lock (5 tests), bottleneck tracker (5 tests), conversion tracker (5 tests), value tier classification (4 tests), wizard (4 tests).
 
 ## Output Structure
 

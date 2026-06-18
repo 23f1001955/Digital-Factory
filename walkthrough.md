@@ -2,7 +2,7 @@
 
 ## What We've Built
 
-An automated AI pipeline that researches market niches, generates complete digital products (reports, templates, courses, databases, prompt packs, and more), packages them, publishes to Gumroad, deploys landing pages to Vercel, promotes on social media, and syncs to Notion — all from a single CLI command.
+An automated AI pipeline that researches market niches, generates complete digital products (reports, templates, courses, databases, prompt packs, and more), packages them, publishes via a pluggable Channel Layer (Gumroad, Etsy, Shopify, Stripe), deploys landing pages to Vercel, promotes on social media, and syncs to Notion — all from a single CLI command.
 
 ---
 
@@ -10,7 +10,7 @@ An automated AI pipeline that researches market niches, generates complete digit
 
 ```mermaid
 flowchart TB
-    subgraph Input["Input Layer"]
+    subgraph Input["Step 1 — Input Layer"]
         A1["CLI Wizard<br/><i>interactive Typer prompts</i>"]
         A2["Batch CSV<br/><i>multi-product via --batch</i>"]
         A3["Resume Mode<br/><i>--resume from last state</i>"]
@@ -23,50 +23,50 @@ flowchart TB
         D["Job State<br/><i>JSON persistence per component<br/>enables resume on failure</i>"]
     end
 
-    subgraph Research["Research & Scoring"]
+    subgraph Research["Step 2 — Research & Scoring"]
         E["market_agent<br/><i>Web • Reddit • News • Trends • GDelt • Etsy • Gumroad<br/>Firecrawl deep scrape • competitor analysis<br/>→ market_research.json</i>"]
         E2["offer_scoring_agent<br/><i>6 weighted metrics • deterministic scoring<br/>Etsy/Gumroad marketplace data<br/>→ scored_recommendations[]</i>"]
         F["research_agent<br/><i>legacy research agent</i>"]
     end
 
-    subgraph Content["Content Generation"]
+    subgraph Content["Step 3 — Content Generation"]
         G["content_agent<br/><i>LLM + Jinja2 prompt templates<br/>→ extensive Markdown</i>"]
         H["catalog_agent<br/><i>prompt/resource collections<br/>→ structured JSON catalogs</i>"]
         I["csv_export_agent<br/><i>tabular data → CSV / XLSX</i>"]
     end
 
-    subgraph Visuals["Media & Visuals"]
+    subgraph Visuals["Step 3 — Media & Visuals"]
         J["image_agent<br/><i>Imagen → Gemini → SVG fallback<br/>→ cover.png, thumbnail.png</i>"]
         K["visual_agent<br/><i>secondary image generation</i>"]
         L["diagram_agent<br/><i>Mermaid.js code generation<br/>→ *.mmd diagrams</i>"]
     end
 
-    subgraph Rendering["Rendering & Formatting"]
+    subgraph Rendering["Step 3 — Rendering & Formatting"]
         M["render_agent<br/><i>Markdown → Jinja2 HTML/CSS<br/>→ Playwright PDF → *.pdf</i>"]
         N["renderers/<br/><i>PlaywrightRenderer (active)<br/>AntigravityRenderer (stub)</i>"]
     end
 
-    subgraph Quality["Quality Validation"]
+    subgraph Quality["Step 4 — Quality Validation (cross-cutting gate)"]
         QA["evaluation_agent<br/><i>pattern checks • AI-ism detection<br/>LLM hallucination cross-ref<br/>→ quality-report.json</i>"]
         QB["review_agent<br/><i>human-in-the-loop review logs<br/>when hallucination flags found</i>"]
         QC["orchestrator/quality.py<br/><i>scoring criteria • thresholds<br/>25 AI-ism patterns</i>"]
         QD["orchestrator/notify.py<br/><i>alert dispatch • optional<br/>QUALITY_WEBHOOK_URL</i>"]
     end
 
-    subgraph Notion["Notion Integration"]
+    subgraph Notion["Step 5 — Notion Integration (parallel)"]
         O["notion_schema_agent<br/><i>LLM designs database architecture<br/>→ notion_schema.json</i>"]
         P["notion_agent<br/><i>Notion API: creates databases,<br/>properties, relations, pages</i>"]
         Q["notion_content_agent<br/><i>pushes markdown as Notion blocks<br/>used in notion_only mode</i>"]
     end
 
-    subgraph Publishing["Packaging, Publishing & Promotion"]
+    subgraph Publishing["Step 5 — Packaging, Publishing & Promotion"]
         R["packaging_agent<br/><i>collects all deliverables from<br/>_delivery_map → {slug}.zip</i>"]
         S["gumroad_agent<br/><i>Gumroad market research → competitors[]<br/>pricing/tags data → channel listing opt<br/>(publish moved to channel layer)</i>"]
         T["landing_agent<br/><i>Design Intelligence brief →<br/>LLM HTML → Vercel deploy</i>"]
         U["social_agent + social/ package<br/><i>Phase 4 strategy: calendar → sequences<br/>→ repurpose → adapt → schedule → dispatch<br/>social/ (models, calendar, sequences,<br/>repurposing, engagement, platform_strategy,<br/>automation, scheduler)</i>"]
     end
 
-    subgraph Channels["Channel Layer (post-pipeline — iterates registry)"]
+    subgraph Channels["Step 6 — Channel Layer (post-pipeline artifact publishing)"]
         X["gumroad_channel<br/><i>GumroadChannel: product create/update<br/>presigned upload → cover + thumbnail<br/>listing opt (tags/price/AIDA) • quality score<br/>A/B variants • research_data merge</i>"]
         EC["etsy_channel<br/><i>EtsyChannel: OAuth2 listing CRUD<br/>file upload → draft→active state</i>"]
         SC["store_channel<br/><i>StoreChannel: Stripe Product+Price<br/>creation/update via Stripe API</i>"]
@@ -80,7 +80,7 @@ flowchart TB
         DR["dry_run.py<br/><i>DAG tree printer<br/>used by --dry-run mode</i>"]
     end
 
-    subgraph Analytics["Analytics & Feedback (Phase 5)"]
+    subgraph Analytics["Step 7 — Analytics & Feedback (Phase 5, post-pipeline)"]
         AA["analytics_agent<br/><i>iterates CHANNEL_REGISTRY<br/>get_analytics() per channel<br/>→ SalesRecord → Insights</i>"]
         AM["analytics_models.py<br/><i>SalesRecord • Insights<br/>JSON persistence • dedup</i>"]
         FL["feedback_loop.py<br/><i>past performance →<br/>market prompts +<br/>scoring adjustments</i>"]
@@ -196,10 +196,17 @@ flowchart TB
 
 ---
 
-## Execution Order (Complete Pipeline — All Phases)
+## Execution Order (Complete Pipeline — 7 Steps)
 
 ```
-═══ Phase 0–1: Research → Scoring → Dynamic Planning ═══
+╔══════════════════════════════════════════════════════════╗
+║  Step 1 — Setup: Input → Orchestrator                   ║
+║  (CLI wizard/CSV → DAG build → schema load → job state) ║
+╚══════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════╗
+║  Step 2 — Research → Scoring → Dynamic Planning         ║
+╚══════════════════════════════════════════════════════════╝
 
 market_research ──→ offer_scoring ──→ pipeline_plan_merge ──→ images
        │                │                    │
@@ -208,7 +215,9 @@ market_research ──→ offer_scoring ──→ pipeline_plan_merge ──→ 
        │                                      └── dynamic components
        │                                         (case_study, faq_section, etc.)
 
-═══ Phase 2: Content Generation + Quality Validation ═══
+╔══════════════════════════════════════════════════════════╗
+║  Step 3 — Product Generation: Content + Media + Render   ║
+╚══════════════════════════════════════════════════════════╝
 
 images ──→ content ──→ ┌───────────────────────────────────┐
 csv_export              │ Quality Validation Gate          │
@@ -228,15 +237,17 @@ render                  │ score < 0.6 → fix prompt → retry  │
                                   [passed or failed]
                                        │
                                        ▼
-                                  package  (bundles all done deliverables)
+                                   package  (bundles all done deliverables)
 
-═══════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════╗
+║  Step 4 — Campaign Prep: Notion + Landing + Social      ║
+╚══════════════════════════════════════════════════════════╝
 
 notion_schema ──→ notion_tree ──→ notion_content  (parallel branch)
 gumroad_research  (competitors + pricing data → channel listing opt)
 landing_page  (after content + Design Intelligence)
 
-social_strategy (Phase 4):
+social_strategy:
   content repurpose (1 pack → 10+ posts)
     → calendar (7-14 day schedule)
       → sequences (teaser/launch/followup/testimonial/repurpose)
@@ -245,11 +256,17 @@ social_strategy (Phase 4):
             → dispatch → Facebook / Instagram / Threads / Pinterest
               → automation (DM/comment webhooks + auto-reply)
 
-═══════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════╗
+║  Step 5 — Package All Deliverables                      ║
+╚══════════════════════════════════════════════════════════╝
 
-[Pipeline Complete]
+[Pipeline Complete — artifacts ready]
        │
        ▼
+╔══════════════════════════════════════════════════════════╗
+║  Step 6 — Channel Layer: Publish to Marketplaces        ║
+╚══════════════════════════════════════════════════════════╝
+
 Channel Layer ──→ _run_channels() iterates CHANNEL_REGISTRY
        │              │
        │              ├── ProductArtifact.research_data_path = market_research.json
@@ -268,12 +285,14 @@ Channel Layer ──→ _run_channels() iterates CHANNEL_REGISTRY
        │              ├── store_channel.publish(artifacts)
        │              └── shopify_channel.publish(artifacts)
        │
-       │              → product_url(s) injected into context
-       │
-       ▼
-═══════════════════════════════════════════════════════
+        │              → product_url(s) injected into context
+        │
+        ▼
+╔══════════════════════════════════════════════════════════╗
+║  Step 7 — Analytics & Feedback Loop                     ║
+╚══════════════════════════════════════════════════════════╝
 
-Analytics & Feedback (Phase 5)
+Analytics & Feedback
        │
        ├── analytics_agent ──→ iterates CHANNEL_REGISTRY
        │       │                  calls get_analytics() per channel
@@ -294,9 +313,10 @@ Analytics & Feedback (Phase 5)
        └── cli/dashboard ──→ python -m cli.dashboard --slug <slug>
                             table + ASCII bar chart + insights
 
-═══════════════════════════════════════════════════════
+╔══════════════════════════════════════════════════════════╗
+║  Cross-cutting: Pipeline Safety (Phase 6)               ║
+╚══════════════════════════════════════════════════════════╝
 
-Pipeline Safety (cross-cutting, Phase 6):
   Every dynamic component from pipeline_plan validated against:
     component_templates.py — 6 registered templates only
     LOCKED_FIELDS — LLM cannot override {id, agent, output}
@@ -553,4 +573,4 @@ Key milestones in order:
 
 9 phases across: Channel Layer, Offer Scoring, Quality Validation, Analytics, Platform Expansion, Advanced Delivery, AI Improvements, Enterprise Features, Monitoring.
 
-**Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6). Phase 3 — Gumroad Listing Optimization (6/6). Phase 4 — Social Strategy (6/6). **Phase 5 — Analytics & Feedback Loop (7/7). Phase 6 — Dynamic Pipeline Safety (5/5). Phase 7 — Platform Expansion (5/5).**
+**Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6). Phase 3 — Gumroad Listing Optimization (6/6). Phase 4 — Social Strategy (6/6). **Phase 5 — Analytics & Feedback Loop (7/7). Phase 6 — Dynamic Pipeline Safety (5/5). Phase 7 — Platform Expansion (5/5). Phase 8 — Production System Hardening (6/6).**
