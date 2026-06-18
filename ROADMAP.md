@@ -2,8 +2,8 @@
 
 > Living document. Update status as items are completed.
 
-**Last updated:** 2026-06-17
-**Current phase:** Phase 5 completed → Phase 6 recommended
+**Last updated:** 2026-06-18
+**Current phase:** Phase 6 completed → Phase 7 recommended
 
 ---
 
@@ -140,11 +140,11 @@ class SalesRecord(BaseModel):
 
 | # | Item | Status | Priority | Est. | Files |
 |---|------|--------|----------|------|-------|
-| 6.1 | Restrict dynamic pipeline: LLM suggests → system maps to templates | `pending` | P2 | 1d | `orchestrator/orchestrator.py:_merge_pipeline_plan` |
-| 6.2 | Build component template registry | `pending` | P2 | 1d | New `orchestrator/component_templates.py` |
-| 6.3 | Add circuit breaker for dynamic components | `pending` | P2 | 0.5d | `orchestrator/orchestrator.py` |
-| 6.4 | Improve error messages | `pending` | P2 | 0.5d | `orchestrator/orchestrator.py` |
-| 6.5 | Add dry-run mode for pipeline plans | `pending` | P2 | 1d | `cli/dry_run.py` or `cli/wizard.py` |
+| 6.1 | Restrict dynamic pipeline: LLM suggests → system maps to templates | `completed` | P2 | 1d | `orchestrator/orchestrator.py:_merge_pipeline_plan` |
+| 6.2 | Build component template registry | `completed` | P2 | 1d | `orchestrator/component_templates.py` |
+| 6.3 | Add circuit breaker for dynamic components | `completed` | P2 | 0.5d | `orchestrator/orchestrator.py` |
+| 6.4 | Improve error messages | `completed` | P2 | 0.5d | `orchestrator/orchestrator.py` |
+| 6.5 | Add dry-run mode for pipeline plans | `completed` | P2 | 1d | `cli/dry_run.py` |
 
 **Component template registry:**
 
@@ -236,7 +236,7 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 0.5 → 0.6               (Decouple remaining)
 4.1 → 4.2 → 4.3        (Social strategy)
 5.4 → 5.5               (Feedback loop — self-improvement)
-6.1 → 6.2               (Pipeline safety)
+6.1 → 6.2 → 6.3 → 6.4 → 6.5 (Pipeline safety — ✅ complete)
 ```
 
 ---
@@ -251,7 +251,7 @@ These data sources feed into the Offer Scoring Engine (Phase 1) and Market Resea
 | 3 — Gumroad Listing Opt. | 6 | 0 | 0 | 6 |
 | 4 — Social Strategy | 6 | 0 | 0 | 6 |
 | 5 — Analytics & Feedback | 7 | 0 | 0 | 7 |
-| 6 — Dynamic Pipeline Safety | 5 | 5 | 0 | 0 |
+| 6 — Dynamic Pipeline Safety | 5 | 0 | 0 | 5 |
 | 7 — Platform Expansion | 5 | 5 | 0 | 0 |
 | 8 — Production Hardening | 6 | 6 | 0 | 0 |
-| **Total** | **52** | **16** | **0** | **36** |
+| **Total** | **52** | **11** | **0** | **41** |
