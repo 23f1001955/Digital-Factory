@@ -46,6 +46,8 @@ class RateLimiter:
         return 0.0
 
     def record_call(self, service: str) -> None:
+        if service not in self.services:
+            return
         if service not in self._windows:
             self._windows[service] = []
         self._windows[service].append(time.monotonic())

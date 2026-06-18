@@ -2,7 +2,6 @@ import os
 import sys
 import csv
 import json
-import time
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
@@ -18,6 +17,11 @@ logger = logging.getLogger("main")
 
 from cli.wizard import run_wizard, slugify
 from orchestrator.orchestrator import Orchestrator
+from orchestrator.rate_limiter import RateLimiter, ServiceConfig
+
+_batch_rate_limiter = RateLimiter({
+    "batch_delay": ServiceConfig(max_calls=1, window_seconds=3),
+})
 
 
 def process_batch(csv_path: str):
@@ -83,7 +87,8 @@ def process_batch(csv_path: str):
             orchestrator.run()
 
             # Rate-limit between batch runs — respect API free tiers
-            time.sleep(3)
+            _batch_rate_limiter.wait_if_needed("batch_delay")
+            _batch_rate_limiter.record_call("batch_delay")
 
 
 def main():
