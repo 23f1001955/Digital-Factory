@@ -46,8 +46,6 @@ def process_batch(csv_path: str):
                 "notion_parent_page_id": (
                     os.getenv("NOTION_PARENT_PAGE_ID") if notion_sync else None
                 ),
-                "gumroad_enabled": row.get("gumroad_enabled", "false").strip().lower()
-                in ("true", "yes", "1", "y"),
                 "landing_page_enabled": row.get("landing_page_enabled", "false")
                 .strip()
                 .lower()
@@ -56,6 +54,15 @@ def process_batch(csv_path: str):
                 .strip()
                 .lower()
                 in ("true", "yes", "1", "y"),
+                "channels": [
+                    {
+                        "name": ch.strip(),
+                        "enabled": True,
+                        "config": {},
+                    }
+                    for ch in row.get("channels", "gumroad").split(",")
+                    if ch.strip()
+                ],
                 "call_to_action": row.get("call_to_action", "Buy Now on Gumroad"),
                 "created_at": datetime.utcnow().isoformat() + "Z",
             }
