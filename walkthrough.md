@@ -18,14 +18,14 @@ flowchart TB
     end
 
     subgraph Core["Orchestrator Engine"]
-        B["Orchestrator<br/><i>DAG topological sort<br/>error isolation • resumable state<br/>dynamic pipeline expansion<br/>template registry • circuit breaker</i>"]
+        B["Orchestrator<br/><i>DAG topological sort<br/>error isolation • resumable state<br/>dynamic pipeline expansion<br/>template registry • circuit breaker<br/>RunLock • RateLimiter • Bottleneck</i>"]
         C["Product Schema<br/><i>16 JSON schemas define<br/>component DAG per product type</i>"]
         D["Job State<br/><i>JSON persistence per component<br/>enables resume on failure</i>"]
     end
 
     subgraph Research["Step 2 — Research & Scoring"]
         E["market_agent<br/><i>Web • Reddit • News • Trends • GDelt • Etsy • Gumroad<br/>Firecrawl deep scrape • competitor analysis<br/>→ market_research.json</i>"]
-        E2["offer_scoring_agent<br/><i>6 weighted metrics • deterministic scoring<br/>Etsy/Gumroad marketplace data<br/>→ scored_recommendations[]</i>"]
+        E2["offer_scoring_agent<br/><i>6 weighted metrics • deterministic scoring<br/>Etsy/Gumroad marketplace data<br/>value_tier classification<br/>→ scored_recommendations[]</i>"]
         F["research_agent<br/><i>legacy research agent</i>"]
     end
 
@@ -67,7 +67,7 @@ flowchart TB
     end
 
     subgraph Channels["Step 6 — Channel Layer (post-pipeline artifact publishing)"]
-        X["gumroad_channel<br/><i>GumroadChannel: product create/update<br/>presigned upload → cover + thumbnail<br/>listing opt (tags/price/AIDA) • quality score<br/>A/B variants • research_data merge</i>"]
+        X["gumroad_channel<br/><i>GumroadChannel: product create/update<br/>presigned upload → cover + thumbnail<br/>listing opt (tags/price/AIDA) • quality score<br/>A/B variants • research_data merge<br/>value_tier pricing</i>"]
         EC["etsy_channel<br/><i>EtsyChannel: OAuth2 listing CRUD<br/>file upload → draft→active state</i>"]
         SC["store_channel<br/><i>StoreChannel: Stripe Product+Price<br/>creation/update via Stripe API</i>"]
         SH["shopify_channel<br/><i>ShopifyChannel: REST API draft products<br/>image upload via base64</i>"]
@@ -78,6 +78,13 @@ flowchart TB
         CT["component_templates.py<br/><i>6 validated templates<br/>LOCKED_FIELDS security</i>"]
         CB["circuit_breaker<br/><i>_component_failures dict<br/>blocks template after 3 failures</i>"]
         DR["dry_run.py<br/><i>DAG tree printer<br/>used by --dry-run mode</i>"]
+    end
+
+    subgraph Hardening["Production Hardening (Phase 8, cross-cutting)"]
+        RL["rate_limiter.py<br/><i>per-API sliding window<br/>anthropic • openai • gumroad<br/>etsy • shopify • stripe</i>"]
+        LOC["concurrency.py<br/><i>RunLock: file-based lock<br/>fail/queue/ignore modes<br/>stale detection</i>"]
+        BN["bottleneck.py<br/><i>BottleneckTracker<br/>context-manager timing<br/>p50/p95/p99 percentiles</i>"]
+        CV["conversion_tracker.py<br/><i>landing vs direct Gumroad<br/>visit & sale tracking<br/>→ conversion_report.json</i>"]
     end
 
     subgraph Analytics["Step 7 — Analytics & Feedback (Phase 5, post-pipeline)"]
@@ -103,6 +110,7 @@ flowchart TB
         W9["PublishResult<br/><i>status • product_url • product_id</i>"]
         W10["outputs/{slug}/<br/>market_research.json<br/><i>→ channel listing opt<br/>(competitors + keywords)</i>"]
         W11["outputs/{slug}/<br/>gumroad/research.json<br/><i>→ merged into channel<br/>(own pricing data)</i>"]
+        W12["outputs/{slug}/<br/>bottleneck_report.json<br/><i>→ profiling data</i>"]
     end
 
     A1 --> B
@@ -181,6 +189,11 @@ flowchart TB
     FL -.->|"feedback to next run"| B
     AM --> DB
 
+    B -.-> RL
+    B -.-> LOC
+    B -.-> BN
+    B -.-> CV
+
     B --> W1
     S --> W7
     W1 -.->|"research_data_path"| X
@@ -192,11 +205,12 @@ flowchart TB
     R --> W6
     T --> W8
     X --> W9
+    B -.-> W12
 ```
 
 ---
 
-## Execution Order (Complete Pipeline — 7 Steps)
+## Execution Order (Complete Pipeline — 8 Steps)
 
 ```
 ╔══════════════════════════════════════════════════════════╗
@@ -212,8 +226,8 @@ market_research ──→ offer_scoring ──→ pipeline_plan_merge ──→ 
        │                │                    │
        │           scored_recommendations[]   ├── template validation
        │           _switch_schema if discov.  ├── circuit breaker check
-       │                                      └── dynamic components
-       │                                         (case_study, faq_section, etc.)
+       │           value_tier classification  └── dynamic components
+       │                                          (case_study, faq_section, etc.)
 
 ╔══════════════════════════════════════════════════════════╗
 ║  Step 3 — Product Generation: Content + Media + Render   ║
@@ -270,12 +284,14 @@ social_strategy:
 Channel Layer ──→ _run_channels() iterates CHANNEL_REGISTRY
        │              │
        │              ├── ProductArtifact.research_data_path = market_research.json
+       │              │       value_tier → tier-aware pricing
        │              │
        │              ├── gumroad_channel.publish(artifact)
        │              │       ├── Loads market_research.json (competitors, keywords)
        │              │       ├── Merges gumroad/research.json (own → competitors[])
        │              │       ├── generate_optimized_tags() with combined research
        │              │       ├── suggest_price() with combined competitor pricing
+       │              │       │   + value_tier clamping (free/low/mid/high ticket)
        │              │       ├── generate_aida_description() with market context
        │              │       ├── Upload files → Publish to Gumroad API
        │              │       ├── Upload cover/thumbnail A/B variants (if available)
@@ -322,6 +338,21 @@ Analytics & Feedback
     LOCKED_FIELDS — LLM cannot override {id, agent, output}
     Circuit breaker — 3 consecutive failures blocks template
     dry_run.py — preview DAG without executing (--dry-run)
+
+╔══════════════════════════════════════════════════════════╗
+║  Cross-cutting: Production Hardening (Phase 8)          ║
+╚══════════════════════════════════════════════════════════╝
+
+  Pipeline execution is wrapped with:
+    RunLock — file-based lock prevents overlapping runs
+    RateLimiter — per-API sliding window (anthropic, openai, gumroad, etsy, shopify, stripe)
+    BottleneckTracker — context-manager timing with p50/p95/p99 percentiles
+    ConversionTracker — landing-vs-direct Gumroad conversion comparison
+
+  Batch mode uses RateLimiter instead of hardcoded sleep(3):
+    process_batch() ──→ RateLimiter(batch_delay: 1 call/3s)
+
+  Pipeline exit releases RunLock, saves bottleneck_report.json
 ```
 
 ### Pipeline Safety Flow
@@ -398,7 +429,7 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 
 ---
 
-## Agents Implemented (20 agents + 7 social modules + 9 channel components + 3 analytics modules + 3 pipeline safety modules)
+## Agents Implemented (20 agents + 7 social modules + 9 channel components + 3 analytics modules + 3 pipeline safety modules + 4 production hardening modules)
 
 | Agent | File | Lines | Role |
 |-------|------|-------|------|
@@ -444,6 +475,11 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 | `component_templates` | `orchestrator/component_templates.py` | 55 | Frozen template registry: validate_template(), resolve_template(), list_templates() |
 | `circuit_breaker` | `orchestrator/orchestrator.py` | — | _component_failures dict per template, blocks after 3 consecutive failures |
 | `dry_run` | `cli/dry_run.py` | 20 | Print DAG tree for `--dry-run` mode |
+| `rate_limiter` | `orchestrator/rate_limiter.py` | 65 | Per-API sliding window rate limiting (6 services) |
+| `concurrency` | `orchestrator/concurrency.py` | 67 | File-based RunLock with fail/queue/ignore modes |
+| `bottleneck` | `orchestrator/bottleneck.py` | 53 | Pipeline profiling: context-manager timing, p50/p95/p99 percentiles |
+| `conversion_tracker` | `orchestrator/conversion_tracker.py` | 99 | Landing vs direct Gumroad A/B conversion tracking |
+| `value_tier` | `agents/offer_scoring_agent.py` | — | `compute_value_tier()`: free/low/mid/high ticket classification |
 
 ---
 
@@ -483,9 +519,41 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 - Per-component status tracking (pending/running/done/failed/skipped)
 - Enables `--resume` mode
 
+### Production Hardening (Phase 8, `orchestrator/`)
+
+**Rate Limiter (`orchestrator/rate_limiter.py`):**
+- `RateLimiter` class with per-service sliding window
+- Tracks 6 services: anthropic (15/min), openai (20/min), gumroad (30/min), etsy (10/min), shopify (40/min), stripe (100/min)
+- `wait_if_needed()` blocks until window slot available, `record_call()` records timestamp
+- Integrated into `llm_client.py` (wraps all LLM calls) and `main.py` batch mode (replaces hardcoded `sleep(3)`)
+
+**Run Lock (`orchestrator/concurrency.py`):**
+- `RunLock` class with file-based JSON lock at `outputs/_runlock.json`
+- Three modes: `fail` (abort if locked), `queue` (poll until available), `ignore` (bypass)
+- Stale detection: locks older than 30 minutes auto-cleaned
+- Integrated into `orchestrator.py:run()` via try/finally wrapper
+
+**Bottleneck Tracker (`orchestrator/bottleneck.py`):**
+- `BottleneckTracker` class with `track(category)` context manager using `time.perf_counter()`
+- Computes p50, p95, p99 percentiles and total_ms per category
+- Categories: `agent_*` per agent type, `channel_*` per channel
+- Report saved to `outputs/{slug}/bottleneck_report.json`
+
+**Conversion Tracker (`orchestrator/conversion_tracker.py`):**
+- `ConversionTracker` with JSON persistence at `outputs/_analytics/conversion_data.json`
+- Tracks `landing_visitors`, `gumroad_visits_direct`, `gumroad_sales_landing`, `gumroad_sales_direct`
+- `compute_report(min_impressions=100)` returns comparison with CVR and winner
+- Non-blocking: purely data collection, no pipeline impact
+
+**Value Tier Classification (`agents/offer_scoring_agent.py`):**
+- `compute_value_tier()` classifies products as `free`/`low_ticket`/`mid_ticket`/`high_ticket`
+- Rules based on content_fit, word_count, page_count, competitor_median, product_type
+- Integrated into `gumroad_listing.py:suggest_price()` for tier-aware pricing
+- Price bounds: free=$0, low_ticket=$5–$15, mid_ticket=$15–$50, high_ticket=$50+
+
 ---
 
-## Testing (270 tests — 60 added in Phase 4, 33 added in Phase 5, 20 added in Phase 6, 16 added in Phase 7)
+## Testing (298 tests — 60 added in Phase 4, 33 added in Phase 5, 20 added in Phase 6, 16 added in Phase 7, 28 added in Phase 8)
 
 _Phase 3 — Gumroad Listing Optimization test modules (29 tests):_
 ```
@@ -532,6 +600,19 @@ tests/
 └── _orchestrator safety_         # 7 tests — reject reserved IDs, duplicates, unknown agents, missing templates, circuit breaker, structured errors, dry-run mode
 ```
 
+_Phase 8 — Production Hardening test modules (28 tests):_
+
+```
+tests/
+├── test_rate_limiter.py          # 5 tests — under limit, over limit, window reset, unknown service, status
+├── test_concurrency.py           # 5 tests — acquire/release, fail-when-locked, queue-timeout, stale, ignore
+├── test_bottleneck.py            # 5 tests — single/multiple calls, percentiles, empty, save
+├── test_conversion_tracker.py    # 5 tests — visit/sale tracking, min impressions, report, save, persistence
+├── test_offer_scoring_agent.py   # +4 tests — compute_value_tier (free/low/mid/high ticket)
+├── test_wizard.py                # 4 tests — slugify edge cases
+└── test_gumroad_listing.py       # value_tier pricing parameters
+```
+
 Run with: `pytest tests/ -v`
 
 ---
@@ -566,11 +647,12 @@ Key milestones in order:
 23. **Phase 5: Analytics & Feedback Loop** — `analytics_models.py` (SalesRecord, Insights with JSON persistence), `analytics_agent` (post-pipeline collector across all channels), `feedback_loop.py` (past performance → market prompts + scoring adjustments), `cli/dashboard.py` (table + ASCII bar chart + insights); wired into orchestrator before market_agent and before offer_scoring_agent (33 new tests)
 24. **Phase 6: Dynamic Pipeline Safety** — component template registry (`orchestrator/component_templates.py`) with 6 validated templates and LOCKED_FIELDS security; `_merge_pipeline_plan` rejects components without/with unknown templates; circuit breaker blocks templates after 3 consecutive failures; structured error messages with template registry reference; `--dry-run` CLI mode prints DAG without execution (20 new tests)
 25. **Phase 7: Platform Expansion** — standardized channel output format (`_run_channels()` iterates registry generically); channel config UI in wizard + CSV batch; Etsy channel (OAuth2, listing CRUD, file upload); Stripe Store channel (Product + Price via Stripe API); Shopify channel (REST API draft products, image upload); all 3 registered in CHANNEL_REGISTRY (16 new tests, 270 total)
+26. **Phase 8: Production System Hardening** — rate_limiter.py (per-API sliding window with 6 tracked services, integrated into LLM client + batch mode); concurrency.py (RunLock with fail/queue/ignore modes, stale detection, orchestrator try/finally); bottleneck.py (BottleneckTracker with context-manager timing, p50/p95/p99, saved to bottleneck_report.json); conversion_tracker.py (landing-vs-direct Gumroad A/B conversion tracking with JSON persistence); value_tier classification (free/low/mid/high ticket classification in offer_scoring_agent, tier-aware pricing in gumroad_listing); CLI wizard improvements (channel validation retry, theme descriptions, .env pre-check) (28 new tests, 298 total)
 
 ---
 
 ## 52 Roadmap Items
 
-9 phases across: Channel Layer, Offer Scoring, Quality Validation, Analytics, Platform Expansion, Advanced Delivery, AI Improvements, Enterprise Features, Monitoring.
+9 phases across: Channel Layer, Offer Scoring, Quality Validation, Gumroad Listing Optimization, Social Strategy, Analytics, Pipeline Safety, Platform Expansion, Production Hardening.
 
 **Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6). Phase 3 — Gumroad Listing Optimization (6/6). Phase 4 — Social Strategy (6/6). **Phase 5 — Analytics & Feedback Loop (7/7). Phase 6 — Dynamic Pipeline Safety (5/5). Phase 7 — Platform Expansion (5/5). Phase 8 — Production System Hardening (6/6).**
