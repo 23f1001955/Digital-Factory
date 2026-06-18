@@ -1,5 +1,5 @@
-from typing import List, Literal, Dict, Optional
-from pydantic import BaseModel, Field
+from typing import Any, List, Literal, Dict, Optional
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 
@@ -35,10 +35,17 @@ class JobSpec(BaseModel):
     notion_parent_page_id: Optional[str] = None
     landing_page_enabled: bool = False
     social_promotion_enabled: bool = False
-    gumroad_enabled: bool = False
+    channels: List[ChannelConfig] = Field(default_factory=lambda: [ChannelConfig(name="gumroad", enabled=True)])
     landing_page_url: Optional[str] = None
     call_to_action: str = "Buy Now on Gumroad"
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    @field_validator("channels", mode="before")
+    @classmethod
+    def _validate_channels(cls, v: Any) -> Any:
+        if isinstance(v, list):
+            return [ChannelConfig(**item) if isinstance(item, dict) else item for item in v]
+        return v
 
 
 class AgentResult(BaseModel):

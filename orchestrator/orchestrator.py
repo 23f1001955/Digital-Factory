@@ -229,7 +229,7 @@ class Orchestrator:
 
     def _run_channels(self) -> dict:
         channel_results = {}
-        if not self.job_spec.gumroad_enabled:
+        if not any(c.enabled for c in self.job_spec.channels):
             return channel_results
 
         try:
@@ -417,7 +417,7 @@ class Orchestrator:
                 continue
 
             # Skip gumroad research if not enabled
-            if component.id == "gumroad_research" and not self.job_spec.gumroad_enabled:
+            if component.id == "gumroad_research" and not any(c.name == "gumroad" and c.enabled for c in self.job_spec.channels):
                 self.state.components[component.id] = AgentResult(
                     status="skipped", error="gumroad not enabled"
                 )

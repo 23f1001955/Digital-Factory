@@ -60,7 +60,7 @@ def test_analytics_agent_skips_if_disabled(monkeypatch):
     monkeypatch.setattr("agents.analytics_agent.CHANNEL_REGISTRY", {})
     from agents.analytics_agent import run
     comp = ComponentSpec(id="analytics", agent="analytics_agent", output="analytics")
-    job_spec = JobSpec(slug="test-slug", product_type="research_pack", niche="test", gumroad_enabled=False)
+    job_spec = JobSpec(slug="test-slug", product_type="research_pack", niche="test", channels=[])
     result = run(comp, job_spec, {"channel_results": {}})
     assert result.status == "done"
 

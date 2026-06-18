@@ -800,7 +800,7 @@ def test_discovery_job_spec_has_no_product_type(tmp_path):
         "notion_sync": False,
         "notion_only": False,
         "notion_parent_page_id": None,
-        "gumroad_enabled": False,
+        "channels": [],
         "landing_page_enabled": False,
         "social_promotion_enabled": False,
         "call_to_action": "",
@@ -885,7 +885,7 @@ def test_orchestrator_runs_channels_and_injects_urls(tmp_path, monkeypatch):
 
     def _make_job_spec(tmp_path, slug="test-chan", **extra):
         path = tmp_path / "job_spec.json"
-        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z", "gumroad_enabled": True, **extra}
+        data = {"slug": slug, "product_type": "research_pack", "niche": "test", "notion_sync": False, "notion_parent_page_id": None, "created_at": "2026-06-17T10:00:00Z", "channels": [{"name": "gumroad", "enabled": True}], **extra}
         path.write_text(json.dumps(data), encoding="utf-8")
         return path
 
