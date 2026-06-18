@@ -58,7 +58,8 @@ User Input (CLI wizard / batch CSV)
 - **Cross-Product Analytics** — Post-pipeline analytics agent aggregates sales data from all channels, deduplicates, and computes insights (top products, best channel, monthly revenue trends)
 - **Feedback Loop** — Past performance data injected into market research prompts and scoring weight adjustments; each run learns from previous runs
 - **CLI Dashboard** — `python -m cli.dashboard` displays sales summary with ASCII bar charts and formatted insights
-- **Dynamic Pipeline** — Market research LLM generates custom pipeline components per niche
+- **Dynamic Pipeline Safety (Phase 6)** — LLM-suggested pipeline components restricted to 6 validated templates (`orchestrator/component_templates.py`); circuit breaker blocks failing templates after 3 failures with structured error messages
+- **Dry-Run Mode** — `python main.py --dry-run` previews the pipeline DAG as a tree without executing any agents
 - **Notion-Only Mode** — Generate standalone Notion template products
 - **Resumable** — Failed pipelines resume from last successful component
 - **Batch Mode** — Process multiple products from a CSV file
@@ -172,7 +173,8 @@ digital-factory/
 │
 ├── cli/
 │   ├── wizard.py                # Interactive CLI wizard
-│   └── dashboard.py             # Analytics dashboard (Phase 5)
+│   ├── dashboard.py             # Analytics dashboard (Phase 5)
+│   └── dry_run.py               # --dry-run mode (Phase 6)
 │
 ├── orchestrator/
 │   ├── models.py                # Pydantic models (ComponentSpec, JobSpec, QualityReport, etc.)
@@ -182,7 +184,8 @@ digital-factory/
 │   ├── notify.py                # Alert dispatch (log + optional webhook)
 │   ├── state.py                 # Job state persistence
 │   ├── analytics_models.py      # SalesRecord + Insights models, JSON persistence (Phase 5)
-│   └── feedback_loop.py         # Past perf → market prompts + scoring adjustments (Phase 5)
+│   ├── feedback_loop.py         # Past perf → market prompts + scoring adjustments (Phase 5)
+│   └── component_templates.py   # Template registry for dynamic pipeline safety (Phase 6)
 │
 ├── agents/
 │   ├── registry.py              # Agent function registry
@@ -245,7 +248,7 @@ digital-factory/
 ├── prompts/                     # 33 Jinja2 prompt templates
 ├── templates/                   # HTML/CSS render templates
 ├── renderers/                   # PDF rendering engines
-├── tests/                       # 230+ pytest tests (70 added in Phase 4-5)
+├── tests/                       # 254 pytest tests (70 added in Phase 4-5, 20 added in Phase 6)
 └── docs/superpowers/            # Design specs & implementation plans
 ```
 
@@ -255,7 +258,7 @@ digital-factory/
 pytest tests/ -v
 ```
 
-Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only, channel publishing), all agents (with API mocks), channel base ABC + GumroadChannel, schema validation (all 16 schemas), scoring engine (14 tests across 6 weighted metrics), multi-format delivery, pipeline plan merging, listing optimization (tags, pricing, AIDA), analytics pull + quality scoring, A/B variant management, social strategy (60 tests across calendar, sequences, repurposing, engagement, platform strategy, automation, scheduler modules), analytics models (9 tests), analytics agent (5 tests), dashboard (5 tests), feedback loop (14 tests).
+Test coverage includes: orchestrator logic (execution order, error isolation, schema switching, notion-only, channel publishing, template validation, circuit breaker), all agents (with API mocks), channel base ABC + GumroadChannel, schema validation (all 16 schemas), scoring engine (14 tests across 6 weighted metrics), multi-format delivery, pipeline plan merging (with template registry restrictions), listing optimization (tags, pricing, AIDA), analytics pull + quality scoring, A/B variant management, social strategy (60 tests across calendar, sequences, repurposing, engagement, platform strategy, automation, scheduler modules), analytics models (9 tests), analytics agent (5 tests), dashboard (5 tests), feedback loop (14 tests), component templates (10 tests), dry-run mode (3 tests).
 
 ## Output Structure
 

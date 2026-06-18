@@ -142,7 +142,7 @@
             <div class="label">Product Schemas</div>
         </div>
         <div class="stat">
-            <div class="num">234</div>
+            <div class="num">254</div>
             <div class="label">Tests</div>
         </div>
         <div class="stat">
@@ -335,7 +335,7 @@
 </div>
 
     <div class="section">
-        <h2>26 Agent Entities + 6 Channel Components</h2>
+        <h2>27 Agent Entities + 6 Channel Components + 2 Pipeline Safety</h2>
         <div class="cards">
             <div class="card"><h3>market_agent</h3><p>Deep market analysis with 10+ data sources (incl. Etsy, Gumroad). 151 lines.</p><span class="badge">Research</span></div>
             <div class="card"><h3>offer_scoring_agent</h3><p>Deterministic scoring: 6 weighted metrics across 15+ product types. 55 lines.</p><span class="badge">Scoring</span></div>
@@ -374,6 +374,8 @@
             <div class="card"><h3>gumroad_analytics</h3><p>Analytics pull + listing quality scoring (5 dimensions). 165 lines.</p><span class="badge">Channel</span></div>
             <div class="card"><h3>gumroad_ab_testing</h3><p>Cover/thumbnail variant management. 80 lines.</p><span class="badge">Channel</span></div>
             <div class="card"><h3>CHANNEL_REGISTRY</h3><p>Channel name → class mapping + model exports. 8 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>component_templates</h3><p>Frozen template registry: validate, resolve, list 6 validated templates with LOCKED_FIELDS security. 55 lines.</p><span class="badge">Safety</span></div>
+            <div class="card"><h3>dry_run</h3><p>DAG tree printer for `--dry-run` CLI mode. 20 lines.</p><span class="badge">Safety</span></div>
         </div>
     </div>
 
@@ -405,6 +407,7 @@
             <tr><td>22</td><td><strong>Phase 3: Gumroad Listing Optimization</strong> — analytics pull, quality scoring, AIDA desc, research-driven tags/pricing, cover/thumbnail A/B variants</td></tr>
             <tr><td>23</td><td><strong>Phase 4: Social Strategy</strong> — multi-post sequences, 7-14 day content calendars, content repurposing (1 pack → 10+ posts), platform adaptation, engagement tracking, DM/comment automation, post scheduler; 60 new tests</td></tr>
             <tr><td>24</td><td><strong>Phase 5: Analytics & Feedback Loop</strong> — analytics_models (SalesRecord, Insights, JSON persistence), analytics_agent (post-pipeline collector across all channels), feedback_loop (past performance → market prompts + scoring adjustments), CLI dashboard; 33 new tests; orchestrator wiring before market_agent and before offer_scoring_agent</td></tr>
+            <tr><td>25</td><td><strong>Phase 6: Dynamic Pipeline Safety</strong> — component template registry (6 validated templates, LOCKED_FIELDS security), circuit breaker (3-failure threshold per template), structured error messages, --dry-run CLI mode; 20 new tests</td></tr>
         </table>
     </div>
 

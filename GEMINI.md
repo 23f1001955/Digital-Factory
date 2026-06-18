@@ -7,7 +7,7 @@ The system is built on a **DAG-based, Dynamic AI Orchestrator**.
 1. **Input**: `main.py` takes user input (interactive wizard or CSV batch) and generates a `job_spec.json`.
 2. **Orchestrator**: Reads a Product Schema (e.g., `research_pack.json`) to build a Directed Acyclic Graph (DAG) of tasks (components).
 3. **Offer Scoring**: In discovery mode, `offer_scoring_agent` runs after `market_agent`, evaluating all 15+ product types against 6 weighted metrics (search demand, competition, market viability, content fit, trend momentum, community signals) using real marketplace data from Etsy and Gumroad.
-4. **Dynamic Expansion**: The `market_agent` can return a `pipeline_plan` that dynamically injects new components into the DAG at runtime.
+4. **Dynamic Expansion**: The `market_agent` can return a `pipeline_plan` that dynamically injects new components into the DAG at runtime. Pipeline Safety (Phase 6) restricts injected components to a validated template registry (`orchestrator/component_templates.py`) and enforces a circuit breaker that blocks templates after 3 failures.
 4. **Execution**: The orchestrator runs through the DAG topologically, invoking specialized agents for content generation, rendering, packaging, and publishing.
 5. **Channel Publishing**: After the DAG completes, the orchestrator runs configured channels (e.g., `GumroadChannel`) to publish artifacts to external platforms. The `product_url` from channel results is injected back into the DAG context for downstream agents (landing page, social promotion).
 ## Key Capabilities & Features
@@ -23,6 +23,8 @@ The system is built on a **DAG-based, Dynamic AI Orchestrator**.
 - **Cover/Thumbnail A/B Testing**: `GumroadChannel` supports multiple cover/thumbnail variants with round-robin cycling across publish runs.
 - **Design Intelligence**: Deploys landing pages using LLM-generated UI combined with curated design patterns and rules.
 - **Resumable State**: Uses `job_state.json` to resume failed pipelines gracefully without re-running successful agents.
+- **Pipeline Safety (Phase 6)**: LLM-suggested pipeline components must map to a validated template registry (`orchestrator/component_templates.py`). Circuit breaker blocks templates after 3 consecutive failures. Structured error messages guide debugging.
+- **Dry-Run Mode**: `python main.py --dry-run` loads schema, merges pipeline plan, prints DAG as a tree without executing any agents.
 ## Agent Roster
 The system uses a variety of specialized agents to execute the DAG components:
 ### 1. Research & Planning
@@ -71,6 +73,10 @@ The system uses a variety of specialized agents to execute the DAG components:
 - **`channels/gumroad_listing.py`**: Listing optimization: tag extraction from competitor data, median pricing, AIDA description generation via LLM with deterministic fallback.
 - **`channels/gumroad_analytics.py`**: Analytics pull from Gumroad API + listing quality scoring across 5 weighted dimensions.
 - **`channels/gumroad_ab_testing.py`**: Cover/thumbnail variant management with persistence and round-robin cycling.
+### 11. Pipeline Safety (Phase 6)
+- **`orchestrator/component_templates.py`**: Frozen template registry with 6 validated component templates (case_study, comparison_table, faq_section, resource_list, step_by_step_guide, checklist). Exports `validate_template()`, `resolve_template()`, `list_templates()`. The `_merge_pipeline_plan` method rejects components without a known template.
+- **`orchestrator/orchestrator.py`** (circuit breaker): Tracks per-template failures in `_component_failures`. After 3 failures for a template, the circuit breaker blocks that template — new pipeline plan components are rejected and existing schema components are skipped with `status="skipped"`.
+- **`cli/dry_run.py`**: `print_dry_run()` renders the ordered DAG as a tree with template info. Activated via `python main.py --dry-run`.
 ## AI Assistant Guidelines
 When assisting with this codebase:
 - Respect the DAG structure in `orchestrator.py` and the JSON configurations in `schemas/`.
@@ -81,6 +87,7 @@ When assisting with this codebase:
 - New channels must implement `channels/base.py:BaseChannel` and be registered in `channels/__init__.py:CHANNEL_REGISTRY`.
 - PDF designs are controlled by `templates/shared/base.css` and Jinja2 templates.
 - Quality validation runs as an orchestrator hook after each content-producing agent. New agents added to `EVALUATION_TARGETS` in `agents/evaluation_agent.py` will be automatically validated.
+- Pipeline Safety (Phase 6): The `_merge_pipeline_plan` method validates all LLM-injected components against `orchestrator/component_templates.py`. The circuit breaker (`_component_failures`) blocks templates after 3 failures. Use `python main.py --dry-run` to preview pipeline plans without execution.
 ## Graphify Auto-Activation
 This project uses **graphify** for a persistent knowledge graph. At the start of every session, the knowledge graph in `graphify-out/` is the primary reference for codebase questions.
 1. **Before answering any codebase question**, check if `graphify-out/graph.json` exists and use `graphify query "<question>"` (or inline NetworkX traversal via `graphify-out/graph.json`) instead of grepping raw files.

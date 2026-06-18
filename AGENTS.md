@@ -132,6 +132,19 @@ The channel layer is a post-pipeline abstraction for publishing generated produc
 * **`channels/__init__.py`**
   * **Role**: Exports `CHANNEL_REGISTRY` — a dict mapping channel names to channel classes. Also re-exports all data models from `base.py`.
 
+## 11. Pipeline Safety & Dry-Run (Phase 6)
+Ensures the dynamic pipeline expansion never executes invalid or broken components.
+* **`orchestrator/component_templates.py`**
+  * **Role**: Frozen template registry — 6 validated component templates (`case_study`, `comparison_table`, `faq_section`, `resource_list`, `step_by_step_guide`, `checklist`). The LLM's `pipeline_plan` must reference a known template.
+  * **Exports**: `validate_template(name) -> bool`, `resolve_template(name, overrides) -> ComponentSpec`, `list_templates() -> List[str]`
+  * **Security**: `LOCKED_FIELDS = {"id", "agent", "output"}` — these cannot be overridden by LLM.
+* **`orchestrator/orchestrator.py` (Circuit Breaker)**
+  * **Role**: Tracks component failures per template in `_component_failures: Dict[str, int]`. After 3 consecutive failures, the circuit breaker blocks that template — new pipeline plan components are rejected, and existing schema components for that template are skipped with `status="skipped"`.
+  * **Design**: Per-Orchestrator-instance state — resets naturally on `--resume` (new Orchestrator).
+* **`cli/dry_run.py`**
+  * **Role**: Prints the ordered pipeline DAG as a tree with template info and available template names.
+  * **Activation**: `python main.py --dry-run` — loads schema, merges pipeline plan (if market research exists), prints DAG, exits without executing any agents.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

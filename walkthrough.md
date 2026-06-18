@@ -211,7 +211,7 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 
 ---
 
-## Agents Implemented (20 agents + 7 social modules + 6 channel components + 3 analytics modules)
+## Agents Implemented (20 agents + 7 social modules + 6 channel components + 3 analytics modules + 2 pipeline safety modules)
 
 | Agent | File | Lines | Role |
 |-------|------|-------|------|
@@ -251,14 +251,17 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 | `gumroad_analytics` | `channels/gumroad_analytics.py` | 165 | Analytics pull (views, sales, revenue) + listing quality scoring |
 | `gumroad_ab_testing` | `channels/gumroad_ab_testing.py` | 80 | Cover/thumbnail A/B variant management |
 | `CHANNEL_REGISTRY` | `channels/__init__.py` | 8 | Channel name → class mapping |
+| `component_templates` | `orchestrator/component_templates.py` | 55 | Frozen template registry: validate, resolve, list templates |
+| `dry_run` | `cli/dry_run.py` | 20 | Print DAG tree for `--dry-run` mode |
 
 ---
 
 ## Key Infrastructure
 
-### Orchestrator (`orchestrator/orchestrator.py` — ~630 lines)
+### Orchestrator (`orchestrator/orchestrator.py` — ~700 lines)
 - DAG topological sort from product schema components
-- Dynamic pipeline expansion: `market_agent` returns a `pipeline_plan` that adds new components
+- Dynamic pipeline expansion: `market_agent` returns a `pipeline_plan` that adds new components (restricted to validated template registry in Phase 6)
+- Circuit breaker: per-template failure tracking blocks templates after 3 failures, prevents cascading failures
 - Discovery mode: auto-detects product type via `offer_scoring_agent` (6 weighted metrics, Etsy/Gumroad marketplace data)
 - Format recommendations: market LLM recommends CSV/XLSX per component
 - Quality validation gate: auto-evaluates each agent's output, retries with fix prompt if score < 0.6
@@ -290,7 +293,7 @@ In discovery mode, the orchestrator runs `offer_scoring` after `market_research`
 
 ---
 
-## Testing (234 tests — 60 added in Phase 4, 33 added in Phase 5)
+## Testing (254 tests — 60 added in Phase 4, 33 added in Phase 5, 20 added in Phase 6)
 
 ```
 tests/
@@ -355,6 +358,7 @@ Key milestones in order:
 21. **Phase 3: Listing Optimization** — analytics pull (`gumroad_analytics.py`), listing quality scoring, AIDA description generation, research-driven tags/pricing, cover/thumbnail A/B variant management (`gumroad_ab_testing.py`)
 22. **Phase 4: Social Strategy** — multi-post sequences, 7-14 day content calendars, content repurposing engine (1 pack → 10+ posts), platform-specific adaptation, engagement tracking, DM/comment automation, post scheduler with dispatch; `agents/social/` package with 7 submodules (60 tests)
 23. **Phase 5: Analytics & Feedback Loop** — `analytics_models.py` (SalesRecord, Insights with JSON persistence), `analytics_agent` (post-pipeline collector across all channels), `feedback_loop.py` (past performance → market prompts + scoring adjustments), `cli/dashboard.py` (table + ASCII bar chart + insights); wired into orchestrator before market_agent and before offer_scoring_agent (33 new tests)
+24. **Phase 6: Dynamic Pipeline Safety** — component template registry (`orchestrator/component_templates.py`) with 6 validated templates and LOCKED_FIELDS security; `_merge_pipeline_plan` rejects components without/with unknown templates; circuit breaker blocks templates after 3 consecutive failures; structured error messages with template registry reference; `--dry-run` CLI mode prints DAG without execution (20 new tests)
 
 ---
 
@@ -362,4 +366,4 @@ Key milestones in order:
 
 9 phases across: Channel Layer, Offer Scoring, Quality Validation, Analytics, Platform Expansion, Advanced Delivery, AI Improvements, Enterprise Features, Monitoring.
 
-**Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6). Phase 3 — Gumroad Listing Optimization (6/6). Phase 4 — Social Strategy (6/6). **Phase 5 — Analytics & Feedback Loop (7/7).**
+**Completed:** Phase 0 — Channel Layer (6/6). Phase 1 — Offer Selection Engine (5/5). Phase 2 — Quality Validation Layer (6/6). Phase 3 — Gumroad Listing Optimization (6/6). Phase 4 — Social Strategy (6/6). **Phase 5 — Analytics & Feedback Loop (7/7). Phase 6 — Dynamic Pipeline Safety (5/5).**
