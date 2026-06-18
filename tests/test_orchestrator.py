@@ -1114,3 +1114,87 @@ def test_pipeline_plan_error_message_format(tmp_path, monkeypatch, caplog):
     assert "component_templates.py" in warning_text
     assert "bad_template" in warning_text
     assert "no_template" in warning_text
+
+
+def test_run_channels_iterates_registry(tmp_path, monkeypatch):
+    """Test that _run_channels iterates all enabled channels from CHANNEL_REGISTRY."""
+    from channels import CHANNEL_REGISTRY
+    from channels.base import PublishResult, BaseChannel
+    from orchestrator.models import AgentResult, ProductSchema, ChannelConfig
+
+    published_channels = []
+
+    class FakeGumroadChannel(BaseChannel):
+        name = "gumroad"
+        def validate(self): return True
+        def publish(self, artifact):
+            published_channels.append("gumroad")
+            return PublishResult(status="published", product_url="https://gumroad.com/l/test", product_id="g1")
+        def update(self, pid, artifact): return self.publish(artifact)
+        def get_analytics(self, pid): return {}
+
+    class FakeEtsyChannel(BaseChannel):
+        name = "etsy"
+        def validate(self): return True
+        def publish(self, artifact):
+            published_channels.append("etsy")
+            return PublishResult(status="published", product_url="https://etsy.com/listing/test", product_id="e1")
+        def update(self, pid, artifact): return self.publish(artifact)
+        def get_analytics(self, pid): return {}
+
+    monkeypatch.setitem(CHANNEL_REGISTRY, "gumroad", FakeGumroadChannel)
+    monkeypatch.setitem(CHANNEL_REGISTRY, "etsy", FakeEtsyChannel)
+
+    def _make_job_spec(tmp_path, slug="test-multi"):
+        path = tmp_path / "job_spec.json"
+        data = {
+            "slug": slug,
+            "product_type": "research_pack",
+            "niche": "test",
+            "notion_sync": False,
+            "notion_parent_page_id": None,
+            "created_at": "2026-06-17T10:00:00Z",
+            "channels": [
+                {"name": "gumroad", "enabled": True},
+                {"name": "etsy", "enabled": True},
+            ],
+        }
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def _make_schema(tmp_path):
+        path = tmp_path / "research_pack.json"
+        data = {"product_type": "research_pack", "display_name": "Test", "components": [
+            {"id": "market_research", "agent": "market_agent", "output": "data/market_research.json", "depends_on": [], "delivery": []},
+            {"id": "package", "agent": "packaging_agent", "output": "{slug}.zip", "depends_on": ["market_research"], "delivery": ["zip"]},
+        ]}
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    schema_path = _make_schema(tmp_path)
+
+    def mock_market(comp, js, ctx):
+        p = os.path.join("outputs", js.slug, "data", "market_research.json")
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w") as f:
+            json.dump({"niche": "test"}, f)
+        return AgentResult(status="done", output_path=p)
+
+    mock_pkg = mock.Mock(return_value=AgentResult(status="done"))
+    monkeypatch.setitem(AGENT_REGISTRY, "market_agent", mock_market)
+    monkeypatch.setitem(AGENT_REGISTRY, "packaging_agent", mock_pkg)
+
+    job_spec_path = _make_job_spec(tmp_path)
+    orc = Orchestrator(str(job_spec_path))
+    with open(schema_path) as f:
+        orc.schema = ProductSchema(**json.load(f))
+    orc.state_path = str(tmp_path / "outputs" / "test-multi" / "job_state.json")
+    orc.state = load_job_state(orc.state_path, "test-multi")
+    monkeypatch.setattr(orc, "_generate_run_summary", lambda: None)
+
+    orc.run()
+
+    assert "gumroad" in published_channels
+    assert "etsy" in published_channels
+    assert "gumroad" in orc._channel_results
+    assert "etsy" in orc._channel_results

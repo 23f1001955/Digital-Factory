@@ -229,95 +229,95 @@ class Orchestrator:
 
     def _run_channels(self) -> dict:
         channel_results = {}
-        if not any(c.enabled for c in self.job_spec.channels):
-            return channel_results
+        from channels import CHANNEL_REGISTRY
+        from channels.base import ProductArtifact, ArtifactFile
 
-        try:
-            from channels import CHANNEL_REGISTRY
-            from channels.base import ProductArtifact, ArtifactFile
+        delivery_map = self._build_delivery_map()
 
-            if "gumroad" not in CHANNEL_REGISTRY:
-                logger.warning("Gumroad channel not registered")
-                return channel_results
+        for channel_config in self.job_spec.channels:
+            if not channel_config.enabled:
+                continue
+            channel_name = channel_config.name
+            if channel_name not in CHANNEL_REGISTRY:
+                logger.warning(f"Channel '{channel_name}' not registered — skipping")
+                continue
 
-            channel = CHANNEL_REGISTRY["gumroad"]()
-            if not channel.validate():
-                logger.warning("Gumroad channel validation failed — skipping")
-                return channel_results
+            try:
+                channel = CHANNEL_REGISTRY[channel_name]()
+                if not channel.validate():
+                    logger.warning(f"Channel '{channel_name}' validation failed — skipping")
+                    continue
 
-            delivery_map = self._build_delivery_map()
+                files = []
+                for comp_id, entry in delivery_map.items():
+                    if channel_name in entry.get("delivery", []):
+                        outputs = entry.get("outputs", {})
+                        for name, path in outputs.items():
+                            if path and os.path.isfile(path):
+                                files.append(ArtifactFile(
+                                    path=path,
+                                    name=os.path.basename(path),
+                                    delivery_tags=[channel_name],
+                                ))
 
-            files = []
-            for comp_id, entry in delivery_map.items():
-                if "gumroad" in entry.get("delivery", []):
-                    outputs = entry.get("outputs", {})
-                    for name, path in outputs.items():
-                        if path and os.path.isfile(path):
-                            files.append(ArtifactFile(
-                                path=path,
-                                name=os.path.basename(path),
-                                delivery_tags=["gumroad"],
-                            ))
+                # Always add ZIP from package
+                zip_path = None
+                for comp_id, entry in delivery_map.items():
+                    if comp_id == "package":
+                        outputs = entry.get("outputs", {})
+                        for name, path in outputs.items():
+                            if path and os.path.isfile(path):
+                                zip_path = path
+                                break
 
-            # Always add ZIP from package
-            zip_path = None
-            for comp_id, entry in delivery_map.items():
-                if comp_id == "package":
-                    outputs = entry.get("outputs", {})
-                    for name, path in outputs.items():
-                        if path and os.path.isfile(path):
-                            zip_path = path
+                assets_dir = os.path.join("outputs", self.job_spec.slug, "assets")
+                cover_image = None
+                thumbnail = None
+                if os.path.isdir(assets_dir):
+                    for fn in os.listdir(assets_dir):
+                        fp = os.path.join(assets_dir, fn)
+                        if os.path.isfile(fp):
+                            if fn.lower().startswith("cover"):
+                                cover_image = fp
+                            elif fn.lower().startswith("thumbnail"):
+                                thumbnail = fp
+
+                if zip_path and not any(f.path == zip_path for f in files):
+                    files.append(ArtifactFile(
+                        path=zip_path,
+                        name=os.path.basename(zip_path),
+                        delivery_tags=[channel_name],
+                    ))
+
+                research_data_path = None
+                mr_state = self.state.components.get("market_research")
+                if mr_state and mr_state.status == "done" and mr_state.output_path:
+                    research_data_path = mr_state.output_path
+                elif mr_state and mr_state.status == "done" and mr_state.output_paths:
+                    for p in mr_state.output_paths.values():
+                        if p and os.path.isfile(p):
+                            research_data_path = p
                             break
 
-            assets_dir = os.path.join("outputs", self.job_spec.slug, "assets")
-            cover_image = None
-            thumbnail = None
-            if os.path.isdir(assets_dir):
-                for fn in os.listdir(assets_dir):
-                    fp = os.path.join(assets_dir, fn)
-                    if os.path.isfile(fp):
-                        if fn.lower().startswith("cover"):
-                            cover_image = fp
-                        elif fn.lower().startswith("thumbnail"):
-                            thumbnail = fp
+                artifact = ProductArtifact(
+                    slug=self.job_spec.slug,
+                    product_type=self.job_spec.product_type,
+                    niche=self.job_spec.niche,
+                    display_name=self.job_spec.display_name or self.job_spec.niche,
+                    files=files,
+                    cover_image=cover_image,
+                    thumbnail=thumbnail,
+                    price_cents=2900,
+                    tags=[],
+                    research_data_path=research_data_path,
+                )
 
-            if zip_path and not any(f.path == zip_path for f in files):
-                files.append(ArtifactFile(
-                    path=zip_path,
-                    name=os.path.basename(zip_path),
-                    delivery_tags=["gumroad"],
-                ))
+                result = channel.publish(artifact)
+                channel_results[channel_name] = result
+                logger.info(f"Channel '{channel_name}' publish: {result.status} — {result.product_url}")
 
-            research_data_path = None
-            mr_state = self.state.components.get("market_research")
-            if mr_state and mr_state.status == "done" and mr_state.output_path:
-                research_data_path = mr_state.output_path
-            elif mr_state and mr_state.status == "done" and mr_state.output_paths:
-                for p in mr_state.output_paths.values():
-                    if p and os.path.isfile(p):
-                        research_data_path = p
-                        break
-
-            artifact = ProductArtifact(
-                slug=self.job_spec.slug,
-                product_type=self.job_spec.product_type,
-                niche=self.job_spec.niche,
-                display_name=self.job_spec.display_name or self.job_spec.niche,
-                files=files,
-                cover_image=cover_image,
-                thumbnail=thumbnail,
-                price_cents=2900,
-                tags=[],
-                research_data_path=research_data_path,
-            )
-
-            result = channel.publish(artifact)
-            channel_results["gumroad"] = result
-
-            logger.info(f"Gumroad channel publish: {result.status} — {result.product_url}")
-
-        except Exception as e:
-            logger.error(f"Channel publish failed: {e}", exc_info=True)
+            except Exception as e:
+                logger.error(f"Channel '{channel_name}' publish failed: {e}", exc_info=True)
 
         return channel_results
 
