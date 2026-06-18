@@ -37,10 +37,10 @@ def run_wizard() -> str | None:
     slug = typer.prompt("Output slug", default=default_slug)
 
     print("\nAvailable Themes:")
-    print("1. Default")
-    print("2. Luxury Dark (luxury-dark)")
-    print("3. Editorial (editorial)")
-    print("4. Minimal (minimal)")
+    print("1. Default — Clean, professional, versatile. Good for most products.")
+    print("2. Luxury Dark — Premium dark theme with gold accents. For high-ticket products.")
+    print("3. Editorial — Magazine-style with large typography. For content-heavy reports.")
+    print("4. Minimal — Sparse, elegant. For design-forward products.")
     theme_choice = typer.prompt("Select a theme (1, 2, 3, or 4)", default="1")
     if theme_choice.strip() == "4":
         theme = "minimal"
@@ -108,21 +108,30 @@ def run_wizard() -> str | None:
     for i, ch_name in enumerate(channel_names, 1):
         print(f"  {i}. {ch_name.title()}")
 
-    selected = typer.prompt(
-        "Which channels to publish to? (comma-separated numbers, or 'all')",
-        default="1",
-    )
-
-    if selected.strip().lower() == "all":
-        selected_indices = list(range(len(channel_names)))
-    else:
-        selected_indices = []
-        for part in selected.split(","):
-            part = part.strip()
-            if part.isdigit():
-                idx = int(part) - 1
-                if 0 <= idx < len(channel_names):
-                    selected_indices.append(idx)
+    while True:
+        selected = typer.prompt(
+            "Which channels to publish to? (comma-separated numbers, e.g. '1,2', or 'all')",
+            default="1",
+        )
+        if selected.strip().lower() == "all":
+            selected_indices = list(range(len(channel_names)))
+            break
+        parts = [p.strip() for p in selected.split(",")]
+        valid = True
+        indices = []
+        for part in parts:
+            if not part.isdigit():
+                valid = False
+                break
+            idx = int(part) - 1
+            if idx < 0 or idx >= len(channel_names):
+                valid = False
+                break
+            indices.append(idx)
+        if valid:
+            selected_indices = indices
+            break
+        print(f"Invalid input. Enter comma-separated numbers 1-{len(channel_names)}, or 'all'.")
 
     for i, ch_name in enumerate(channel_names):
         if i in selected_indices:
@@ -212,6 +221,28 @@ def run_wizard() -> str | None:
         "call_to_action": cta_text,
         "created_at": datetime.utcnow().isoformat() + "Z",
     }
+
+    # .env pre-validation
+    missing_vars = []
+    if landing_page_enabled:
+        if not os.getenv("GEMINI_API_KEY"):
+            missing_vars.append("GEMINI_API_KEY")
+        if not os.getenv("VERCEL_TOKEN"):
+            missing_vars.append("VERCEL_TOKEN")
+    if social_promotion_enabled:
+        if not os.getenv("FACEBOOK_PAGE_TOKEN"):
+            missing_vars.append("FACEBOOK_PAGE_TOKEN")
+    if any(c["name"] == "gumroad" for c in channel_configs):
+        if not os.getenv("GUMROAD_ACCESS_TOKEN"):
+            missing_vars.append("GUMROAD_ACCESS_TOKEN")
+
+    if missing_vars:
+        print(f"\nWarning: Missing environment variables: {', '.join(missing_vars)}")
+        print("Pipeline may fail. Set them in .env and retry, or continue anyway.")
+        proceed = typer.prompt("Continue? (y/n)", default="n")
+        if proceed.lower() != "y":
+            print("Aborted.")
+            return None
 
     output_dir = os.path.join("outputs", slug)
     os.makedirs(output_dir, exist_ok=True)
