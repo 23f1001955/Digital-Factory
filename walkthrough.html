@@ -133,16 +133,16 @@
             <div class="num">30</div>
             <div class="label">Agents + Modules</div>
         </div>
-        <div class="stat">
-            <div class="num">6</div>
-            <div class="label">Channel Components</div>
-        </div>
+            <div class="stat">
+                <div class="num">9</div>
+                <div class="label">Channel Components</div>
+            </div>
         <div class="stat">
             <div class="num">16</div>
             <div class="label">Product Schemas</div>
         </div>
         <div class="stat">
-            <div class="num">254</div>
+                <div class="num">270</div>
             <div class="label">Tests</div>
         </div>
         <div class="stat">
@@ -163,10 +163,11 @@
                 A1["CLI Wizard (interactive Typer prompts)"]
                 A2["Batch CSV (multi-product via --batch)"]
                 A3["Resume Mode (--resume from last state)"]
+                A4["Dry-Run Mode (--dry-run preview DAG without execution)"]
             end
 
             subgraph Core["Orchestrator Engine"]
-                B["Orchestrator (DAG topological sort, error isolation, resumable state, dynamic pipeline expansion)"]
+                B["Orchestrator (DAG topological sort, error isolation, resumable state, dynamic pipeline expansion, template registry, circuit breaker)"]
                 C["Product Schema (16 JSON schemas define component DAG per product type)"]
                 D["Job State (JSON persistence per component, enables resume on failure)"]
             end
@@ -202,14 +203,17 @@
 
             subgraph Publishing["Packaging, Publishing & Promotion"]
                 R["packaging_agent (collects all deliverables from _delivery_map → {slug}.zip)"]
-                S["gumroad_agent (Gumroad market research only — publish moved to channel layer)"]
+                S["gumroad_agent (Gumroad market research → competitors[] with pricing — data merged into channel listing opt)"]
                 T["landing_agent (Design Intelligence brief → LLM HTML → Vercel deploy)"]
                 U["social_agent (Phase 4 strategy: calendar → sequences → repurpose → adapt → schedule → dispatch)
                      social/ (models, calendar, sequences, repurposing, engagement, platform_strategy, automation, scheduler)"]
             end
 
-            subgraph Channels["Channel Layer (post-pipeline)"]
-                X["gumroad_channel (GumroadChannel — product create/update, presigned upload, cover, thumbnail, rich content, listing opt, quality score, A/B variants)"]
+            subgraph Channels["Channel Layer (post-pipeline — iterates registry)"]
+                X["gumroad_channel (GumroadChannel — product create/update, presigned upload, cover, thumbnail, rich content, listing opt, quality score, A/B variants, research_data merge from market_agent + gumroad_agent)"]
+                EC["etsy_channel (EtsyChannel — OAuth2 listing create/update, file upload, draft→active)"]
+                SC["store_channel (StoreChannel — Stripe Product+Price creation/update)"]
+                SH["shopify_channel (ShopifyChannel — REST API draft products, image upload via base64)"]
                 Y["channels/base.py (BaseChannel ABC: validate, publish, update, get_analytics, AnalyticsData, ListingQualityScore)"]
                 Z1["gumroad_listing (tag/pricing/AIDA optimization)"]
                 Z2["gumroad_analytics (analytics pull + quality scoring)"]
@@ -227,6 +231,12 @@
                 V["design_intelligence/ (6 design skill rules, 12 vibes, 12 layout patterns, brief generator)"]
             end
 
+            subgraph Safety["Pipeline Safety (Phase 6)"]
+                CT["component_templates.py (6 validated templates, LOCKED_FIELDS security)"]
+                CB["circuit_breaker (_component_failures dict, blocks template after 3 failures)"]
+                DR["dry_run.py (DAG tree printer, used by --dry-run mode)"]
+            end
+
             subgraph Quality["Quality Validation"]
                 QA["evaluation_agent (pattern checks + LLM hallucination cross-ref)"]
                 QB["review_agent (human-in-the-loop review logs)"]
@@ -237,10 +247,16 @@
             A1 --> B
             A2 --> B
             A3 --> B
+            A4 --> DR
+            DR --> B
             B --> C
             B --> D
             B --> E
-            E -->|"pipeline plan merge, format recommendations"| B
+            E -->|"pipeline plan merge, format recommendations, template validation"| B
+            E -.->|"validates against"| CT
+            CT -.->|"pass/fail"| B
+            B -.->|"tracks failures"| CB
+            CB -.->|"blocks after 3"| B
             E2 -->|"schema switch (scored_recommendations)"| B
             E --> E2
             E --> F
@@ -276,13 +292,24 @@
             G --> T
             V --> T
             T --> U
-            R -.->|"post-pipeline"| X
+            R -.->|"post-pipeline<br/>artifacts"| X
+            R -.->|"post-pipeline<br/>artifacts"| EC
+            R -.->|"post-pipeline<br/>artifacts"| SC
+            R -.->|"post-pipeline<br/>artifacts"| SH
             Y -.->|"BaseChannel"| X
+            Y -.->|"BaseChannel"| EC
+            Y -.->|"BaseChannel"| SC
+            Y -.->|"BaseChannel"| SH
             U -.->|"post-pipeline"| X
+            E -.->|"market_research.json → listing data"| X
+            S -.->|"competitors[] → merged pricing"| X
             Z1 -.->|"optimizes"| X
             Z2 -.->|"analytics"| X
             Z3 -.->|"variants"| X
             X -.->|"post-pipeline"| AA
+            EC -.->|"post-pipeline"| AA
+            SC -.->|"post-pipeline"| AA
+            SH -.->|"post-pipeline"| AA
             AA --> AM
             AM --> FL
             FL -.->|"feedback to next run"| B
@@ -291,23 +318,70 @@
 </div>
 
     <div class="section">
-        <h2>Execution Order (Typical Research Pack)</h2>
+        <h2>Execution Order (Complete Pipeline — All Phases)</h2>
         <div class="mermaid">
-            flowchart LR
-                MR["market_research"] --> IM["images"]
-                MR --> CO["content"]
-                CO --> RE["render"]
-                RE --> PA["package"]
-                IM --> CSV["csv_export"]
-                CO --> CSV
-                IM --> DIAG["diagram"]
-                CO --> DIAG
-                MR --> NS["notion_schema"]
-                NS --> NT["notion_tree"]
-                NT --> NC["notion_content"]
-                CO --> LP["landing_page"]
-                LP --> SP["social_promotion"]
-                PA -.->|"post-pipeline"| CL["Channel Layer: gumroad_channel.publish(artifacts)\n→ product_url injected into context"]
+            flowchart TB
+                subgraph P01["Phase 0-1: Research → Scoring → Dynamic Planning"]
+                    MR["market_research"] --> OS["offer_scoring<br/>(6 weighted metrics)"]
+                    OS -->|"scored_recommendations[]<br/>schema switch if discovery"| PM["pipeline_plan_merge"]
+                    PM --> CT["template validation<br/>circuit breaker"]
+                    CT --> IM["images"]
+                    CT --> CO["content"]
+                    CT --> CSV["csv_export"]
+                    CT --> CAT["catalog"]
+                    CT --> DG["diagram"]
+                    CT --> DC["dynamic components<br/>(case_study, faq_section, etc.)"]
+                end
+
+                subgraph P2["Phase 2: Content Generation + Quality Validation"]
+                    CO --> QA1{"evaluation_agent<br/>score ≥ 0.6?"}
+                    IM --> QA1
+                    CSV --> QA1
+                    CAT --> QA1
+                    DG --> QA1
+                    QA1 -->|"yes ✓"| PA["package"]
+                    QA1 -->|"no ✗ (retry with fix prompt)"| CO
+                    QA1 -->|"no ✗ (2 retries exhausted)"| FAIL["component failed"]
+                    QA1 -.->|"needs_human_review"| RV["review_agent → review log"]
+                end
+
+                subgraph PP["Parallel Branches"]
+                    MR --> NS["notion_schema"]
+                    NS --> NT["notion_tree"]
+                    NT --> NC["notion_content"]
+                    CO --> LP["landing_page"]
+                    LP --> GR["gumroad_research"]
+                end
+
+                subgraph S4["Phase 4: Social Strategy"]
+                    LP --> RP["repurpose (1 pack → 10+ posts)"]
+                    RP --> CL["calendar (7-14 day schedule)"]
+                    CL --> SQ["sequences (teaser/launch/...)"]
+                    SQ --> AP["adapt per platform"]
+                    AP --> SCH["scheduler (JSON queue)"]
+                    SCH --> DI["dispatch → FB/IG/Threads/Pinterest"]
+                    DI --> AU["automation (DM/comment webhooks)"]
+                end
+
+                subgraph CL2["Channel Layer (post-pipeline)"]
+                    PA -.->|"artifacts"| GUM["gumroad_channel<br/>tags → price → AIDA → quality"]
+                    PA -.->|"artifacts"| ETS["etsy_channel"]
+                    PA -.->|"artifacts"| ST["store_channel (Stripe)"]
+                    PA -.->|"artifacts"| SHOP["shopify_channel"]
+                    MR -.->|"market_research.json"| GUM
+                    GR -.->|"competitors[]"| GUM
+                end
+
+                subgraph P5["Phase 5: Analytics & Feedback"]
+                    GUM -.->|"get_analytics()"| AA["analytics_agent"]
+                    ETS -.->|"get_analytics()"| AA
+                    ST -.->|"get_analytics()"| AA
+                    SHOP -.->|"get_analytics()"| AA
+                    AA --> AM["analytics_models → sales_records.json + insights.json"]
+                    AM --> DB["cli/dashboard"]
+                    AM --> FL["feedback_loop"]
+                    FL -.->|"next pipeline"| MR
+                end
         </div>
     </div>
 
@@ -335,7 +409,7 @@
 </div>
 
     <div class="section">
-        <h2>27 Agent Entities + 6 Channel Components + 2 Pipeline Safety</h2>
+        <h2>27 Agent Entities + 9 Channel Components + 3 Pipeline Safety</h2>
         <div class="cards">
             <div class="card"><h3>market_agent</h3><p>Deep market analysis with 10+ data sources (incl. Etsy, Gumroad). 151 lines.</p><span class="badge">Research</span></div>
             <div class="card"><h3>offer_scoring_agent</h3><p>Deterministic scoring: 6 weighted metrics across 15+ product types. 55 lines.</p><span class="badge">Scoring</span></div>
@@ -353,7 +427,7 @@
             <div class="card"><h3>notion_schema_agent</h3><p>LLM-generated Notion database blueprints. 71 lines.</p><span class="badge">Notion</span></div>
             <div class="card"><h3>notion_agent</h3><p>Notion API: databases, relations, pages. 566 lines.</p><span class="badge">Notion</span></div>
             <div class="card"><h3>notion_content_agent</h3><p>Notion block content writer. 127 lines.</p><span class="badge">Notion</span></div>
-            <div class="card"><h3>gumroad_agent</h3><p>Gumroad market research only. 134 lines.</p><span class="badge">Publishing</span></div>
+            <div class="card"><h3>gumroad_agent</h3><p>Gumroad market research: own-products API → competitors[] with pricing; data merged into channel listing optimization. 204 lines.</p><span class="badge">Publishing</span></div>
             <div class="card"><h3>landing_agent</h3><p>Design Intelligence + Vercel deploy. 204 lines.</p><span class="badge">Publishing</span></div>
             <div class="card"><h3>social_agent</h3><p>Social promotion with strategy: calendar, sequences, repurposing, scheduling. 355 lines.</p><span class="badge">Publishing</span></div>
             <div class="card"><h3>analytics_agent</h3><p>Post-pipeline analytics collector: iterates channels, deduplicates SalesRecords, computes Insights. 85 lines.</p><span class="badge">Analytics</span></div>
@@ -369,12 +443,16 @@
             <div class="card"><h3>social_automation</h3><p>DM/comment webhooks + trigger phrase auto-reply. 86 lines.</p><span class="badge">Social</span></div>
             <div class="card"><h3>social_scheduler</h3><p>JSON post queue, dequeue due, dispatch to API clients. 127 lines.</p><span class="badge">Social</span></div>
             <div class="card"><h3>BaseChannel</h3><p>ABC: validate, publish, update, get_analytics + AnalyticsData, ListingQualityScore models. 76 lines.</p><span class="badge">Channel</span></div>
-            <div class="card"><h3>GumroadChannel</h3><p>Full Gumroad publish with listing optimization, quality scoring, A/B variants. 436 lines.</p><span class="badge">Channel</span></div>
-            <div class="card"><h3>gumroad_listing</h3><p>Tag/pricing/AIDA description optimization from market research. 147 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>GumroadChannel</h3><p>Full Gumroad publish with listing optimization, quality scoring, A/B variants, research_data merge from market_agent + gumroad_agent. 540 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>gumroad_listing</h3><p>Tag/pricing/AIDA description optimization from merged market + gumroad research data. 147 lines.</p><span class="badge">Channel</span></div>
             <div class="card"><h3>gumroad_analytics</h3><p>Analytics pull + listing quality scoring (5 dimensions). 165 lines.</p><span class="badge">Channel</span></div>
             <div class="card"><h3>gumroad_ab_testing</h3><p>Cover/thumbnail variant management. 80 lines.</p><span class="badge">Channel</span></div>
-            <div class="card"><h3>CHANNEL_REGISTRY</h3><p>Channel name → class mapping + model exports. 8 lines.</p><span class="badge">Channel</span></div>
-            <div class="card"><h3>component_templates</h3><p>Frozen template registry: validate, resolve, list 6 validated templates with LOCKED_FIELDS security. 55 lines.</p><span class="badge">Safety</span></div>
+            <div class="card"><h3>EtsyChannel</h3><p>OAuth2 listing create/update with file upload, draft→active state management, analytics via Etsy Stats API. 156 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>StoreChannel</h3><p>Stripe Product + Price creation/update, analytics via Charges API. 98 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>ShopifyChannel</h3><p>REST API product create (draft), image upload via base64, analytics via Orders API. 121 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>CHANNEL_REGISTRY</h3><p>Channel name → class mapping + model exports. 14 lines.</p><span class="badge">Channel</span></div>
+            <div class="card"><h3>component_templates</h3><p>Frozen template registry: validate_template(), resolve_template(), list_templates() with LOCKED_FIELDS security. 55 lines.</p><span class="badge">Safety</span></div>
+            <div class="card"><h3>circuit_breaker</h3><p>_component_failures dict per template, blocks template after 3 consecutive failures. Integrated in orchestrator.py run-loop + _merge_pipeline_plan.</p><span class="badge">Safety</span></div>
             <div class="card"><h3>dry_run</h3><p>DAG tree printer for `--dry-run` CLI mode. 20 lines.</p><span class="badge">Safety</span></div>
         </div>
     </div>
@@ -404,10 +482,11 @@
             <tr><td>19</td><td>Phase 0: Channel Layer — extracted Gumroad publishing into channels/; decoupled landing/social; removed gumroad_publish from all 15 schemas</td></tr>
             <tr><td>20</td><td><strong>Phase 1: Offer Scoring Engine</strong> — scoring framework with 6 weighted metrics, offer_scoring_agent, Etsy/Gumroad data sources, orchestrator schema switching</td></tr>
             <tr><td>21</td><td>Quality Validation — evaluation_agent, pattern + LLM checks, auto-retry, review_agent, alerts</td></tr>
-            <tr><td>22</td><td><strong>Phase 3: Gumroad Listing Optimization</strong> — analytics pull, quality scoring, AIDA desc, research-driven tags/pricing, cover/thumbnail A/B variants</td></tr>
+            <tr><td>22</td><td><strong>Phase 3: Gumroad Listing Optimization</strong> — analytics pull, quality scoring, AIDA desc, research-driven tags/pricing, cover/thumbnail A/B variants; gumroad_agent outputs competitors[]; orchestrator wires research_data_path; channel merges both sources for listing opt</td></tr>
             <tr><td>23</td><td><strong>Phase 4: Social Strategy</strong> — multi-post sequences, 7-14 day content calendars, content repurposing (1 pack → 10+ posts), platform adaptation, engagement tracking, DM/comment automation, post scheduler; 60 new tests</td></tr>
             <tr><td>24</td><td><strong>Phase 5: Analytics & Feedback Loop</strong> — analytics_models (SalesRecord, Insights, JSON persistence), analytics_agent (post-pipeline collector across all channels), feedback_loop (past performance → market prompts + scoring adjustments), CLI dashboard; 33 new tests; orchestrator wiring before market_agent and before offer_scoring_agent</td></tr>
             <tr><td>25</td><td><strong>Phase 6: Dynamic Pipeline Safety</strong> — component template registry (6 validated templates, LOCKED_FIELDS security), circuit breaker (3-failure threshold per template), structured error messages, --dry-run CLI mode; 20 new tests</td></tr>
+            <tr><td>26</td><td><strong>Phase 7: Platform Expansion</strong> — standardized channel output format; channel config UI (wizard + CSV); EtsyChannel (OAuth2, listing CRUD, file upload); StoreChannel (Stripe Product+Price); ShopifyChannel (REST API, draft products, image upload); all registered in CHANNEL_REGISTRY; 16 new tests (270 total)</td></tr>
         </table>
     </div>
 
