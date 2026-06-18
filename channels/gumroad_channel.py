@@ -8,6 +8,26 @@ import httpx
 
 from channels.base import BaseChannel, ProductArtifact, PublishResult, AnalyticsData, ListingQualityScore
 from channels.gumroad_listing import generate_optimized_tags, suggest_price, generate_aida_description
+
+
+def _extract_competitors(research_data: dict | None) -> list[dict] | None:
+    if not research_data:
+        return None
+    competitors = []
+    for comp in research_data.get("competitors", []) or []:
+        p = comp.get("price_cents") or comp.get("price", 0)
+        if isinstance(p, (int, float)) and p > 0:
+            competitors.append({"price_cents": int(p)})
+    gr_prods = (
+        research_data.get("gumroad_products", [])
+        or research_data.get("gumroad", {}).get("products", [])
+        or []
+    )
+    for prod in gr_prods:
+        p = prod.get("price_cents") or prod.get("price", 0)
+        if isinstance(p, (int, float)) and p > 0:
+            competitors.append({"price_cents": int(p)})
+    return competitors or None
 from channels.gumroad_analytics import pull_analytics, score_listing_quality
 from channels.gumroad_ab_testing import VariantSet, save_variant_state, upload_variants
 
@@ -221,7 +241,9 @@ class GumroadChannel(BaseChannel):
             artifact.niche, artifact.product_type, research_data
         )
         artifact.price_cents = suggest_price(
-            artifact.product_type, research_data, artifact.price_cents
+            competitors=_extract_competitors(research_data),
+            default_price=artifact.price_cents or 2900,
+            value_tier=artifact.value_tier,
         )
         artifact.description = generate_aida_description(
             artifact.niche, artifact.product_type, research_data
@@ -289,7 +311,9 @@ class GumroadChannel(BaseChannel):
             artifact.niche, artifact.product_type, research_data
         )
         artifact.price_cents = suggest_price(
-            artifact.product_type, research_data, artifact.price_cents
+            competitors=_extract_competitors(research_data),
+            default_price=artifact.price_cents or 2900,
+            value_tier=artifact.value_tier,
         )
         artifact.description = generate_aida_description(
             artifact.niche, artifact.product_type, research_data

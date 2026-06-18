@@ -8,6 +8,22 @@ from orchestrator.scoring import run as run_scoring
 logger = logging.getLogger(__name__)
 
 
+def compute_value_tier(content_fit: float = 0.5, word_count: int = 0, page_count: int = 0, competitor_median: float = 0, product_type: str = "") -> str:
+    low_ticket_types = {"checklist", "prompt_pack", "swipe_file", "excel_template"}
+    mid_ticket_types = {"research_pack", "blog_kit", "visual_pack", "sop_pack", "resource_pack", "boilerplate"}
+    high_ticket_types = {"course_launch", "operating_system", "workflow_kit", "database", "saas_docs"}
+
+    if content_fit < 0.3 and word_count < 500:
+        return "free"
+    if page_count > 80 or content_fit > 0.7 or competitor_median > 45:
+        return "high_ticket"
+    if product_type in high_ticket_types:
+        return "high_ticket"
+    if page_count > 20 or competitor_median > 15 or product_type in mid_ticket_types:
+        return "mid_ticket"
+    return "low_ticket"
+
+
 def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResult:
     """Read market_research.json, score offers, write enriched output."""
     try:
@@ -26,13 +42,21 @@ def run(component: ComponentSpec, job_spec: JobSpec, context: dict) -> AgentResu
 
         scored_data = []
         for offer in framework.offers:
-            scored_data.append({
+            rec = {
                 "product_type": offer.product_type,
                 "display_name": offer.display_name,
                 "total_score": offer.total_score,
                 "confidence": offer.confidence,
                 "reasoning": offer.reasoning,
-            })
+            }
+            rec["value_tier"] = compute_value_tier(
+                content_fit=rec.get("content_fit", 0.5),
+                word_count=research.get("estimated_word_count", 0),
+                page_count=research.get("estimated_page_count", 0),
+                competitor_median=rec.get("competitor_median_price", 0),
+                product_type=rec.get("product_type", ""),
+            )
+            scored_data.append(rec)
 
         research["scored_recommendations"] = scored_data
 

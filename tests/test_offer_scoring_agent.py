@@ -77,6 +77,26 @@ def test_offer_scoring_agent_missing_file(tmp_path):
     assert "not found" in (result.error or "").lower()
 
 
+def test_compute_value_tier_free():
+    from agents.offer_scoring_agent import compute_value_tier
+    tier = compute_value_tier(content_fit=0.2, word_count=300, page_count=1, competitor_median=0, product_type="checklist")
+    assert tier == "free"
+
+def test_compute_value_tier_low_ticket():
+    from agents.offer_scoring_agent import compute_value_tier
+    tier = compute_value_tier(content_fit=0.5, word_count=1500, page_count=10, competitor_median=10, product_type="prompt_pack")
+    assert tier == "low_ticket"
+
+def test_compute_value_tier_mid_ticket():
+    from agents.offer_scoring_agent import compute_value_tier
+    tier = compute_value_tier(content_fit=0.6, word_count=5000, page_count=40, competitor_median=25, product_type="research_pack")
+    assert tier == "mid_ticket"
+
+def test_compute_value_tier_high_ticket():
+    from agents.offer_scoring_agent import compute_value_tier
+    tier = compute_value_tier(content_fit=0.8, word_count=20000, page_count=100, competitor_median=60, product_type="course_launch")
+    assert tier == "high_ticket"
+
 def test_offer_scoring_agent_with_mocked_scoring(tmp_path, monkeypatch):
     """Unit test: mock scoring framework to return controlled output."""
     from agents.offer_scoring_agent import run as agent_run

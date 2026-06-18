@@ -25,17 +25,41 @@ def test_generate_optimized_tags_without_research():
     assert "Digital Product" in tags
 
 def test_suggest_price_with_research():
-    price = suggest_price("research_pack", SAMPLE_RESEARCH, base_price_cents=1500)
+    competitors = [
+        {"price_cents": 1999},
+        {"price_cents": 2999},
+        {"price_cents": 2499},
+    ]
+    price = suggest_price(competitors, default_price=1500)
     assert isinstance(price, int)
     assert price > 0
 
-def test_suggest_price_without_research():
-    price = suggest_price("research_pack", base_price_cents=2000)
+def test_suggest_price_without_competitors():
+    price = suggest_price(default_price=2000)
     assert price == 2000
 
 def test_suggest_price_median():
-    price = suggest_price("research_pack", SAMPLE_RESEARCH)
+    competitors = [
+        {"price_cents": 1999},
+        {"price_cents": 2999},
+        {"price_cents": 2499},
+    ]
+    price = suggest_price(competitors)
     assert 1999 <= price <= 2999
+
+def test_suggest_price_free_tier():
+    price = suggest_price(value_tier="free")
+    assert price == 0
+
+def test_suggest_price_low_ticket():
+    competitors = [{"price_cents": 3000}]
+    price = suggest_price(competitors, value_tier="low_ticket")
+    assert 500 <= price <= 1500
+
+def test_suggest_price_high_ticket():
+    competitors = [{"price_cents": 3000}]
+    price = suggest_price(competitors, value_tier="high_ticket")
+    assert price >= 5000
 
 def test_generate_aida_description_with_research(monkeypatch):
     def mock_llm(*args, **kwargs):

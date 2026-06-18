@@ -86,36 +86,23 @@ def generate_optimized_tags(
     return result
 
 
-def suggest_price(
-    product_type: str,
-    research_data: dict | None = None,
-    base_price_cents: int = 0,
-) -> int:
-    if not research_data:
-        return base_price_cents
+def suggest_price(competitors: list[dict] | None = None, default_price: int = 2900, value_tier: str | None = None) -> int:
+    if competitors:
+        prices = sorted([c.get("price_cents", default_price) for c in competitors if c.get("price_cents")])
+        if prices:
+            median_price = prices[len(prices) // 2]
+        else:
+            median_price = default_price
+    else:
+        median_price = default_price
 
-    prices: list[int] = []
-    for comp in research_data.get("competitors", []) or []:
-        p = comp.get("price_cents") or comp.get("price", 0)
-        if isinstance(p, (int, float)) and p > 0:
-            prices.append(int(p))
-    gumroad_prods = (
-        research_data.get("gumroad_products", [])
-        or research_data.get("gumroad", {}).get("products", [])
-        or []
-    )
-    for prod in gumroad_prods:
-        p = prod.get("price_cents") or prod.get("price", 0)
-        if isinstance(p, (int, float)) and p > 0:
-            prices.append(int(p))
-
-    if not prices:
-        return base_price_cents if base_price_cents > 0 else 999
-
-    prices.sort()
-    n = len(prices)
-    median = prices[n // 2] if n % 2 == 1 else (prices[n // 2 - 1] + prices[n // 2]) // 2
-    return median
+    if value_tier == "free":
+        return 0
+    if value_tier == "low_ticket":
+        return max(500, min(median_price, 1500))
+    if value_tier == "high_ticket":
+        return max(5000, median_price)
+    return max(1500, min(median_price, 5000))
 
 
 def generate_aida_description(

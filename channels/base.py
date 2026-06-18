@@ -24,6 +24,7 @@ class ProductArtifact(BaseModel):
     research_data_path: Optional[str] = None
     cover_variants: List[str] = []
     thumbnail_variants: List[str] = []
+    value_tier: Optional[str] = None
 
 
 class PublishResult(BaseModel):
