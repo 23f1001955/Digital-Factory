@@ -12,6 +12,8 @@ from agents.evaluation_agent import evaluate, EVALUATION_TARGETS
 from orchestrator.notify import dispatch_alert
 from agents.review_agent import write_review_log
 from orchestrator.concurrency import RunLock
+from orchestrator.bottleneck import BottleneckTracker
+
 FILE_AGENT_SUBSTITUTIONS = {
     "content_agent": "notion_content_agent",
     "csv_export_agent": "notion_content_agent",
@@ -43,6 +45,7 @@ class Orchestrator:
         self._landing_page_url: str = ""
         self._component_failures: Dict[str, int] = {}
         self.run_lock = RunLock()
+        self.bottleneck = BottleneckTracker()
 
     def _get_execution_order(self) -> List[ComponentSpec]:
         """Topological sort of components."""
@@ -545,7 +548,8 @@ class Orchestrator:
                     context["landing_page_url"] = self._landing_page_url
 
                 try:
-                    result = agent_func(component, self.job_spec, context)
+                    with self.bottleneck.track(f"agent_{component.agent}"):
+                        result = agent_func(component, self.job_spec, context)
                 except Exception as e:
                     tb = traceback.format_exc()
                     logger.error(
@@ -707,6 +711,9 @@ class Orchestrator:
             logger.info("Pipeline complete")
             logger.info("Orchestrator run complete. Generating summary report...")
             self._generate_run_summary()
+            # Save bottleneck report
+            bottleneck_path = os.path.join("outputs", self.job_spec.slug, "bottleneck_report.json")
+            self.bottleneck.save_report(bottleneck_path)
         finally:
             self.run_lock.release()
 
