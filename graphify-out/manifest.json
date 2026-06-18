@@ -1,237 +1,592 @@
 {
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\__init__.py": {
-    "mtime": 1781264473.2113676,
+  "agents/__init__.py": {
+    "mtime": 1781613712.5030174,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\catalog_agent.py": {
-    "mtime": 1781261585.1637197,
-    "ast_hash": "789adc9599185a6712c2187bfd7731a8",
-    "semantic_hash": "789adc9599185a6712c2187bfd7731a8"
+  "agents/catalog_agent.py": {
+    "mtime": 1781614268.2888918,
+    "ast_hash": "0d8fb4aba85ecc6abc518d54d230594c",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\content_agent.py": {
-    "mtime": 1781264898.3377147,
-    "ast_hash": "ebc33da93c70f5312a20372bb089c841",
-    "semantic_hash": "ebc33da93c70f5312a20372bb089c841"
+  "agents/content_agent.py": {
+    "mtime": 1781613712.5030174,
+    "ast_hash": "1c8d0f58f9a55b25cd0b0517e465ef44",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\csv_export_agent.py": {
-    "mtime": 1781232385.1865726,
-    "ast_hash": "85efe60c8fa5f13ed104e5c2bae8b7f2",
-    "semantic_hash": "85efe60c8fa5f13ed104e5c2bae8b7f2"
+  "agents/csv_export_agent.py": {
+    "mtime": 1781617950.1835215,
+    "ast_hash": "286cf987cdaba4a3ba37e12c9d39135f",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\diagram_agent.py": {
-    "mtime": 1781261583.0989437,
-    "ast_hash": "43edc8453bf647f2b271ff5ec7b9fe60",
-    "semantic_hash": "43edc8453bf647f2b271ff5ec7b9fe60"
+  "agents/diagram_agent.py": {
+    "mtime": 1781613712.50858,
+    "ast_hash": "84faedd1aab339ddfb9fd283a06d25b7",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\gumroad_agent.py": {
-    "mtime": 1781502902.5021155,
-    "ast_hash": "fe3213321147e9288389df08454038ed",
-    "semantic_hash": "fe3213321147e9288389df08454038ed"
+  "agents/gumroad_agent.py": {
+    "mtime": 1781692777.8766503,
+    "ast_hash": "34ebf70781cffe7cd3783aa5e5bad9b2",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\image_agent.py": {
-    "mtime": 1781514153.4814768,
-    "ast_hash": "a29c0b485d6ca3593060986b705d7b07",
-    "semantic_hash": "a29c0b485d6ca3593060986b705d7b07"
+  "agents/image_agent.py": {
+    "mtime": 1781613712.50858,
+    "ast_hash": "e98f68685789651fb9e2df714f74637e",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\landing_agent.py": {
-    "mtime": 1781529476.8371332,
-    "ast_hash": "6e49f9caa36f9382b8d1e868acea1ed4",
-    "semantic_hash": "6e49f9caa36f9382b8d1e868acea1ed4"
+  "agents/landing_agent.py": {
+    "mtime": 1781673904.6281295,
+    "ast_hash": "d165431cb5ed64bdfebbb5349c1df832",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\llm_client.py": {
-    "mtime": 1781263687.982751,
-    "ast_hash": "52ca18bdfc2410241ff49dc6590d89f2",
-    "semantic_hash": "52ca18bdfc2410241ff49dc6590d89f2"
+  "agents/llm_client.py": {
+    "mtime": 1781613712.515833,
+    "ast_hash": "c364178487bec8e0c43f46db50c46ed1",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\market_agent.py": {
-    "mtime": 1781539327.7032273,
-    "ast_hash": "65e0e00c2cc7ae81ff5ffbfc9fb895fb",
-    "semantic_hash": "65e0e00c2cc7ae81ff5ffbfc9fb895fb"
+  "agents/market_agent.py": {
+    "mtime": 1781692628.3235898,
+    "ast_hash": "67e5d8dd0612452d18d24a017bdc267f",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\notion_agent.py": {
-    "mtime": 1781531178.0388417,
-    "ast_hash": "7a0fa53cc6fdf106ac49c708a5a3a1e2",
-    "semantic_hash": "7a0fa53cc6fdf106ac49c708a5a3a1e2"
+  "agents/notion_agent.py": {
+    "mtime": 1781613712.5190897,
+    "ast_hash": "8ea3cdeff8e88ba983d65061c9ceb728",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\notion_schema_agent.py": {
-    "mtime": 1781531106.5425322,
-    "ast_hash": "cd623c156a6f154dd90af349562c091d",
-    "semantic_hash": "cd623c156a6f154dd90af349562c091d"
+  "agents/notion_schema_agent.py": {
+    "mtime": 1781613712.5225813,
+    "ast_hash": "ecc9df935b3d9ed4a8a184e48996619b",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\packaging_agent.py": {
-    "mtime": 1781532139.4346168,
-    "ast_hash": "a3b16ebbc221630db218c9465837c4f0",
-    "semantic_hash": "a3b16ebbc221630db218c9465837c4f0"
+  "agents/packaging_agent.py": {
+    "mtime": 1781613712.5225813,
+    "ast_hash": "13f126fa310d9a5efe0dedbdb4d7472e",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\registry.py": {
-    "mtime": 1781489722.539121,
-    "ast_hash": "e635d1aeafc3e62ab4e0ed2d68f118c2",
-    "semantic_hash": "e635d1aeafc3e62ab4e0ed2d68f118c2"
+  "agents/registry.py": {
+    "mtime": 1781691065.2092998,
+    "ast_hash": "3dfe78a2cc4a57ad6720324d71240f67",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\render_agent.py": {
-    "mtime": 1781514807.30805,
-    "ast_hash": "838a4959faa7baf1b3cef5698fa4cdae",
-    "semantic_hash": "838a4959faa7baf1b3cef5698fa4cdae"
+  "agents/render_agent.py": {
+    "mtime": 1781613712.5225813,
+    "ast_hash": "ace790a0755dbba2e54e66f585a309a7",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\research_agent.py": {
-    "mtime": 1781269120.68829,
-    "ast_hash": "647ad847fc6ef8440dccddd0fa78cc66",
-    "semantic_hash": "647ad847fc6ef8440dccddd0fa78cc66"
+  "agents/research_agent.py": {
+    "mtime": 1781613712.5225813,
+    "ast_hash": "84ac06ae116b94ad7933ac3cc4bb79d0",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\research_tools.py": {
-    "mtime": 1781527198.413834,
-    "ast_hash": "3831e72c59dbfff42540a52e753400fa",
-    "semantic_hash": "3831e72c59dbfff42540a52e753400fa"
+  "agents/research_tools.py": {
+    "mtime": 1781675803.3673348,
+    "ast_hash": "dc423110a022cdbba4b4ccd40f4d2b0d",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\social_agent.py": {
-    "mtime": 1781374247.4510906,
-    "ast_hash": "543c606dda167da146a75f1f19c7bc92",
-    "semantic_hash": "543c606dda167da146a75f1f19c7bc92"
+  "agents/social_agent.py": {
+    "mtime": 1781691230.041353,
+    "ast_hash": "300cba272840ddeb1614e1a386d2908a",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\stitch_agent.py": {
-    "mtime": 1781500668.3459587,
-    "ast_hash": "a0a86166c913d59dc7a972859fb45f2d",
-    "semantic_hash": "a0a86166c913d59dc7a972859fb45f2d"
+  "agents/visual_agent.py": {
+    "mtime": 1781613712.5356567,
+    "ast_hash": "c6551d5cd5f3674606c93aac94b0f887",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\agents\\visual_agent.py": {
-    "mtime": 1781374921.0316951,
-    "ast_hash": "7fa817b05bbbf269596d8bb2a8c473af",
-    "semantic_hash": "7fa817b05bbbf269596d8bb2a8c473af"
-  },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\cli\\__init__.py": {
-    "mtime": 1781264473.4923902,
+  "cli/__init__.py": {
+    "mtime": 1781613712.5356567,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\cli\\wizard.py": {
-    "mtime": 1781490069.5463922,
-    "ast_hash": "4cfcd5600ad8afbfa34a6b2e7f108200",
-    "semantic_hash": "4cfcd5600ad8afbfa34a6b2e7f108200"
+  "cli/wizard.py": {
+    "mtime": 1781617312.3528168,
+    "ast_hash": "2b58bfc1c227359d434a99cb8d809582",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\main.py": {
-    "mtime": 1781524992.647561,
-    "ast_hash": "39cfa3686579d51b903e60457ea5d3a9",
-    "semantic_hash": "39cfa3686579d51b903e60457ea5d3a9"
+  "main.py": {
+    "mtime": 1781613712.5689497,
+    "ast_hash": "23110296288600e9c9915e80e9c70eb7",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\orchestrator\\__init__.py": {
-    "mtime": 1781264472.917013,
+  "orchestrator/__init__.py": {
+    "mtime": 1781613712.5689497,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\orchestrator\\models.py": {
-    "mtime": 1781340464.898288,
-    "ast_hash": "e299e67acca1528c2d68aac59dd8694c",
-    "semantic_hash": "e299e67acca1528c2d68aac59dd8694c"
+  "orchestrator/models.py": {
+    "mtime": 1781673616.7390654,
+    "ast_hash": "2a55c176c655a68e1c333bea4ccae29e",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\orchestrator\\orchestrator.py": {
-    "mtime": 1781514807.2984424,
-    "ast_hash": "4c820c8529a26728f521f644cae84e5b",
-    "semantic_hash": "4c820c8529a26728f521f644cae84e5b"
+  "orchestrator/orchestrator.py": {
+    "mtime": 1781692788.721381,
+    "ast_hash": "7b44b5bc5fd480added64c2f0931366b",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\orchestrator\\state.py": {
-    "mtime": 1781514807.3065343,
-    "ast_hash": "5bb109843281e02ca92f3287c2967582",
-    "semantic_hash": "5bb109843281e02ca92f3287c2967582"
+  "orchestrator/state.py": {
+    "mtime": 1781613712.570959,
+    "ast_hash": "7883b41bbe670d153b59ec7de17dfa92",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\renderers\\__init__.py": {
-    "mtime": 1781264473.8333292,
+  "renderers/__init__.py": {
+    "mtime": 1781613712.6248116,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\renderers\\antigravity_renderer.py": {
-    "mtime": 1781232355.9797475,
-    "ast_hash": "b9658a473c657de820b5077f1c067bcb",
-    "semantic_hash": "b9658a473c657de820b5077f1c067bcb"
+  "renderers/antigravity_renderer.py": {
+    "mtime": 1781613712.6329777,
+    "ast_hash": "0c12b6c7f8c2f6a0f4c5f8c0d2e1a660",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\renderers\\base.py": {
-    "mtime": 1781232344.6986601,
-    "ast_hash": "5bff7d52c3a5ab34d9c815dfb79db43b",
-    "semantic_hash": "5bff7d52c3a5ab34d9c815dfb79db43b"
+  "renderers/base.py": {
+    "mtime": 1781613712.6329777,
+    "ast_hash": "dd1f4307fc03e2751d986571d27d3c90",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\renderers\\playwright_renderer.py": {
-    "mtime": 1781269641.3744197,
-    "ast_hash": "afc4ce8690e8e3975a1a2d47075fec1a",
-    "semantic_hash": "afc4ce8690e8e3975a1a2d47075fec1a"
+  "renderers/playwright_renderer.py": {
+    "mtime": 1781613712.6329777,
+    "ast_hash": "87fa7551deab94a5d7fedab96c14e57a",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\schemas\\blog_kit.json": {
-    "mtime": 1781532224.0435398,
-    "ast_hash": "85fd1a752c956078ae74282cdd0ba66e",
-    "semantic_hash": "85fd1a752c956078ae74282cdd0ba66e"
+  "schemas/blog_kit.json": {
+    "mtime": 1781673538.8941798,
+    "ast_hash": "ffc4282049bec3757fc83e8d6048a524",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\schemas\\course_launch.json": {
-    "mtime": 1781530956.2975812,
-    "ast_hash": "8e9524ff173c83526f13178bcafeeec9",
-    "semantic_hash": "8e9524ff173c83526f13178bcafeeec9"
+  "schemas/course_launch.json": {
+    "mtime": 1781673535.3578615,
+    "ast_hash": "38661a175f10bcaaf4df14291e3165ae",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\schemas\\operating_system.json": {
-    "mtime": 1781532183.824695,
-    "ast_hash": "5fa3678936a2d7f393cc7c883c94fcab",
-    "semantic_hash": "5fa3678936a2d7f393cc7c883c94fcab"
+  "schemas/operating_system.json": {
+    "mtime": 1781673531.783764,
+    "ast_hash": "e167b55339adcf0594c52b80e094b2f7",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\schemas\\research_pack.json": {
-    "mtime": 1781513726.9750729,
-    "ast_hash": "a205671339b74f408654380542606894",
-    "semantic_hash": "a205671339b74f408654380542606894"
+  "schemas/research_pack.json": {
+    "mtime": 1781673529.5502365,
+    "ast_hash": "8b68d1d43c27803aacb49ecb20cbab7b",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\schemas\\saas_docs.json": {
-    "mtime": 1781532277.7723966,
-    "ast_hash": "6056de19827187edf3d3b6e67cf2716e",
-    "semantic_hash": "6056de19827187edf3d3b6e67cf2716e"
+  "schemas/saas_docs.json": {
+    "mtime": 1781673527.1284285,
+    "ast_hash": "d80a1ff94e0adf52a7082b43ae4978cc",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\schemas\\visual_pack.json": {
-    "mtime": 1781513730.4578314,
-    "ast_hash": "a96cb4ba2654c6ea35bccfb4f9c91e05",
-    "semantic_hash": "a96cb4ba2654c6ea35bccfb4f9c91e05"
+  "schemas/visual_pack.json": {
+    "mtime": 1781673523.5264199,
+    "ast_hash": "9d83c37952ca6a2527647a0b9288b8f3",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\schemas\\workflow_kit.json": {
-    "mtime": 1781532194.3301668,
-    "ast_hash": "8b6ceeb409e361c274032fa9b551bdd7",
-    "semantic_hash": "8b6ceeb409e361c274032fa9b551bdd7"
+  "schemas/workflow_kit.json": {
+    "mtime": 1781673522.4382539,
+    "ast_hash": "ce1fb7c73121cb827ac3e130960ae1c8",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\templates\\shared\\mermaid.min.js": {
+  "templates/shared/mermaid.min.js": {
     "mtime": 1781353528.9717796,
     "ast_hash": "67b927e022dbd5844e31897539ea5616",
     "semantic_hash": "67b927e022dbd5844e31897539ea5616"
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\tests\\__init__.py": {
-    "mtime": 1781264474.1209097,
+  "tests/__init__.py": {
+    "mtime": 1781613712.6576858,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\tests\\test_agents.py": {
-    "mtime": 1781514807.3094633,
-    "ast_hash": "ae8f9927ba6e963fb8651d256d29aaf7",
-    "semantic_hash": "ae8f9927ba6e963fb8651d256d29aaf7"
+  "tests/test_agents.py": {
+    "mtime": 1781691250.8393111,
+    "ast_hash": "f1ed2cae2651267bedc0aed5f428ce0e",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\tests\\test_orchestrator.py": {
-    "mtime": 1781514671.376263,
-    "ast_hash": "77eba3273cd573ce862046d6765e6069",
-    "semantic_hash": "77eba3273cd573ce862046d6765e6069"
+  "tests/test_orchestrator.py": {
+    "mtime": 1781692921.8572166,
+    "ast_hash": "5b6aa9c735d464379931142aca35b6bf",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\AGENTS.md": {
-    "mtime": 1781226836.024828,
-    "ast_hash": "dd91492a1bca66e17c11dfaa8890a4fc",
-    "semantic_hash": "dd91492a1bca66e17c11dfaa8890a4fc"
+  "AGENTS.md": {
+    "mtime": 1781693817.6273935,
+    "ast_hash": "0100c70465135d0b9c6e6dd71c2f390c",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\PRD.md": {
-    "mtime": 1781513966.5712357,
-    "ast_hash": "4c33b72a448e745e5a5dde16c4e42d05",
-    "semantic_hash": "4c33b72a448e745e5a5dde16c4e42d05"
+  "README.md": {
+    "mtime": 1781693877.4161704,
+    "ast_hash": "5bfdc263629df5aa2f4e37752d715256",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\README.md": {
-    "mtime": 1781339967.5450108,
-    "ast_hash": "b4b9d9e5cd3f0aa92fcc2a6c62a172b1",
-    "semantic_hash": "b4b9d9e5cd3f0aa92fcc2a6c62a172b1"
+  "requirements.txt": {
+    "mtime": 1781617836.0639422,
+    "ast_hash": "168bfa52158629d7128e5c9875818ab1",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\docs\\superpowers\\specs\\2026-06-15-dynamic-pipeline-design.md": {
-    "mtime": 1781538823.5574658,
-    "ast_hash": "1c894e5a20358f09f3c8b8e51ea3d43a",
-    "semantic_hash": "1c894e5a20358f09f3c8b8e51ea3d43a"
+  "agents/analytics_agent.py": {
+    "mtime": 1781691713.6286995,
+    "ast_hash": "a62096ab3e95926c1d8d428c8a54a423",
+    "semantic_hash": ""
   },
-  "C:\\Users\\hp\\Documents\\Projects\\digital-factory\\requirements.txt": {
-    "mtime": 1781523340.5818338,
-    "ast_hash": "a4d5ae6509d72c61e3f3ccd1aef8b589",
-    "semantic_hash": "a4d5ae6509d72c61e3f3ccd1aef8b589"
+  "agents/evaluation_agent.py": {
+    "mtime": 1781674432.6135962,
+    "ast_hash": "826349afa12574a3d78c4ca6cd3ef992",
+    "semantic_hash": ""
+  },
+  "agents/notion_content_agent.py": {
+    "mtime": 1781613712.5197597,
+    "ast_hash": "54cbb223dc51b544c26d5a48ef238ee0",
+    "semantic_hash": ""
+  },
+  "agents/offer_scoring_agent.py": {
+    "mtime": 1781692631.0656497,
+    "ast_hash": "1cdc79d764341d6908a86b7e26f1ab0a",
+    "semantic_hash": ""
+  },
+  "agents/review_agent.py": {
+    "mtime": 1781673885.0396035,
+    "ast_hash": "e2a28781d2b33e29391278decdae857c",
+    "semantic_hash": ""
+  },
+  "agents/social/__init__.py": {
+    "mtime": 1781691026.655234,
+    "ast_hash": "bd34c9aa4e75498c08bee7823c66ebcc",
+    "semantic_hash": ""
+  },
+  "agents/social/automation.py": {
+    "mtime": 1781690929.3722875,
+    "ast_hash": "7555ac102bb93bbba4afff43405eb2c3",
+    "semantic_hash": ""
+  },
+  "agents/social/calendar.py": {
+    "mtime": 1781690453.873117,
+    "ast_hash": "f0f98d833286431b0cd07dfed5b55989",
+    "semantic_hash": ""
+  },
+  "agents/social/engagement.py": {
+    "mtime": 1781690864.4525337,
+    "ast_hash": "1d54839cfe7eaedad978a8f31eb1315d",
+    "semantic_hash": ""
+  },
+  "agents/social/models.py": {
+    "mtime": 1781689595.2248304,
+    "ast_hash": "dfe500cca42c03c2890aa5327aa1e980",
+    "semantic_hash": ""
+  },
+  "agents/social/platform_strategy.py": {
+    "mtime": 1781690076.9820385,
+    "ast_hash": "d846250e82c09f14de3a8163281400d4",
+    "semantic_hash": ""
+  },
+  "agents/social/repurposing.py": {
+    "mtime": 1781690501.4970107,
+    "ast_hash": "89abfc5c57534c51c1f0a4c1a8fc8103",
+    "semantic_hash": ""
+  },
+  "agents/social/scheduler.py": {
+    "mtime": 1781690770.597158,
+    "ast_hash": "e612f4dc840531568e7abbb6a01e3bdf",
+    "semantic_hash": ""
+  },
+  "agents/social/sequences.py": {
+    "mtime": 1781690594.8653717,
+    "ast_hash": "98974cc28b9125529685b4f0f271738b",
+    "semantic_hash": ""
+  },
+  "channels/__init__.py": {
+    "mtime": 1781688977.77611,
+    "ast_hash": "735e4bb8c44a985d849f59911aaf851b",
+    "semantic_hash": ""
+  },
+  "channels/base.py": {
+    "mtime": 1781688975.661396,
+    "ast_hash": "95fd21edd662553b74e76d73865b6c9a",
+    "semantic_hash": ""
+  },
+  "channels/gumroad_ab_testing.py": {
+    "mtime": 1781689997.9957528,
+    "ast_hash": "8e526d83352e95f11db590a10ea0027a",
+    "semantic_hash": ""
+  },
+  "channels/gumroad_analytics.py": {
+    "mtime": 1781689926.2529113,
+    "ast_hash": "3e6cfad70439c19a222027ab6d1eac78",
+    "semantic_hash": ""
+  },
+  "channels/gumroad_channel.py": {
+    "mtime": 1781692822.0194132,
+    "ast_hash": "294af8ccaa14caf6b3e6679612bc083b",
+    "semantic_hash": ""
+  },
+  "channels/gumroad_listing.py": {
+    "mtime": 1781689501.8921154,
+    "ast_hash": "f140b9a83098031dcddf99961981c197",
+    "semantic_hash": ""
+  },
+  "cli/dashboard.py": {
+    "mtime": 1781692146.9855168,
+    "ast_hash": "a919c378afd4bfc92a41e56487cb47f6",
+    "semantic_hash": ""
+  },
+  "design_intelligence/__init__.py": {
+    "mtime": 1781616155.7218225,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "design_intelligence/brief.py": {
+    "mtime": 1781617152.0381124,
+    "ast_hash": "9fe8fa34ca80549e41588ee941bb7216",
+    "semantic_hash": ""
+  },
+  "design_intelligence/models.py": {
+    "mtime": 1781617713.15518,
+    "ast_hash": "d00c629fbece68f0909c137f58e36ba1",
+    "semantic_hash": ""
+  },
+  "design_intelligence/registry.py": {
+    "mtime": 1781616908.0889997,
+    "ast_hash": "cb5f9e6351ed5eb4b301e902dcde2369",
+    "semantic_hash": ""
+  },
+  "orchestrator/analytics_models.py": {
+    "mtime": 1781690817.4774613,
+    "ast_hash": "e7aef466766b2672f2a28eece1753a31",
+    "semantic_hash": ""
+  },
+  "orchestrator/feedback_loop.py": {
+    "mtime": 1781692486.0938702,
+    "ast_hash": "04c788fdd660b65bfaeab787ebfa1e38",
+    "semantic_hash": ""
+  },
+  "orchestrator/notify.py": {
+    "mtime": 1781673830.7899723,
+    "ast_hash": "927bd509d9711118351ee5a055741561",
+    "semantic_hash": ""
+  },
+  "orchestrator/quality.py": {
+    "mtime": 1781673692.9436126,
+    "ast_hash": "3858932e61e07d04bb58ccb5e569f65e",
+    "semantic_hash": ""
+  },
+  "orchestrator/scoring.py": {
+    "mtime": 1781692630.474355,
+    "ast_hash": "f392402e6e26b3dbb308433531476894",
+    "semantic_hash": ""
+  },
+  "schemas/boilerplate.json": {
+    "mtime": 1781673537.7685304,
+    "ast_hash": "dcacaa26e41c55fcb8481729119196df",
+    "semantic_hash": ""
+  },
+  "schemas/checklist.json": {
+    "mtime": 1781673536.7916567,
+    "ast_hash": "bb920777d25ad85c6c9e1ec6052df3b6",
+    "semantic_hash": ""
+  },
+  "schemas/database.json": {
+    "mtime": 1781673534.2162378,
+    "ast_hash": "bec549e22b96e3a5f64fded9fe8de797",
+    "semantic_hash": ""
+  },
+  "schemas/discovery.json": {
+    "mtime": 1781674324.9385557,
+    "ast_hash": "451d2732e4e393172a288c331cbbf722",
+    "semantic_hash": ""
+  },
+  "schemas/excel_template.json": {
+    "mtime": 1781673533.09281,
+    "ast_hash": "7e15bed046314d57ae18b78c8c01db4e",
+    "semantic_hash": ""
+  },
+  "schemas/prompt_pack.json": {
+    "mtime": 1781673530.8002954,
+    "ast_hash": "c916203dd532982e1a1a0dcdac84b2f5",
+    "semantic_hash": ""
+  },
+  "schemas/resource_pack.json": {
+    "mtime": 1781673528.310665,
+    "ast_hash": "d375673e07be1a52a131c0917d2b12eb",
+    "semantic_hash": ""
+  },
+  "schemas/sop_pack.json": {
+    "mtime": 1781673526.0718951,
+    "ast_hash": "f1d301928c40900b9e6823b97c86ee35",
+    "semantic_hash": ""
+  },
+  "schemas/swipe_file.json": {
+    "mtime": 1781673524.7816384,
+    "ast_hash": "94ef72ad4ae0ee69ae7ce81c05a482b2",
+    "semantic_hash": ""
+  },
+  "tests/test_analytics_agent.py": {
+    "mtime": 1781691576.2616801,
+    "ast_hash": "7c3d0e4028fa127e5fe4a6d72bbae9b3",
+    "semantic_hash": ""
+  },
+  "tests/test_analytics_models.py": {
+    "mtime": 1781690818.1923878,
+    "ast_hash": "6f29b9f0df0ae8e32bd53ba6fc1028bc",
+    "semantic_hash": ""
+  },
+  "tests/test_catalog_agent.py": {
+    "mtime": 1781627110.995715,
+    "ast_hash": "bea88ad8590caeb1b98c531c9c819386",
+    "semantic_hash": ""
+  },
+  "tests/test_channel_base.py": {
+    "mtime": 1781688976.3529909,
+    "ast_hash": "f09bf0e8059871decdace17e85bce88e",
+    "semantic_hash": ""
+  },
+  "tests/test_csv_export_agent.py": {
+    "mtime": 1781614077.9033778,
+    "ast_hash": "01327c5ef2ac1209ce9ce8c1b90906f9",
+    "semantic_hash": ""
+  },
+  "tests/test_dashboard.py": {
+    "mtime": 1781691897.3535264,
+    "ast_hash": "5f61309399cdecee47a2195b09f8042f",
+    "semantic_hash": ""
+  },
+  "tests/test_feedback_loop.py": {
+    "mtime": 1781692276.1896722,
+    "ast_hash": "cffd2df1c47fc2bc76d3d00f1c161f76",
+    "semantic_hash": ""
+  },
+  "tests/test_gumroad_analytics.py": {
+    "mtime": 1781689912.3638577,
+    "ast_hash": "47598381bebb648a385b1018b000a5d8",
+    "semantic_hash": ""
+  },
+  "tests/test_gumroad_channel.py": {
+    "mtime": 1781690128.516134,
+    "ast_hash": "1c79c9cda5a043bda55e3f4dcd95d594",
+    "semantic_hash": ""
+  },
+  "tests/test_gumroad_listing.py": {
+    "mtime": 1781689204.0674334,
+    "ast_hash": "fc79b80769c3ded2d2ef21353eb90819",
+    "semantic_hash": ""
+  },
+  "tests/test_multi_format.py": {
+    "mtime": 1781627110.995715,
+    "ast_hash": "007f0f02e03431f41300e677491bf12f",
+    "semantic_hash": ""
+  },
+  "tests/test_notion_content_agent.py": {
+    "mtime": 1781613712.666732,
+    "ast_hash": "86a430ec17eef21efc78a1c91444a5c1",
+    "semantic_hash": ""
+  },
+  "tests/test_offer_scoring_agent.py": {
+    "mtime": 1781692921.3077717,
+    "ast_hash": "112502b8123165f32d3301748a4e58d2",
+    "semantic_hash": ""
+  },
+  "tests/test_quality.py": {
+    "mtime": 1781674576.9636228,
+    "ast_hash": "9f44acb0c484aaa293f00b9e621d2f06",
+    "semantic_hash": ""
+  },
+  "tests/test_schemas_phase2.py": {
+    "mtime": 1781614974.5558512,
+    "ast_hash": "f48d90eb368a241703d5ce492f979a67",
+    "semantic_hash": ""
+  },
+  "tests/test_scoring.py": {
+    "mtime": 1781673525.0383887,
+    "ast_hash": "fd9ac5bc703cb24a1a3fce6b3765f045",
+    "semantic_hash": ""
+  },
+  "tests/test_scoring_feedback.py": {
+    "mtime": 1781692452.8704658,
+    "ast_hash": "760cc18b231fbec62160e7c97c632b6f",
+    "semantic_hash": ""
+  },
+  "tests/test_social_automation.py": {
+    "mtime": 1781690958.2584717,
+    "ast_hash": "b47011117a423c131db6d66f7021ef10",
+    "semantic_hash": ""
+  },
+  "tests/test_social_calendar.py": {
+    "mtime": 1781690434.4919467,
+    "ast_hash": "4d7f091b40506a26499cfe71d9a3ea97",
+    "semantic_hash": ""
+  },
+  "tests/test_social_engagement.py": {
+    "mtime": 1781690861.4142015,
+    "ast_hash": "7542745ef718b277b1fc46b16365b6da",
+    "semantic_hash": ""
+  },
+  "tests/test_social_models.py": {
+    "mtime": 1781689623.6229746,
+    "ast_hash": "f91b2f6505fcb90dbc0c27c93294008a",
+    "semantic_hash": ""
+  },
+  "tests/test_social_platform_strategy.py": {
+    "mtime": 1781690087.657049,
+    "ast_hash": "9a51d49c7cadf74c33f8486c335294dc",
+    "semantic_hash": ""
+  },
+  "tests/test_social_repurposing.py": {
+    "mtime": 1781690351.5109148,
+    "ast_hash": "9b3d7a5a2a57f3436a7fb141bf2d6888",
+    "semantic_hash": ""
+  },
+  "tests/test_social_scheduler.py": {
+    "mtime": 1781690697.0439978,
+    "ast_hash": "dc47d6adec37ac8cf8bdc9815b638ade",
+    "semantic_hash": ""
+  },
+  "tests/test_social_sequences.py": {
+    "mtime": 1781690574.1295118,
+    "ast_hash": "84df4f576d82ee092e96ef5d7e72041b",
+    "semantic_hash": ""
+  },
+  "GEMINI.md": {
+    "mtime": 1781693784.5892632,
+    "ast_hash": "7cbed59fa8dc3b1518b416ff57239a38",
+    "semantic_hash": ""
+  },
+  "ROADMAP.md": {
+    "mtime": 1781695063.2803814,
+    "ast_hash": "d11ca3ec2c4aa318675d74ab39274871",
+    "semantic_hash": ""
+  },
+  "design_intelligence/rules/design-taste-frontend.md": {
+    "mtime": 1781616561.242761,
+    "ast_hash": "88df480c978b640040b1cebd0dee6abe",
+    "semantic_hash": ""
+  },
+  "design_intelligence/rules/frontend-design.md": {
+    "mtime": 1781616554.155072,
+    "ast_hash": "42f7831191101b8b363ed9b58009f0ab",
+    "semantic_hash": ""
+  },
+  "design_intelligence/rules/frontend-design2.md": {
+    "mtime": 1781616556.8428392,
+    "ast_hash": "bbe73e98a9c076666ea3b3b142be5079",
+    "semantic_hash": ""
+  },
+  "design_intelligence/rules/gpt-taste.md": {
+    "mtime": 1781616564.0805247,
+    "ast_hash": "03cf9f1edd3110426ffb40070f38e450",
+    "semantic_hash": ""
+  },
+  "design_intelligence/rules/impeccable.md": {
+    "mtime": 1781616551.7542582,
+    "ast_hash": "cf9e52fb40b0224172c02a7ea89542df",
+    "semantic_hash": ""
+  },
+  "design_intelligence/rules/ui-ux-pro-max.md": {
+    "mtime": 1781616566.2405086,
+    "ast_hash": "a6d4b4f7ebcce92e3e0163a35fb1f863",
+    "semantic_hash": ""
+  },
+  "walkthrough.html": {
+    "mtime": 1781693988.245658,
+    "ast_hash": "a46c1ff37ed7483fcb92e498735a6c6b",
+    "semantic_hash": ""
+  },
+  "walkthrough.md": {
+    "mtime": 1781693928.6038518,
+    "ast_hash": "ddd2570b2777014b5c6a4c54fab82add",
+    "semantic_hash": ""
   }
 }

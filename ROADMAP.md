@@ -3,7 +3,7 @@
 > Living document. Update status as items are completed.
 
 **Last updated:** 2026-06-18
-**Current phase:** Phase 6 completed → Phase 7 recommended
+**Current phase:** Phase 7 — Platform Expansion (in progress)
 
 ---
 
@@ -170,6 +170,8 @@ class SalesRecord(BaseModel):
 | 7.3 | Create Own Store channel (Stripe) | `pending` | P2 | 1d | New `channels/store_channel.py` |
 | 7.4 | Add channel configuration UI | `pending` | P2 | 1d | `cli/wizard.py`, `orchestrator/models.py` |
 | 7.5 | Standardize channel output format | `pending` | P1 | 0.5d | `channels/base.py` |
+
+**Shopify exclusions (future):** Full theme integration, inventory management, multi-variant support.
 
 **Channel interface (proposed):**
 

@@ -27,6 +27,7 @@ venv/
 .ruff_cache/
 graphify-out/
 docs/superpowers/
+.opencode
 
 # Generated outputs
 outputs/
