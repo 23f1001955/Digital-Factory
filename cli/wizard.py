@@ -1,6 +1,6 @@
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import typer
 import re
 
@@ -219,7 +219,7 @@ def run_wizard() -> str | None:
         "landing_page_enabled": landing_page_enabled,
         "social_promotion_enabled": social_promotion_enabled,
         "call_to_action": cta_text,
-        "created_at": datetime.utcnow().isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
 
     # .env pre-validation

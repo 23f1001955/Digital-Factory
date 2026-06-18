@@ -3,7 +3,7 @@ import sys
 import csv
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 # Load .env before anything else
@@ -68,7 +68,7 @@ def process_batch(csv_path: str):
                     if ch.strip()
                 ],
                 "call_to_action": row.get("call_to_action", "Buy Now on Gumroad"),
-                "created_at": datetime.utcnow().isoformat() + "Z",
+                "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             }
 
             output_dir = os.path.join("outputs", slug)

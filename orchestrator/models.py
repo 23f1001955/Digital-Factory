@@ -1,6 +1,6 @@
 from typing import Any, List, Literal, Dict, Optional
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class ComponentSpec(BaseModel):
@@ -38,7 +38,7 @@ class JobSpec(BaseModel):
     channels: List[ChannelConfig] = Field(default_factory=lambda: [ChannelConfig(name="gumroad", enabled=True)])
     landing_page_url: Optional[str] = None
     call_to_action: str = "Buy Now on Gumroad"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator("channels", mode="before")
     @classmethod

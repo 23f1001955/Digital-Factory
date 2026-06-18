@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from orchestrator.models import ComponentSpec, JobSpec, AgentResult, QualityReport
 
@@ -20,7 +20,7 @@ def write_review_log(
     lines = []
     lines.append(f"# Human Review: {component.id}")
     lines.append(f"**Slug:** {slug}")
-    lines.append(f"**Date:** {datetime.utcnow().isoformat()}Z")
+    lines.append(f"**Date:** {datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}")
     lines.append(f"**Quality Score:** {report.score}")
     lines.append(f"**Threshold:** {report.threshold}")
     lines.append("")
