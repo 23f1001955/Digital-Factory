@@ -87,6 +87,8 @@ def main():
         logger.info(f"Resuming from {job_spec_path}")
         orchestrator = Orchestrator(job_spec_path)
         orchestrator.run()
+    elif "--dry-run" in sys.argv:
+        _run_dry_run()
     else:
         # First run: start wizard
         job_spec_path = run_wizard()
@@ -95,6 +97,31 @@ def main():
             return
         orchestrator = Orchestrator(job_spec_path)
         orchestrator.run()
+
+
+def _run_dry_run():
+    """Run pipeline in dry-run mode: load schema, merge plan, print DAG, exit."""
+    from cli.dry_run import print_dry_run
+    from orchestrator.component_templates import list_templates
+
+    job_spec_path = run_wizard()
+    if not job_spec_path:
+        return
+
+    orchestrator = Orchestrator(job_spec_path)
+
+    # Merge pipeline plan if market_research.json exists
+    research_path = None
+    mr_state = orchestrator.state.components.get("market_research")
+    if mr_state and mr_state.status == "done" and mr_state.output_path:
+        research_path = mr_state.output_path
+    if research_path and os.path.exists(research_path):
+        orchestrator._merge_pipeline_plan(research_path)
+        logger.info("Pipeline plan merged (dry-run)")
+
+    ordered = orchestrator._get_execution_order()
+    templates = list_templates()
+    print_dry_run(ordered, templates)
 
 
 if __name__ == "__main__":
