@@ -11,6 +11,7 @@ from renderers.base import get_renderer
 from agents.evaluation_agent import evaluate, EVALUATION_TARGETS
 from orchestrator.notify import dispatch_alert
 from agents.review_agent import write_review_log
+from orchestrator.concurrency import RunLock
 FILE_AGENT_SUBSTITUTIONS = {
     "content_agent": "notion_content_agent",
     "csv_export_agent": "notion_content_agent",
@@ -41,6 +42,7 @@ class Orchestrator:
         self._channel_results: dict = {}
         self._landing_page_url: str = ""
         self._component_failures: Dict[str, int] = {}
+        self.run_lock = RunLock()
 
     def _get_execution_order(self) -> List[ComponentSpec]:
         """Topological sort of components."""
@@ -321,387 +323,392 @@ class Orchestrator:
         return channel_results
 
     def run(self):
-        logger.info("Starting pipeline for slug: %s", self.job_spec.slug)
-        ordered_components = self._get_execution_order()
+        if not self.run_lock.acquire(self.job_spec.slug, mode="fail"):
+            logger.error("Run lock acquisition failed — another pipeline is running")
+            return
+        try:
+            logger.info("Starting pipeline for slug: %s", self.job_spec.slug)
+            ordered_components = self._get_execution_order()
 
-        # Check if we need a renderer
-        needs_renderer = any(c.uses_renderer for c in ordered_components)
-        if needs_renderer and not self.renderer:
-            self.renderer = get_renderer()
+            # Check if we need a renderer
+            needs_renderer = any(c.uses_renderer for c in ordered_components)
+            if needs_renderer and not self.renderer:
+                self.renderer = get_renderer()
 
-        total = len(ordered_components)
-        done_count = 0
+            total = len(ordered_components)
+            done_count = 0
 
-        logger.info("Pipeline: %s components", total)
+            logger.info("Pipeline: %s components", total)
 
-        idx = 0
-        while idx < len(ordered_components):
-            component = ordered_components[idx]
-            idx += 1
-            state_result = self.state.components.get(component.id)
-            if state_result and state_result.status == "done":
-                done_count += 1
-                logger.info("%s/%s %s (already done)", done_count, total, component.id)
-                continue
+            idx = 0
+            while idx < len(ordered_components):
+                component = ordered_components[idx]
+                idx += 1
+                state_result = self.state.components.get(component.id)
+                if state_result and state_result.status == "done":
+                    done_count += 1
+                    logger.info("%s/%s %s (already done)", done_count, total, component.id)
+                    continue
 
-            # Check dependencies
-            deps_ok = True
-            context = {}
-            for dep in component.depends_on:
-                dep_state = self.state.components.get(dep)
-                if not dep_state:
-                    deps_ok = False
-                    logger.warning(
-                        "Component %s blocked by dependency %s (not found)",
-                        component.id,
-                        dep,
-                    )
-                    break
-                if dep_state.status == "done":
-                    context[dep] = dep_state.output_path
-                elif dep_state.status == "skipped":
-                    context[dep] = None
-                    logger.info(
-                        "Component %s dependency %s was skipped — continuing",
-                        component.id,
-                        dep,
-                    )
-                else:
-                    deps_ok = False
-                    logger.warning(
-                        "Component %s blocked by dependency %s (status: %s)",
-                        component.id,
-                        dep,
-                        dep_state.status,
-                    )
-                    break
+                # Check dependencies
+                deps_ok = True
+                context = {}
+                for dep in component.depends_on:
+                    dep_state = self.state.components.get(dep)
+                    if not dep_state:
+                        deps_ok = False
+                        logger.warning(
+                            "Component %s blocked by dependency %s (not found)",
+                            component.id,
+                            dep,
+                        )
+                        break
+                    if dep_state.status == "done":
+                        context[dep] = dep_state.output_path
+                    elif dep_state.status == "skipped":
+                        context[dep] = None
+                        logger.info(
+                            "Component %s dependency %s was skipped — continuing",
+                            component.id,
+                            dep,
+                        )
+                    else:
+                        deps_ok = False
+                        logger.warning(
+                            "Component %s blocked by dependency %s (status: %s)",
+                            component.id,
+                            dep,
+                            dep_state.status,
+                        )
+                        break
 
-            if not deps_ok:
-                self.state.components[component.id] = AgentResult(
-                    status="skipped", error="dependency not met"
-                )
-                save_job_state(self.state, self.state_path)
-                continue
-
-            # Inject renderer if needed
-            if component.uses_renderer:
-                context["renderer"] = self.renderer
-
-            agent_func = AGENT_REGISTRY.get(component.agent)
-
-            # Skip landing_page if not enabled
-            if (
-                component.id == "landing_page"
-                and not self.job_spec.landing_page_enabled
-            ):
-                self.state.components[component.id] = AgentResult(
-                    status="skipped", error="landing page not enabled"
-                )
-                save_job_state(self.state, self.state_path)
-                done_count += 1
-                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
-                continue
-
-            # Skip social_promotion if not enabled
-            if (
-                component.id == "social_promotion"
-                and not self.job_spec.social_promotion_enabled
-            ):
-                self.state.components[component.id] = AgentResult(
-                    status="skipped", error="social promotion not enabled"
-                )
-                save_job_state(self.state, self.state_path)
-                done_count += 1
-                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
-                continue
-
-            # Skip gumroad research if not enabled
-            if component.id == "gumroad_research" and not any(c.name == "gumroad" and c.enabled for c in self.job_spec.channels):
-                self.state.components[component.id] = AgentResult(
-                    status="skipped", error="gumroad not enabled"
-                )
-                save_job_state(self.state, self.state_path)
-                done_count += 1
-                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
-                continue
-
-            # Skip notion_schema/notion_tree if notion_sync not enabled
-            if (
-                component.id in ("notion_schema", "notion_tree")
-                and not self.job_spec.notion_sync
-            ):
-                self.state.components[component.id] = AgentResult(
-                    status="skipped", error="notion sync not enabled"
-                )
-                save_job_state(self.state, self.state_path)
-                done_count += 1
-                logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
-                continue
-
-# notion_only mode: skip package, substitute file agents
-            if self.job_spec.notion_only:
-                if component.id == "package":
+                if not deps_ok:
                     self.state.components[component.id] = AgentResult(
-                        status="skipped", error="notion_only mode: no ZIP"
+                        status="skipped", error="dependency not met"
+                    )
+                    save_job_state(self.state, self.state_path)
+                    continue
+
+                # Inject renderer if needed
+                if component.uses_renderer:
+                    context["renderer"] = self.renderer
+
+                agent_func = AGENT_REGISTRY.get(component.agent)
+
+                # Skip landing_page if not enabled
+                if (
+                    component.id == "landing_page"
+                    and not self.job_spec.landing_page_enabled
+                ):
+                    self.state.components[component.id] = AgentResult(
+                        status="skipped", error="landing page not enabled"
                     )
                     save_job_state(self.state, self.state_path)
                     done_count += 1
-                    logger.warning(
-                        "%s/%s %s (notion_only — skipped)",
-                        done_count,
-                        total,
-                        component.id,
+                    logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
+                    continue
+
+                # Skip social_promotion if not enabled
+                if (
+                    component.id == "social_promotion"
+                    and not self.job_spec.social_promotion_enabled
+                ):
+                    self.state.components[component.id] = AgentResult(
+                        status="skipped", error="social promotion not enabled"
+                    )
+                    save_job_state(self.state, self.state_path)
+                    done_count += 1
+                    logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
+                    continue
+
+                # Skip gumroad research if not enabled
+                if component.id == "gumroad_research" and not any(c.name == "gumroad" and c.enabled for c in self.job_spec.channels):
+                    self.state.components[component.id] = AgentResult(
+                        status="skipped", error="gumroad not enabled"
+                    )
+                    save_job_state(self.state, self.state_path)
+                    done_count += 1
+                    logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
+                    continue
+
+                # Skip notion_schema/notion_tree if notion_sync not enabled
+                if (
+                    component.id in ("notion_schema", "notion_tree")
+                    and not self.job_spec.notion_sync
+                ):
+                    self.state.components[component.id] = AgentResult(
+                        status="skipped", error="notion sync not enabled"
+                    )
+                    save_job_state(self.state, self.state_path)
+                    done_count += 1
+                    logger.warning("%s/%s %s (disabled)", done_count, total, component.id)
+                    continue
+
+                # notion_only mode: skip package, substitute file agents
+                if self.job_spec.notion_only:
+                    if component.id == "package":
+                        self.state.components[component.id] = AgentResult(
+                            status="skipped", error="notion_only mode: no ZIP"
+                        )
+                        save_job_state(self.state, self.state_path)
+                        done_count += 1
+                        logger.warning(
+                            "%s/%s %s (notion_only — skipped)",
+                            done_count,
+                            total,
+                            component.id,
+                        )
+                        continue
+                    substituted = FILE_AGENT_SUBSTITUTIONS.get(component.agent)
+                    if substituted:
+                        agent_func = AGENT_REGISTRY.get(substituted)
+                        logger.info(
+                            "%s/%s %s (%s → %s)",
+                            done_count,
+                            total,
+                            component.id,
+                            component.agent,
+                            substituted,
+                        )
+
+                if not agent_func:
+                    logger.error("Agent %s not found in registry", component.agent)
+                    self.state.components[component.id] = AgentResult(
+                        status="failed", error=f"Agent {component.agent} not in registry"
+                    )
+                    save_job_state(self.state, self.state_path)
+                    done_count += 1
+                    logger.error(
+                        "%s/%s %s - agent not found", done_count, total, component.id
                     )
                     continue
-                substituted = FILE_AGENT_SUBSTITUTIONS.get(component.agent)
-                if substituted:
-                    agent_func = AGENT_REGISTRY.get(substituted)
-                    logger.info(
-                        "%s/%s %s (%s → %s)",
-                        done_count,
-                        total,
-                        component.id,
-                        component.agent,
-                        substituted,
+
+                # Circuit breaker: skip if template has failed >= 3 times
+                cb_key = component.template or component.id
+                if self._component_failures.get(cb_key, 0) >= 3:
+                    logger.warning("[circuit_breaker] Skipping component '%s': template '%s' blocked after %d failures",
+                                   component.id, cb_key, self._component_failures[cb_key])
+                    self.state.components[component.id] = AgentResult(
+                        status="skipped", error=f"Circuit breaker: template '{cb_key}' blocked after 3 failures"
                     )
+                    save_job_state(self.state, self.state_path)
+                    done_count += 1
+                    continue
 
-            if not agent_func:
-                logger.error("Agent %s not found in registry", component.agent)
-                self.state.components[component.id] = AgentResult(
-                    status="failed", error=f"Agent {component.agent} not in registry"
-                )
+                self.state.components[component.id] = AgentResult(status="running")
                 save_job_state(self.state, self.state_path)
+
                 done_count += 1
-                logger.error(
-                    "%s/%s %s - agent not found", done_count, total, component.id
-                )
-                continue
+                logger.info("%s/%s %s...", done_count, total, component.id)
 
-            # Circuit breaker: skip if template has failed >= 3 times
-            cb_key = component.template or component.id
-            if self._component_failures.get(cb_key, 0) >= 3:
-                logger.warning("[circuit_breaker] Skipping component '%s': template '%s' blocked after %d failures",
-                               component.id, cb_key, self._component_failures[cb_key])
-                self.state.components[component.id] = AgentResult(
-                    status="skipped", error=f"Circuit breaker: template '{cb_key}' blocked after 3 failures"
-                )
-                save_job_state(self.state, self.state_path)
-                done_count += 1
-                continue
-
-            self.state.components[component.id] = AgentResult(status="running")
-            save_job_state(self.state, self.state_path)
-
-            done_count += 1
-            logger.info("%s/%s %s...", done_count, total, component.id)
-
-            # Phase 5: Inject feedback before market research
-            if component.id == "market_research":
-                try:
-                    from orchestrator.feedback_loop import inject_feedback
-                    from orchestrator.analytics_models import load_sales_records, load_insights
-
-                    feedback_records = load_sales_records("outputs/_analytics/sales_records.json")
-                    feedback_insights = load_insights("outputs/_analytics/insights.json")
-                    if feedback_records and feedback_insights:
-                        inject_feedback(context, feedback_records, feedback_insights)
-                        logger.info("Past performance feedback injected into market agent context")
-                except Exception as e:
-                    logger.warning(f"Feedback injection failed: {e}")
-
-            # Phase 5: Apply scoring adjustments from past performance
-            if component.id == "offer_scoring":
-                try:
-                    from orchestrator.feedback_loop import compute_score_adjustment
-                    from orchestrator.analytics_models import load_sales_records
-
-                    fb_records = load_sales_records("outputs/_analytics/sales_records.json")
-                    if fb_records:
-                        adjustments = compute_score_adjustment(fb_records)
-                        if adjustments:
-                            logger.info(f"Applying scoring adjustments: {adjustments}")
-                            context["_scoring_adjustments"] = adjustments
-                except Exception as e:
-                    logger.warning(f"Scoring adjustment failed: {e}")
-
-            # Inject delivery_map for agents that need routing info
-            if component.agent in ("packaging_agent", "gumroad_agent"):
-                context["_delivery_map"] = self._build_delivery_map()
-
-            # Inject channel results as standard context keys
-            if self._channel_results:
-                for ch_name, ch_result in self._channel_results.items():
-                    if ch_result.status == "published" and ch_result.product_url:
-                        context["product_url"] = ch_result.product_url
-
-            # Inject landing_page_url for social agent
-            if self._landing_page_url:
-                context["landing_page_url"] = self._landing_page_url
-
-            try:
-                result = agent_func(component, self.job_spec, context)
-            except Exception as e:
-                tb = traceback.format_exc()
-                logger.error(
-                    "Agent %s (%s) raised unhandled exception:\n%s",
-                    component.agent,
-                    component.id,
-                    tb,
-                )
-                result = AgentResult(status="failed", error=f"Unhandled exception: {e}")
-
-
-            self.state.components[component.id] = result
-            save_job_state(self.state, self.state_path)
-
-            if result.status == "failed":
-                template = component.template or component.id
-                self._component_failures[template] = self._component_failures.get(template, 0) + 1
-                logger.warning("[circuit_breaker] Component '%s' failed (%d/%d failures for template '%s')",
-                               component.id, self._component_failures[template], 3, template)
-
-            # Phase 2: Quality validation gate
-            if result.status == "done" and component.agent in EVALUATION_TARGETS:
-                output_path = result.output_path
-                if output_path and os.path.exists(output_path):
-                    for retry_num in range(MAX_QUALITY_RETRIES + 1):
-                        report = evaluate(component, self.job_spec, context, output_path)
-                        if report.passed:
-                            logger.info(
-                                "Quality check PASSED for %s (score=%.2f)",
-                                component.id, report.score,
-                            )
-                            break
-
-                        if retry_num < MAX_QUALITY_RETRIES:
-                            logger.warning(
-                                "Quality check FAILED for %s (score=%.2f, attempt %d/%d) — retrying",
-                                component.id, report.score, retry_num + 1, MAX_QUALITY_RETRIES,
-                            )
-                            context["_quality_feedback"] = report.fix_prompt
-                            try:
-                                result = agent_func(component, self.job_spec, context)
-                                if result.status == "done":
-                                    output_path = result.output_path
-                                    self.state.components[component.id] = result
-                                    save_job_state(self.state, self.state_path)
-                                else:
-                                    logger.error("Retry agent failed for %s", component.id)
-                                    break
-                            except Exception as e:
-                                logger.error("Retry exception for %s: %s", component.id, e)
-                                break
-                        else:
-                            logger.error(
-                                "Quality check FAILED for %s after %d retries — marking as failed",
-                                component.id, MAX_QUALITY_RETRIES,
-                            )
-                            result = AgentResult(
-                                status="failed",
-                                error=f"Quality check failed after {MAX_QUALITY_RETRIES} retries (score={report.score})",
-                            )
-                            self.state.components[component.id] = result
-                            save_job_state(self.state, self.state_path)
-                            template = component.template or component.id
-                            self._component_failures[template] = self._component_failures.get(template, 0) + 1
-                            logger.warning("[circuit_breaker] Component '%s' failed (%d/%d failures for template '%s')",
-                                           component.id, self._component_failures[template], 3, template)
-
-                    dispatch_alert(report, self.job_spec, component.id)
-                    if report.needs_human_review:
-                        write_review_log(component, self.job_spec, report)
-                        logger.info("Review log created for %s — flagged for human review", component.id)
-
-            # After market_agent completes: merge pipeline plan and format recs only
-            if component.id == "market_research" and result.status == "done":
-                if self.job_spec.product_type == "discovery":
-                    pass  # Don't switch schema yet — wait for offer_scoring
-                self._merge_pipeline_plan(result.output_path)
-                self._merge_format_recommendations(result.output_path)
-                ordered_components = self._get_execution_order()
-                idx = 0
-                total = len(ordered_components)
-                logger.info("Pipeline re-planned: %s total components", total)
-
-            # After offer_scoring completes: switch schema based on scoring
-            if component.id == "offer_scoring" and result.status == "done":
-                if self.job_spec.product_type == "discovery":
+                # Phase 5: Inject feedback before market research
+                if component.id == "market_research":
                     try:
-                        with open(result.output_path) as f:
-                            research = json.load(f)
-                        scored = research.get("scored_recommendations", [])
-                        if scored:
-                            best = max(scored, key=lambda x: x.get("total_score", 0))
-                            if best.get("total_score", 0) >= 50:
-                                self._switch_schema(best["product_type"])
-                            else:
-                                logger.warning(
-                                    "Best score %.1f below threshold — fallback",
-                                    best.get("total_score", 0),
-                                )
-                                self._switch_schema("research_pack")
-                        else:
-                            recommended = research.get("recommended_product_type")
-                            confidence = research.get("recommendation_confidence", 0)
-                            if recommended and confidence >= 0.5:
-                                self._switch_schema(recommended)
-                            elif recommended:
-                                self._switch_schema("research_pack")
-                            else:
-                                self._switch_schema("research_pack")
-                    except Exception as e:
-                        logger.error("Failed to read scoring output: %s", e)
-                        self._switch_schema("research_pack")
+                        from orchestrator.feedback_loop import inject_feedback
+                        from orchestrator.analytics_models import load_sales_records, load_insights
 
+                        feedback_records = load_sales_records("outputs/_analytics/sales_records.json")
+                        feedback_insights = load_insights("outputs/_analytics/insights.json")
+                        if feedback_records and feedback_insights:
+                            inject_feedback(context, feedback_records, feedback_insights)
+                            logger.info("Past performance feedback injected into market agent context")
+                    except Exception as e:
+                        logger.warning(f"Feedback injection failed: {e}")
+
+                # Phase 5: Apply scoring adjustments from past performance
+                if component.id == "offer_scoring":
+                    try:
+                        from orchestrator.feedback_loop import compute_score_adjustment
+                        from orchestrator.analytics_models import load_sales_records
+
+                        fb_records = load_sales_records("outputs/_analytics/sales_records.json")
+                        if fb_records:
+                            adjustments = compute_score_adjustment(fb_records)
+                            if adjustments:
+                                logger.info(f"Applying scoring adjustments: {adjustments}")
+                                context["_scoring_adjustments"] = adjustments
+                    except Exception as e:
+                        logger.warning(f"Scoring adjustment failed: {e}")
+
+                # Inject delivery_map for agents that need routing info
+                if component.agent in ("packaging_agent", "gumroad_agent"):
+                    context["_delivery_map"] = self._build_delivery_map()
+
+                # Inject channel results as standard context keys
+                if self._channel_results:
+                    for ch_name, ch_result in self._channel_results.items():
+                        if ch_result.status == "published" and ch_result.product_url:
+                            context["product_url"] = ch_result.product_url
+
+                # Inject landing_page_url for social agent
+                if self._landing_page_url:
+                    context["landing_page_url"] = self._landing_page_url
+
+                try:
+                    result = agent_func(component, self.job_spec, context)
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    logger.error(
+                        "Agent %s (%s) raised unhandled exception:\n%s",
+                        component.agent,
+                        component.id,
+                        tb,
+                    )
+                    result = AgentResult(status="failed", error=f"Unhandled exception: {e}")
+
+                self.state.components[component.id] = result
+                save_job_state(self.state, self.state_path)
+
+                if result.status == "failed":
+                    template = component.template or component.id
+                    self._component_failures[template] = self._component_failures.get(template, 0) + 1
+                    logger.warning("[circuit_breaker] Component '%s' failed (%d/%d failures for template '%s')",
+                                   component.id, self._component_failures[template], 3, template)
+
+                # Phase 2: Quality validation gate
+                if result.status == "done" and component.agent in EVALUATION_TARGETS:
+                    output_path = result.output_path
+                    if output_path and os.path.exists(output_path):
+                        for retry_num in range(MAX_QUALITY_RETRIES + 1):
+                            report = evaluate(component, self.job_spec, context, output_path)
+                            if report.passed:
+                                logger.info(
+                                    "Quality check PASSED for %s (score=%.2f)",
+                                    component.id, report.score,
+                                )
+                                break
+
+                            if retry_num < MAX_QUALITY_RETRIES:
+                                logger.warning(
+                                    "Quality check FAILED for %s (score=%.2f, attempt %d/%d) — retrying",
+                                    component.id, report.score, retry_num + 1, MAX_QUALITY_RETRIES,
+                                )
+                                context["_quality_feedback"] = report.fix_prompt
+                                try:
+                                    result = agent_func(component, self.job_spec, context)
+                                    if result.status == "done":
+                                        output_path = result.output_path
+                                        self.state.components[component.id] = result
+                                        save_job_state(self.state, self.state_path)
+                                    else:
+                                        logger.error("Retry agent failed for %s", component.id)
+                                        break
+                                except Exception as e:
+                                    logger.error("Retry exception for %s: %s", component.id, e)
+                                    break
+                            else:
+                                logger.error(
+                                    "Quality check FAILED for %s after %d retries — marking as failed",
+                                    component.id, MAX_QUALITY_RETRIES,
+                                )
+                                result = AgentResult(
+                                    status="failed",
+                                    error=f"Quality check failed after {MAX_QUALITY_RETRIES} retries (score={report.score})",
+                                )
+                                self.state.components[component.id] = result
+                                save_job_state(self.state, self.state_path)
+                                template = component.template or component.id
+                                self._component_failures[template] = self._component_failures.get(template, 0) + 1
+                                logger.warning("[circuit_breaker] Component '%s' failed (%d/%d failures for template '%s')",
+                                               component.id, self._component_failures[template], 3, template)
+
+                        dispatch_alert(report, self.job_spec, component.id)
+                        if report.needs_human_review:
+                            write_review_log(component, self.job_spec, report)
+                            logger.info("Review log created for %s — flagged for human review", component.id)
+
+                # After market_agent completes: merge pipeline plan and format recs only
+                if component.id == "market_research" and result.status == "done":
+                    if self.job_spec.product_type == "discovery":
+                        pass  # Don't switch schema yet — wait for offer_scoring
                     self._merge_pipeline_plan(result.output_path)
                     self._merge_format_recommendations(result.output_path)
                     ordered_components = self._get_execution_order()
                     idx = 0
                     total = len(ordered_components)
-                    logger.info("Pipeline re-planned after scoring: %s total components", total)
+                    logger.info("Pipeline re-planned: %s total components", total)
 
-            # Store landing_page URL for downstream context injection
-            if component.id == "landing_page" and result.status == "done":
+                # After offer_scoring completes: switch schema based on scoring
+                if component.id == "offer_scoring" and result.status == "done":
+                    if self.job_spec.product_type == "discovery":
+                        try:
+                            with open(result.output_path) as f:
+                                research = json.load(f)
+                            scored = research.get("scored_recommendations", [])
+                            if scored:
+                                best = max(scored, key=lambda x: x.get("total_score", 0))
+                                if best.get("total_score", 0) >= 50:
+                                    self._switch_schema(best["product_type"])
+                                else:
+                                    logger.warning(
+                                        "Best score %.1f below threshold — fallback",
+                                        best.get("total_score", 0),
+                                    )
+                                    self._switch_schema("research_pack")
+                            else:
+                                recommended = research.get("recommended_product_type")
+                                confidence = research.get("recommendation_confidence", 0)
+                                if recommended and confidence >= 0.5:
+                                    self._switch_schema(recommended)
+                                elif recommended:
+                                    self._switch_schema("research_pack")
+                                else:
+                                    self._switch_schema("research_pack")
+                        except Exception as e:
+                            logger.error("Failed to read scoring output: %s", e)
+                            self._switch_schema("research_pack")
+
+                        self._merge_pipeline_plan(result.output_path)
+                        self._merge_format_recommendations(result.output_path)
+                        ordered_components = self._get_execution_order()
+                        idx = 0
+                        total = len(ordered_components)
+                        logger.info("Pipeline re-planned after scoring: %s total components", total)
+
+                # Store landing_page URL for downstream context injection
+                if component.id == "landing_page" and result.status == "done":
+                    try:
+                        if result.output_path and os.path.exists(result.output_path):
+                            with open(result.output_path, encoding="utf-8") as f:
+                                landing_data = json.load(f)
+                            landing_url = landing_data.get("deployed_url", "")
+                            if landing_url:
+                                self._landing_page_url = landing_url
+                                logger.info(f"Landing page URL captured: {landing_url}")
+                    except Exception as e:
+                        logger.warning(f"Failed to capture landing page URL: {e}")
+
+                if result.status == "done":
+                    logger.info("%s/%s %s", done_count, total, component.id)
+                elif result.status == "failed":
+                    logger.error(
+                        "%s/%s %s - %s", done_count, total, component.id, result.error
+                    )
+                else:
+                    logger.warning("%s/%s %s", done_count, total, component.id)
+
+            # Run channels after pipeline completes
+            channel_results = self._run_channels()
+            if channel_results:
+                self._channel_results = channel_results
+
+            # Phase 5: Run analytics after channels
+            if self._channel_results:
                 try:
-                    if result.output_path and os.path.exists(result.output_path):
-                        with open(result.output_path, encoding="utf-8") as f:
-                            landing_data = json.load(f)
-                        landing_url = landing_data.get("deployed_url", "")
-                        if landing_url:
-                            self._landing_page_url = landing_url
-                            logger.info(f"Landing page URL captured: {landing_url}")
+                    from agents.analytics_agent import run as run_analytics
+                    analytics_comp = ComponentSpec(
+                        id="analytics", agent="analytics_agent", output="analytics"
+                    )
+                    analytics_context = {"channel_results": self._channel_results}
+                    run_analytics(analytics_comp, self.job_spec, analytics_context)
                 except Exception as e:
-                    logger.warning(f"Failed to capture landing page URL: {e}")
+                    logger.warning(f"Analytics agent failed: {e}")
 
-            if result.status == "done":
-                logger.info("%s/%s %s", done_count, total, component.id)
-            elif result.status == "failed":
-                logger.error(
-                    "%s/%s %s - %s", done_count, total, component.id, result.error
-                )
-            else:
-                logger.warning("%s/%s %s", done_count, total, component.id)
-
-        # Run channels after pipeline completes
-        channel_results = self._run_channels()
-        if channel_results:
-            self._channel_results = channel_results
-
-        # Phase 5: Run analytics after channels
-        if self._channel_results:
-            try:
-                from agents.analytics_agent import run as run_analytics
-                analytics_comp = ComponentSpec(
-                    id="analytics", agent="analytics_agent", output="analytics"
-                )
-                analytics_context = {"channel_results": self._channel_results}
-                run_analytics(analytics_comp, self.job_spec, analytics_context)
-            except Exception as e:
-                logger.warning(f"Analytics agent failed: {e}")
-
-        logger.info("Pipeline complete")
-        logger.info("Orchestrator run complete. Generating summary report...")
-        self._generate_run_summary()
+            logger.info("Pipeline complete")
+            logger.info("Orchestrator run complete. Generating summary report...")
+            self._generate_run_summary()
+        finally:
+            self.run_lock.release()
 
     def _generate_run_summary(self):
         summary_path = os.path.join("outputs", self.job_spec.slug, "run_summary.md")
